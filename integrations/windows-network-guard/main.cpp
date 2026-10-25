@@ -1,10 +1,10 @@
 // Fixed local protocol and dynamic WFP ownership; no service installation or persistent filters.
 #include <winsock2.h>
+#include <ws2ipdef.h>
 #include <windows.h>
 #include <initguid.h>
 #include <fwpmu.h>
 #include <iphlpapi.h>
-#include <netioapi.h>
 #include <setupapi.h>
 #include <devguid.h>
 #include <sddl.h>
@@ -315,6 +315,16 @@ class Guard {
   std::vector<UINT64> filters_;
   std::optional<Candidate> active_;
 
+  void verifyFilter(UINT64 id) const {
+    FWPM_FILTER0* filter = nullptr;
+    winCheck(FwpmFilterGetById0(engine_, id, &filter), "Verify owned WFP filter");
+    const bool valid = filter && filter->providerKey && IsEqualGUID(*filter->providerKey, provider_) &&
+                       IsEqualGUID(filter->subLayerKey, sublayer_) &&
+                       (filter->flags & FWPM_FILTER_FLAG_DISABLED) == 0;
+    FwpmFreeMemory0(reinterpret_cast<void**>(&filter));
+    ng::require(valid, "An owned WFP filter is no longer active");
+  }
+
   void initialize() {
     if (engine_) return;
     FWPM_SESSION0 session{};
@@ -426,7 +436,10 @@ class Guard {
     try {
       // WFP commits the delete/add set atomically. Any validation/add/commit failure leaves
       // the previous rules and file/process identity alive, including during automatic restart.
-      for (const auto id : filters_) winCheck(FwpmFilterDeleteById0(engine_, id), "Delete owned filter in transaction");
+      for (const auto id : filters_) {
+        verifyFilter(id);
+        winCheck(FwpmFilterDeleteById0(engine_, id), "Delete owned filter in transaction");
+      }
       std::vector<UINT64> replacement;
       layerRules(FWPM_LAYER_ALE_AUTH_CONNECT_V4, false, candidate, app.value, dhcp.value, replacement);
       layerRules(FWPM_LAYER_ALE_AUTH_CONNECT_V6, true, candidate, app.value, dhcp.value, replacement);
@@ -447,14 +460,7 @@ class Guard {
   }
   std::string status() const {
     // A BFE restart or an administrator removing our rules must not leave a stale active report.
-    for (const auto id : filters_) {
-      FWPM_FILTER0* filter = nullptr;
-      winCheck(FwpmFilterGetById0(engine_, id, &filter), "Verify owned WFP filter");
-      const bool valid = filter && filter->providerKey && IsEqualGUID(*filter->providerKey, provider_) &&
-                         (filter->flags & FWPM_FILTER_FLAG_DISABLED) == 0;
-      FwpmFreeMemory0(reinterpret_cast<void**>(&filter));
-      ng::require(valid, "An owned WFP filter is no longer active");
-    }
+    for (const auto id : filters_) verifyFilter(id);
     std::ostringstream out;
     out << "{\"protocolVersion\":1,\"active\":" << (active_ ? "true" : "false")
         << ",\"guardPid\":" << GetCurrentProcessId() << ",\"corePid\":";
@@ -502,10 +508,12 @@ void serve(const std::wstring& sid) {
                                                             &ownerSecurity, nullptr))
     winCheck(GetLastError(), "Create owner mutex ACL");
   SECURITY_ATTRIBUTES ownerAttributes{sizeof(SECURITY_ATTRIBUTES), ownerSecurity, FALSE};
+  SetLastError(ERROR_SUCCESS);
   Handle owner(CreateMutexW(&ownerAttributes, FALSE, L"Global\\ClashParty.NetworkGuard.v1.Owner"));
   const DWORD ownerError = GetLastError();
   LocalFree(ownerSecurity);
-  handleCheck(owner, "Reserve machine-wide guard ownership");
+  if (!owner.valid()) winCheck(ownerError == ERROR_SUCCESS ? ERROR_INVALID_HANDLE : ownerError,
+                              "Reserve machine-wide guard ownership");
   ng::require(ownerError != ERROR_ALREADY_EXISTS, "Another network guard already owns this machine session");
   const std::wstring descriptor = L"D:P(A;;GA;;;SY)(A;;GA;;;" + sid + L")";
   PSECURITY_DESCRIPTOR security = nullptr;

@@ -79,6 +79,14 @@ describe('Windows guard native build and boundary', () => {
       'utf8'
     )
     const main = source.slice(source.lastIndexOf('int wmain('))
+    // The user-mode SDK exposes NetIO through Iphlpapi only after Winsock IP types exist.
+    const winsockHeader = source.indexOf('#include <winsock2.h>')
+    const ipTypesHeader = source.indexOf('#include <ws2ipdef.h>')
+    const ipHelperHeader = source.indexOf('#include <iphlpapi.h>')
+    expect(winsockHeader).toBeGreaterThanOrEqual(0)
+    expect(ipTypesHeader).toBeGreaterThan(winsockHeader)
+    expect(ipHelperHeader).toBeGreaterThan(ipTypesHeader)
+    expect(source).not.toContain('#include <netioapi.h>')
     expect(main.indexOf('L"--self-test"')).toBeLessThan(main.indexOf('elevatedUser('))
     expect(source).toContain('FWPM_SESSION_FLAG_DYNAMIC')
     expect(source).not.toContain('FWPM_FILTER_FLAG_PERSISTENT')
