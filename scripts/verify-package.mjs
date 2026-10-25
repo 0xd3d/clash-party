@@ -62,6 +62,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         path.join(resources, 'files/party.mihomo.helper'),
         path.join(resources, 'files/party.mihomo.dns-guard')
       )
+    if (platform === 'win32')
+      binaries.push(path.join(resources, 'files/party.mihomo.network-guard.exe'))
     for (const binary of binaries) assertBinaryArchitecture(readFileSync(binary), platform, arch)
     const archive = path.join(resources, 'app.asar')
     assertDesktopArchivePaths(asar.listPackage(archive))

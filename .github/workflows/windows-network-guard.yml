@@ -1,0 +1,50 @@
+name: Windows network guard
+
+on:
+  push:
+    branches: [smart_core, feature/three-platform-privacy]
+    paths:
+      - 'integrations/windows-network-guard/**'
+      - 'scripts/build-windows-network-guard.mjs'
+      - '.github/workflows/windows-network-guard.yml'
+  pull_request:
+    paths:
+      - 'integrations/windows-network-guard/**'
+      - 'scripts/build-windows-network-guard.mjs'
+      - '.github/workflows/windows-network-guard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: windows-network-guard-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    name: Native guard ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          architecture: ${{ matrix.arch }}
+      - name: Compile and run pure native fixtures
+        run: node scripts/build-windows-network-guard.mjs
+      - uses: actions/upload-artifact@v6
+        with:
+          name: windows-network-guard-${{ matrix.arch }}-${{ github.sha }}
+          path: build/native/windows/${{ matrix.arch }}/party.mihomo.network-guard.exe
+          retention-days: 7
+          if-no-files-found: error

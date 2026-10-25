@@ -41,6 +41,9 @@ fileAssociations:
     mimeType: 'application/x-clash-party-plugin'
     role: 'Viewer'
 win:
+  extraResources:
+    - from: './build/native/windows/${arch}/party.mihomo.network-guard.exe'
+      to: 'files/party.mihomo.network-guard.exe'
   target:
     - nsis
     - 7z
@@ -57,6 +60,9 @@ mac:
     - pkg
   binaries:
     - 'Contents/Resources/files/party.mihomo.dns-guard'
+    - 'Contents/Resources/sidecar/mihomo'
+    - 'Contents/Resources/sidecar/mihomo-alpha'
+    - 'Contents/Resources/sidecar/mihomo-smart'
   extraResources:
     - from: './build/native/party.mihomo.dns-guard'
       to: 'files/party.mihomo.dns-guard'
