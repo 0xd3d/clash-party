@@ -17,11 +17,15 @@ env:
 jobs:
   windows:
     name: Windows ${{ matrix.arch }}
-    runs-on: windows-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        arch: [x64, arm64]
+        include:
+          - arch: x64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
     env:
       npm_config_arch: ${{ matrix.arch }}
       npm_config_target_arch: ${{ matrix.arch }}
@@ -56,16 +60,21 @@ jobs:
             dist/*portable.7z
             dist/*.sha256
           if-no-files-found: error
+          overwrite: true
           compression-level: 0
           retention-days: 7
 
   macos:
     name: macOS ${{ matrix.arch }}
-    runs-on: macos-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        arch: [x64, arm64]
+        include:
+          - arch: x64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-latest
     env:
       npm_config_arch: ${{ matrix.arch }}
       npm_config_target_arch: ${{ matrix.arch }}
@@ -92,5 +101,6 @@ jobs:
             dist/*.pkg
             dist/*.sha256
           if-no-files-found: error
+          overwrite: true
           compression-level: 0
           retention-days: 7

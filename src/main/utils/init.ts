@@ -487,25 +487,22 @@ export async function ensureRuntimeFiles(): Promise<void> {
   }
 }
 
-export async function init(): Promise<void> {
+export async function initSystemProxy(): Promise<void> {
   const { sysProxy } = await getAppConfig()
+  try {
+    if (sysProxy.enable) await startPacServer()
+    await triggerSysProxy(sysProxy.enable)
+  } catch {
+    // A failed proxy activation must not prevent the settings window from opening.
+  }
+}
 
+export async function init(): Promise<void> {
   initResumeRecovery()
 
   const initTasks: Promise<void>[] = [ensureRuntimeFiles(), startSSIDCheck()]
 
-  initTasks.push(
-    (async (): Promise<void> => {
-      try {
-        if (sysProxy.enable) {
-          await startPacServer()
-        }
-        await triggerSysProxy(sysProxy.enable)
-      } catch {
-        // ignore
-      }
-    })()
-  )
+  if (process.platform !== 'win32') initTasks.push(initSystemProxy())
 
   await Promise.all(initTasks)
   initDeeplink()

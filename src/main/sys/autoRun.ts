@@ -8,6 +8,7 @@ import { app } from 'electron'
 import { exePath, homeDir } from '../utils/dirs'
 import { managerLogger } from '../utils/logger'
 import { checkAdminPrivileges } from '../core/admin'
+import { getWindowsLoginTaskXml } from './windowsTask'
 
 const appName = 'mihomo-party'
 // 1.x 通过 AppleScript 往 System Events 写登录项，这些旧条目不受 Service Management 管理，
@@ -26,50 +27,6 @@ async function removeDarwinLegacyLoginItems(): Promise<void> {
   } catch (error) {
     await managerLogger.info('No legacy macOS login item removed', error)
   }
-}
-
-function getTaskXml(asAdmin: boolean): string {
-  const runLevel = asAdmin ? 'HighestAvailable' : 'LeastPrivilege'
-  return `<?xml version="1.0" encoding="UTF-16"?>
-<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <Triggers>
-    <LogonTrigger>
-      <Enabled>true</Enabled>
-      <Delay>PT3S</Delay>
-    </LogonTrigger>
-  </Triggers>
-  <Principals>
-    <Principal id="Author">
-      <LogonType>InteractiveToken</LogonType>
-      <RunLevel>${runLevel}</RunLevel>
-    </Principal>
-  </Principals>
-  <Settings>
-    <MultipleInstancesPolicy>Parallel</MultipleInstancesPolicy>
-    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-    <AllowHardTerminate>false</AllowHardTerminate>
-    <StartWhenAvailable>false</StartWhenAvailable>
-    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
-    <IdleSettings>
-      <StopOnIdleEnd>false</StopOnIdleEnd>
-      <RestartOnIdle>false</RestartOnIdle>
-    </IdleSettings>
-    <AllowStartOnDemand>true</AllowStartOnDemand>
-    <Enabled>true</Enabled>
-    <Hidden>false</Hidden>
-    <RunOnlyIfIdle>false</RunOnlyIfIdle>
-    <WakeToRun>false</WakeToRun>
-    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-    <Priority>3</Priority>
-  </Settings>
-  <Actions Context="Author">
-    <Exec>
-      <Command>"${exePath()}"</Command>
-    </Exec>
-  </Actions>
-</Task>
-`
 }
 
 export async function checkAutoRun(): Promise<boolean> {
@@ -115,7 +72,10 @@ export async function enableAutoRun(): Promise<void> {
     const regPath = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
     const taskFilePath = path.join(tmpdir(), `${appName}.xml`)
     const isAdmin = await checkAdminPrivileges()
-    await writeFile(taskFilePath, Buffer.from(`\ufeff${getTaskXml(isAdmin)}`, 'utf-16le'))
+    await writeFile(
+      taskFilePath,
+      Buffer.from(`\ufeff${getWindowsLoginTaskXml(exePath(), isAdmin)}`, 'utf-16le')
+    )
 
     let taskCreated = false
 

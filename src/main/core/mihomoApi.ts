@@ -220,7 +220,7 @@ export const patchMihomoConfig = async (patch: Partial<IMihomoConfig>): Promise<
     const instance = await getAxios()
     const corePid = getCurrentCorePID()
     await instance.patch('/configs', patch)
-    if (patch.tun) {
+    if (patch.tun && process.platform === 'darwin') {
       try {
         const applied = await instance.get<never, IMihomoConfig>('/configs')
         patchSystemDNSRuntime({ tun: applied.tun }, corePid)

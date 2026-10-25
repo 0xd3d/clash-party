@@ -968,5 +968,8 @@
   "privacy.finding.udpProxySupport.info": "Правило прокси UDP не проверяет поддержку UDP узлом или выбранного участника группы. Выполните тест в браузере.",
   "privacy.finding.udpGroupSelection.warning": "Целевая группа UDP может выбрать DIRECT. Проверьте текущий выбор.",
   "privacy.finding.udpRuleOrdering.warning": "Более ранние правила DIRECT могут перехватить публичный UDP. Проверьте порядок и область действия.",
-  "privacy.finding.udpComplexRules.warning": "Ранние наборы правил, подправила или логические правила требуют ручной проверки. Статический анализ не определяет всю обработку UDP."
+  "privacy.finding.udpComplexRules.warning": "Ранние наборы правил, подправила или логические правила требуют ручной проверки. Статический анализ не определяет всю обработку UDP.",
+  "privacy.finding.windowsDnsMode.pass": "Настроены перехват DNS, auto-route и strict-route Windows; адаптеры и WFP требуют проверки.",
+  "privacy.finding.windowsDnsMode.warning": "Перехват DNS Windows настроен не полностью: проверьте dns-mode, auto-route и strict-route.",
+  "privacy.finding.windowsDnsMode.error": "Перехват системного DNS Windows отключён; одних правил порта 53 недостаточно."
 }

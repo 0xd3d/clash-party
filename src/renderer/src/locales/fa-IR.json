@@ -962,5 +962,8 @@
   "privacy.finding.udpProxySupport.info": "قانون پراکسی UDP، پشتیبانی گره از UDP یا عضو انتخاب‌شده گروه را تأیید نمی‌کند. در مرورگر آزمایش کنید.",
   "privacy.finding.udpGroupSelection.warning": "گروه هدف UDP می‌تواند به DIRECT برسد. انتخاب فعلی را بررسی کنید.",
   "privacy.finding.udpRuleOrdering.warning": "قوانین زودتر DIRECT ممکن است قبل از قانون عمومی، UDP عمومی را منطبق کنند. ترتیب و محدوده را بررسی کنید.",
-  "privacy.finding.udpComplexRules.warning": "مجموعه‌قوانین، زیرقوانین یا قوانین منطقی زودتر به بررسی دستی نیاز دارند. بررسی ایستا همه رفتار UDP را مشخص نمی‌کند."
+  "privacy.finding.udpComplexRules.warning": "مجموعه‌قوانین، زیرقوانین یا قوانین منطقی زودتر به بررسی دستی نیاز دارند. بررسی ایستا همه رفتار UDP را مشخص نمی‌کند.",
+  "privacy.finding.windowsDnsMode.pass": "رهگیری DNS ویندوز با مسیریابی خودکار و سخت‌گیرانه تنظیم شده است؛ وضعیت آداپتور و WFP نیاز به بررسی دارد.",
+  "privacy.finding.windowsDnsMode.warning": "رهگیری DNS ویندوز کامل نیست؛ dns-mode و مسیریابی خودکار و سخت‌گیرانه را بررسی کنید.",
+  "privacy.finding.windowsDnsMode.error": "رهگیری DNS سیستم ویندوز غیرفعال است؛ قوانین پورت ۵۳ به‌تنهایی کافی نیستند."
 }

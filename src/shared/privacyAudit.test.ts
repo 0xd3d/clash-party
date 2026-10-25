@@ -62,6 +62,24 @@ describe('privacy configuration audit', () => {
     expect(findings.some((entry) => entry.id === 'udpRuleOrdering')).toBe(false)
   })
 
+  it('checks effective Windows DNS mode instead of treating port rules as adapter interception', () => {
+    const baseline = profile()
+    expect(finding(baseline, 'windowsDnsMode')?.level).toBe('pass')
+    for (const mode of ['disabled', 'native'] as const) {
+      const config = profile({ tun: { ...baseline.tun, 'dns-mode': mode } })
+      expect(finding(config, 'windowsDnsMode')?.level).toBe(
+        mode === 'disabled' ? 'error' : 'warning'
+      )
+    }
+    expect(
+      finding(profile({ tun: { ...baseline.tun, 'auto-route': false } }), 'windowsDnsMode')?.level
+    ).toBe('error')
+    expect(
+      finding(profile({ tun: { ...baseline.tun, 'strict-route': false } }), 'windowsDnsMode')?.level
+    ).toBe('warning')
+    expect(finding(baseline, 'windowsDnsMode', 'darwin')).toBeUndefined()
+  })
+
   it('treats macOS system DNS automation as configuration state only', () => {
     expect(auditPrivacyConfig(profile(), 'darwin', { autoSetDNS: true })).toContainEqual({
       id: 'macSystemDNS',

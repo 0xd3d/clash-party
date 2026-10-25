@@ -54,6 +54,8 @@ mac:
   target:
     - pkg
   extraResources:
+    - from: './integrations/macos-dns-guard/'
+      to: 'integrations/macos-dns-guard'
     - from: './build/pkg-scripts/party.mihomo.helper.plist'
       to: 'files/party.mihomo.helper.plist'
   entitlementsInherit: build/entitlements.mac.plist

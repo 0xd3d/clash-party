@@ -35,7 +35,7 @@ jobs:
       # --ignore-scripts skips the prepare step that downloads the mihomo cores;
       # none of the static checks or unit tests need the sidecar binaries.
       - name: Install dependencies
-        run: pnpm install --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Format check
         run: pnpm run format:check
       - name: Lint
@@ -63,6 +63,6 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Test
         run: pnpm test

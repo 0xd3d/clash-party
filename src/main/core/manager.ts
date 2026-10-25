@@ -28,7 +28,7 @@ import {
 } from '../utils/dirs'
 import { uploadRuntimeConfigIfChanged } from '../resolve/gistApi'
 import { startMonitor } from '../resolve/trafficMonitor'
-import { ensureRuntimeFiles, safeShowErrorBox } from '../utils/init'
+import { ensureRuntimeFiles, safeShowErrorBox, initSystemProxy } from '../utils/init'
 import { parseAgeSecretKeys } from '../utils/age'
 import i18next from '../../shared/i18n'
 import { managerLogger } from '../utils/logger'
@@ -52,6 +52,7 @@ import { syncSmartModelToTestDir } from './smartModel'
 import {
   checkAdminRestartForTun as checkAdminRestartForTunWithRestart,
   getSessionAdminStatus,
+  requireWindowsTunPrivileges,
   setStopCoreBeforeAdminRestart
 } from './permissions'
 import {
@@ -68,6 +69,7 @@ import {
   updateSystemDNSRuntime
 } from './dns'
 import { SystemDNSListenerProof } from './systemDNSRuntime'
+import { activateWindowsCoreProxy } from './startupProxy'
 
 // 重新导出权限相关函数
 export {
@@ -111,6 +113,7 @@ const coreDNSStates = new WeakMap<
   ChildProcess,
   { proof: SystemDNSListenerProof; runtime: IMihomoConfig }
 >()
+let appliedCoreRevision = 0
 let coreProcessWatchdog: CoreProcessWatchdog | null = null
 let isRestarting = false
 let coreOperationPhase: 'initializing' | 'ready' | 'blocked' | 'shutting-down' = 'ready'
@@ -152,6 +155,11 @@ export function getAppliedCoreConfig(): IMihomoConfig | null {
   return state ? structuredClone(state.runtime) : null
 }
 
+export function getAppliedCoreRevision(): number | undefined {
+  if (!child || !hasCoreProcess() || dnsIneligibleProcesses.has(child)) return undefined
+  return coreDNSStates.has(child) ? appliedCoreRevision : undefined
+}
+
 export function prepareSystemDNSReload(runtime: IMihomoConfig, corePid: number | undefined): void {
   if (!child || child.pid !== corePid) return
   const state = coreDNSStates.get(child)
@@ -168,7 +176,10 @@ export function prepareSystemDNSReload(runtime: IMihomoConfig, corePid: number |
 export function commitSystemDNSReload(runtime: IMihomoConfig, corePid: number | undefined): void {
   if (!child || child.pid !== corePid || dnsIneligibleProcesses.has(child)) return
   const state = coreDNSStates.get(child)
-  if (state) state.runtime = structuredClone(runtime)
+  if (state) {
+    state.runtime = structuredClone(runtime)
+    appliedCoreRevision++
+  }
   updateSystemDNSRuntime(runtime, corePid)
 }
 
@@ -491,9 +502,13 @@ function buildCoreEnv(safePath?: string, ageSecretKey?: string): NodeJS.ProcessE
 }
 
 // 准备核心配置
-async function prepareCore(detached: boolean, skipStop = false): Promise<CoreConfig> {
+async function prepareCore(
+  detached: boolean,
+  skipStop = false,
+  forceStop = false
+): Promise<CoreConfig> {
   await ensureRuntimeFiles()
-  if (!hasCoreProcess() && !skipStop) {
+  if (!hasCoreProcess() && !skipStop && !forceStop) {
     try {
       await recoverDNS({ force: true, timeout: 750 })
     } catch (error) {
@@ -515,9 +530,6 @@ async function prepareCore(detached: boolean, skipStop = false): Promise<CoreCon
 
   let { 'log-level': logLevel = 'info' as LogLevel, tun } = mihomoConfig
 
-  // 清理轻量模式遗留的后台核心
-  await stopPidFileCore()
-
   // 管理 Smart 内核覆写配置
   await manageSmartOverride()
 
@@ -528,12 +540,15 @@ async function prepareCore(detached: boolean, skipStop = false): Promise<CoreCon
     logLevel = simpleRuntime['log-level'] || 'info'
     tun = simpleRuntime.tun
   }
+  await requireWindowsTunPrivileges(runtimeConfig)
+  // Only stop an existing bundled core after the next protected configuration is eligible.
+  await stopPidFileCore()
   const ageSecretKey = (await getProfileItem(current))?.ageSecretKey || ''
   if (testProfileOnStart) {
     await checkProfile(current, core, diffWorkDir, ageSecretKey)
   }
   if (!skipStop && hasCoreProcess()) {
-    await stopCoreInternal()
+    await stopCoreInternal(forceStop)
   }
   await cleanupSocketFile()
 
@@ -623,7 +638,10 @@ function setupCoreListeners(
   const { logLevel, startupMode } = config
   const dnsProof = new SystemDNSListenerProof()
   coreDNSStates.set(proc, { proof: dnsProof, runtime: structuredClone(config.runtimeConfig) })
+  appliedCoreRevision++
   let startupSettled = false
+  let protectedTunFailed = false
+  let apiReadinessStarted = false
   const startupTimer =
     startupMode === 'log'
       ? setTimeout(() => {
@@ -650,9 +668,29 @@ function setupCoreListeners(
     reject(reason)
   }
 
+  const failProtectedWindowsTun = (reason: string): void => {
+    protectedTunFailed = true
+    dnsIneligibleProcesses.add(proc)
+    stopCoreProcessWatchdog(proc.pid)
+    stopMihomoTraffic()
+    stopMihomoConnections()
+    stopMihomoLogs()
+    stopMihomoMemory()
+    if (child === proc) child = null
+    proc.kill('SIGTERM')
+    rejectStartup(new Error(reason))
+  }
+
   const startMihomoApiStreams = async (): Promise<void> => {
     await waitForCoreReady()
-    await getAxios(true)
+    const instance = await getAxios(true)
+    await activateWindowsCoreProxy(
+      process.platform,
+      config.runtimeConfig,
+      (timeout) => instance.get<never, IMihomoConfig>('/configs', { timeout }),
+      () => child === proc && !protectedTunFailed && !dnsIneligibleProcesses.has(proc),
+      initSystemProxy
+    )
     await Promise.all([
       startMihomoTraffic(),
       startMihomoConnections(),
@@ -662,6 +700,7 @@ function setupCoreListeners(
   }
 
   const completeCoreStartup = async (): Promise<void> => {
+    if (child !== proc || protectedTunFailed || dnsIneligibleProcesses.has(proc)) return
     try {
       await uploadRuntimeConfigIfChanged()
     } catch (error) {
@@ -683,6 +722,7 @@ function setupCoreListeners(
   proc.on('close', async (code, signal) => {
     managerLogger.info(`Core closed, code: ${code}, signal: ${signal}`)
     stopCoreProcessWatchdog(proc.pid)
+    if (protectedTunFailed) return
 
     if (child === proc) {
       stopSystemDNSMonitoring()
@@ -724,6 +764,16 @@ function setupCoreListeners(
     // TUN 权限错误
     if (str.includes('configure tun interface: operation not permitted')) {
       lastTunFailureAt = Date.now()
+      if (process.platform === 'win32') {
+        failProtectedWindowsTun(i18next.t('tun.error.tunPermissionDenied'))
+        void dialog
+          .showMessageBox({
+            type: 'error',
+            message: i18next.t('tun.error.tunPermissionDenied')
+          })
+          .catch(() => {})
+        return
+      }
       patchControledMihomoConfig({ tun: { enable: false } })
       mainWindow?.webContents.send('controledMihomoConfigUpdated')
       ipcMain.emit('updateTrayMenu')
@@ -741,7 +791,11 @@ function setupCoreListeners(
       lastTunFailureAt = Date.now()
       managerLogger.error('TUN listening error detected:', tunListenErrorLine.trim())
       try {
-        await patchControledMihomoConfig({ tun: { enable: false } })
+        if (process.platform === 'win32') {
+          failProtectedWindowsTun(tunListenErrorLine.trim())
+        } else {
+          await patchControledMihomoConfig({ tun: { enable: false } })
+        }
       } catch (error) {
         managerLogger.warn('Failed to disable TUN after listening error', error)
       }
@@ -790,28 +844,39 @@ function setupCoreListeners(
       (process.platform !== 'win32' && str.includes('RESTful API unix listening at')) ||
       (process.platform === 'win32' && str.includes('RESTful API pipe listening at'))
 
-    if (isApiReady) {
-      resolveStartup([
-        new Promise((innerResolve) => {
-          proc.stdout?.on('data', async (innerData) => {
-            if (
-              innerData
-                .toString()
-                .toLowerCase()
-                .includes('start initial compatible provider default')
-            ) {
-              completeCoreStartup()
-                .then(() => innerResolve())
-                .catch((error) => {
-                  managerLogger.warn('Failed to complete core startup', error)
-                  innerResolve()
-                })
-            }
-          })
-        })
-      ])
-
-      await startMihomoApiStreams()
+    if (isApiReady && !apiReadinessStarted) {
+      apiReadinessStarted = true
+      const providerReady = new Promise<void>((innerResolve) => {
+        let completed = false
+        const complete = (): void => {
+          if (completed) return
+          completed = true
+          clearTimeout(timer)
+          proc.stdout?.removeListener('data', observeProvider)
+          completeCoreStartup()
+            .catch((error) => managerLogger.warn('Failed to complete core startup', error))
+            .finally(innerResolve)
+        }
+        const observeProvider = (chunk: Buffer | string): void => {
+          if (chunk.toString().toLowerCase().includes('start initial compatible provider default'))
+            complete()
+        }
+        const timer = setTimeout(complete, 5000)
+        proc.stdout?.on('data', observeProvider)
+        observeProvider(str)
+      })
+      try {
+        if (process.platform === 'win32') {
+          await startMihomoApiStreams()
+          resolveStartup([providerReady])
+        } else {
+          resolveStartup([providerReady])
+          await startMihomoApiStreams()
+        }
+      } catch (error) {
+        if (process.platform === 'win32') failProtectedWindowsTun(String(error))
+        else rejectStartup(error)
+      }
     }
   })
 
@@ -837,9 +902,13 @@ interface CoreStartAttempt {
   readiness: Promise<Promise<void>[]>
 }
 
-async function startCoreInternal(detached = false, skipStop = false): Promise<CoreStartAttempt> {
+async function startCoreInternal(
+  detached = false,
+  skipStop = false,
+  forceStop = false
+): Promise<CoreStartAttempt> {
   ensureNotShuttingDown()
-  const config = await prepareCore(detached, skipStop)
+  const config = await prepareCore(detached, skipStop, forceStop)
   ensureNotShuttingDown()
   const hookWaiter = config.startupHook ? createCoreHookWaiter(config.startupHook) : undefined
   const proc = spawnCoreProcess(config)
@@ -1037,10 +1106,7 @@ async function ensureCoreProcessExited(proc: ChildProcess | null): Promise<void>
 }
 
 async function restartCoreOnce(forceStop: boolean): Promise<void> {
-  const startAttempt = await runCoreOperation(async () => {
-    await stopCoreInternal(forceStop)
-    return startCoreInternal(false, true)
-  })
+  const startAttempt = await runCoreOperation(() => startCoreInternal(false, false, forceStop))
   await startAttempt.readiness
 }
 

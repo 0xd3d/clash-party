@@ -59,14 +59,13 @@ function getBindingName() {
 }
 
 function getResourcesPath() {
-  // 开发环境：优先使用 process.cwd()
+  // Packaged resources are authoritative even when launched from a source checkout.
+  if (process.resourcesPath && existsSync(join(process.resourcesPath, 'sidecar'))) {
+    return process.resourcesPath
+  }
   const cwd = process.cwd()
   if (existsSync(join(cwd, 'extra', 'sidecar'))) {
     return cwd
-  }
-  // Electron 打包后的路径
-  if (process.resourcesPath && existsSync(join(process.resourcesPath, 'sidecar'))) {
-    return process.resourcesPath
   }
   // 备选：使用 app.getAppPath() (Electron 特有)
   try {

@@ -193,7 +193,18 @@ export function auditPrivacyConfig(
     'dnsHijackTcp',
     hijack.some((entry) => /^tcp:\/\/(any|0\.0\.0\.0):53$/.test(entry)) ? 'pass' : 'warning'
   )
-  if (platform === 'win32') add('windowsRouting', 'info')
+  if (platform === 'win32') {
+    add('windowsRouting', 'info')
+    const mode = tun?.['dns-mode'] || (tun?.['auto-route'] ? 'hijack' : 'disabled')
+    add(
+      'windowsDnsMode',
+      mode === 'disabled'
+        ? 'error'
+        : mode === 'hijack' && tun?.['auto-route'] === true && tun?.['strict-route'] === true
+          ? 'pass'
+          : 'warning'
+    )
+  }
   if (platform === 'darwin') {
     add('macSystemDNS', appConfig?.autoSetDNS === true ? 'info' : 'warning')
   }

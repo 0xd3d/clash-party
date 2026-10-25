@@ -64,17 +64,50 @@ describe('cleanupWindowsNamedPipes', () => {
 
   it('only terminates bundled core executables', async () => {
     mockExecFile([
-      { Id: 1002, Path: 'C:\\Program Files\\Clash Party\\resources\\sidecar\\mihomo.exe' },
-      { Id: 1003, Path: 'D:\\tools\\mihomo\\mihomo.exe' },
-      { Id: 1004, Path: 'c:\\program files\\clash party\\resources\\sidecar\\MIHOMO-SMART.EXE' },
-      { Id: 1006, Path: null }
+      {
+        ProcessId: 1002,
+        ParentProcessId: process.pid,
+        ExecutablePath: 'C:\\Program Files\\Clash Party\\resources\\sidecar\\mihomo.exe'
+      },
+      {
+        ProcessId: 1003,
+        ParentProcessId: process.pid,
+        ExecutablePath: 'D:\\tools\\mihomo\\mihomo.exe'
+      },
+      {
+        ProcessId: 1004,
+        ParentProcessId: process.pid,
+        ExecutablePath: 'c:\\program files\\clash party\\resources\\sidecar\\MIHOMO-SMART.EXE'
+      },
+      { ProcessId: 1006, ParentProcessId: process.pid, ExecutablePath: null }
     ])
 
     await cleanupWindowsNamedPipes()
 
-    expect(terminatedPids()).toEqual([1002, 1004, 1006])
+    expect(terminatedPids()).toEqual([1002, 1004])
     const powershellArgs = mocks.execFile.mock.calls.find(([file]) => file === 'powershell')?.[1]
-    expect(powershellArgs?.join(' ')).toContain('Get-Process -Id 1002,1003,1004,1006')
+    expect(powershellArgs?.join(' ')).toContain('Get-CimInstance Win32_Process')
+  })
+
+  it('does not terminate another instance using the same installed core', async () => {
+    mockExecFile([
+      {
+        ProcessId: 1002,
+        ParentProcessId: process.pid + 1,
+        ExecutablePath: 'C:\\Program Files\\Clash Party\\resources\\sidecar\\mihomo.exe'
+      }
+    ])
+    await cleanupWindowsNamedPipes()
+    expect(terminatedPids()).toEqual([])
+  })
+
+  it('does not terminate a process on malformed inspection output', async () => {
+    mockExecFile(null)
+    mocks.execFile.mockImplementation((file, _args, _options, callback) =>
+      callback(null, { stdout: file === 'tasklist' ? tasklistOutput : '{invalid', stderr: '' })
+    )
+    await cleanupWindowsNamedPipes()
+    expect(terminatedPids()).toEqual([])
   })
 
   it('skips process inspection when no core executable is running', async () => {
@@ -89,11 +122,11 @@ describe('cleanupWindowsNamedPipes', () => {
     expect(terminatedPids()).toEqual([])
   })
 
-  it('falls back to exact executable names when paths cannot be inspected', async () => {
+  it('leaves all unknown processes running when path inspection fails', async () => {
     mockExecFile(null, new Error('powershell unavailable'))
 
     await cleanupWindowsNamedPipes()
 
-    expect(terminatedPids()).toEqual([1002, 1003, 1004, 1006])
+    expect(terminatedPids()).toEqual([])
   })
 })

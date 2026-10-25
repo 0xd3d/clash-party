@@ -444,6 +444,7 @@ interface IMihomoTunConfig {
   'auto-redirect'?: boolean
   'auto-detect-interface'?: boolean
   'dns-hijack'?: string[]
+  'dns-mode'?: 'disabled' | 'native' | 'hijack' | ''
   device?: string
   mtu?: number
   'strict-route'?: boolean

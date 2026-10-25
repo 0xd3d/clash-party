@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getAppConfig: vi.fn(),
   getAppliedCoreConfig: vi.fn(),
   getCurrentCorePID: vi.fn(),
+  getAppliedCoreRevision: vi.fn(),
   get: vi.fn(),
   auditPrivacyConfig: vi.fn(),
   app: { isPackaged: false, getAppPath: () => '/mock/repository' }
@@ -19,7 +20,8 @@ vi.mock('electron', () => ({ app: mocks.app, dialog: { showOpenDialog: mocks.sho
 vi.mock('../config', () => ({ getAppConfig: mocks.getAppConfig }))
 vi.mock('../core/manager', () => ({
   getAppliedCoreConfig: mocks.getAppliedCoreConfig,
-  getCurrentCorePID: mocks.getCurrentCorePID
+  getCurrentCorePID: mocks.getCurrentCorePID,
+  getAppliedCoreRevision: mocks.getAppliedCoreRevision
 }))
 vi.mock('../core/mihomoApi', () => ({ getAxios: async () => ({ get: mocks.get }) }))
 vi.mock('../../shared/privacyAudit', () => ({ auditPrivacyConfig: mocks.auditPrivacyConfig }))
@@ -39,6 +41,7 @@ beforeEach(() => {
   })
   mocks.app.isPackaged = false
   mocks.getCurrentCorePID.mockReturnValue(1234)
+  mocks.getAppliedCoreRevision.mockReturnValue(1)
   mocks.getAppConfig.mockResolvedValue({ autoSetDNS: true })
   mocks.getAppliedCoreConfig.mockReturnValue({
     dns: { nameserver: ['https://dns.example.test#Proxy'] }
@@ -76,6 +79,12 @@ describe('privacy inspection boundary', () => {
 
   it('rejects a report spanning a core restart', async () => {
     mocks.getCurrentCorePID.mockReturnValueOnce(1234).mockReturnValue(5678)
+    expect((await inspectPrivacyProtection()).source).toBe('unavailable')
+    expect(mocks.auditPrivacyConfig).not.toHaveBeenCalled()
+  })
+
+  it('rejects a report spanning a hot reload with the same core PID', async () => {
+    mocks.getAppliedCoreRevision.mockReturnValueOnce(1).mockReturnValue(2)
     expect((await inspectPrivacyProtection()).source).toBe('unavailable')
     expect(mocks.auditPrivacyConfig).not.toHaveBeenCalled()
   })

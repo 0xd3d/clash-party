@@ -41,3 +41,15 @@ Use [the self-build instructions](self-build.md) for modern Windows/macOS target
 The self-build workflow produces artifacts only. It does not publish a Release, install a package, change the running application, or validate real TUN/DNS/browser behavior. Unsigned/ad-hoc packages and actual installation remain separate from source build checks.
 
 Official references: [Mihomo TUN](https://wiki.metacubex.one/en/config/inbound/tun/), [Chrome privacy API](https://developer.chrome.com/docs/extensions/reference/api/privacy), [Electron WebContents](https://www.electronjs.org/docs/latest/api/web-contents#contentssetwebrtciphandlingpolicypolicy), [RFC 8828](https://www.rfc-editor.org/rfc/rfc8828.html).
+
+## Windows and macOS verification boundaries
+
+Both platforms share the core's routing policy, UDP/TCP 53 hijack settings, encrypted upstream definitions and optional Chromium WebRTC tool. Windows uses the core's native DNS/WFP implementation; macOS uses per-interface loopback DNS takeover. macOS networksetup/helper code never executes on Windows.
+
+On current Mihomo, Windows with auto-route defaults an unspecified DNS mode to hijack. The inspector separately flags explicit disabled/native mode and missing strict-route/auto-route; port rules alone are not proof of other adapters being intercepted. Existing saved settings are preserved. Windows TUN startup requires administrator rights before stopping a working core or spawning a new one. Missing privileges no longer silently persist tun.enable=false. System proxy activation waits for a live, owned core and the requested TUN state, covering initial mode selection and retries. This is not an operating-system-wide kill switch.
+
+An external app that hardcodes a LAN DNS server can bypass the normal TUN route on macOS. A successful browser leak test does not disprove that route. The optional [administrator session guard](../integrations/macos-dns-guard/README.md) is a separate advanced layer with an explicit lifetime; it is never represented as automatically active. It is included only as a macOS resource, and requires deliberate administrator execution.
+
+Privacy inspection now checks the applied configuration revision as well as process identity, rejecting a report that spans an in-place hot reload. Windows startup cleanup never terminates an unknown-path process based only on its name. Packaged native modules always prefer their own resources over a source checkout in the working directory.
+
+See [network validation](network-validation.md) for independent tests and proof limits.

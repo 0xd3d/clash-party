@@ -985,5 +985,8 @@
   "privacy.finding.udpProxySupport.info": "A UDP proxy rule does not verify node UDP support or the selected group member. Verify behavior in a browser test.",
   "privacy.finding.udpGroupSelection.warning": "The UDP target group can reach DIRECT. Its current selection needs review.",
   "privacy.finding.udpRuleOrdering.warning": "Earlier DIRECT rules may match public UDP before the blanket rule. Review their order and scope.",
-  "privacy.finding.udpComplexRules.warning": "Earlier rule sets, sub-rules or logical rules need manual review. Static inspection cannot resolve their full UDP behavior."
+  "privacy.finding.udpComplexRules.warning": "Earlier rule sets, sub-rules or logical rules need manual review. Static inspection cannot resolve their full UDP behavior.",
+  "privacy.finding.windowsDnsMode.pass": "Windows effective DNS interception is configured with auto-route and strict-route. Adapter/WFP state still needs native verification.",
+  "privacy.finding.windowsDnsMode.warning": "Windows DNS interception is incomplete: check dns-mode, auto-route and strict-route.",
+  "privacy.finding.windowsDnsMode.error": "Windows system DNS interception is disabled. Port-53 rules alone do not protect other adapters."
 }

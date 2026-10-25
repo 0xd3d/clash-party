@@ -985,5 +985,8 @@
   "privacy.finding.udpProxySupport.info": "UDP 代理規則不能驗證節點的 UDP 支援或目前群組成員選擇，請透過瀏覽器實測。",
   "privacy.finding.udpGroupSelection.warning": "UDP 目標群組可選擇到 DIRECT，請檢查目前選擇。",
   "privacy.finding.udpRuleOrdering.warning": "較早的 DIRECT 規則可能先匹配公網 UDP，請檢查規則順序和範圍。",
-  "privacy.finding.udpComplexRules.warning": "較早存在規則集、子規則或邏輯規則，靜態檢查無法完整判斷其 UDP 行為，需手動檢查。"
+  "privacy.finding.udpComplexRules.warning": "較早存在規則集、子規則或邏輯規則，靜態檢查無法完整判斷其 UDP 行為，需手動檢查。",
+  "privacy.finding.windowsDnsMode.pass": "Windows 已設定自動路由、嚴格路由和有效 DNS 攔截；實際網卡及 WFP 狀態仍需原生驗證。",
+  "privacy.finding.windowsDnsMode.warning": "Windows DNS 攔截設定不完整，請檢查 dns-mode、自動路由和嚴格路由。",
+  "privacy.finding.windowsDnsMode.error": "Windows 系統 DNS 攔截已停用；僅有 53 連接埠規則無法保護其他網卡。"
 }

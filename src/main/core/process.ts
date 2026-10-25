@@ -63,14 +63,14 @@ async function findWindowsCorePids(timeout: number): Promise<number[]> {
       [
         '-NoProfile',
         '-Command',
-        `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Process -Id ${candidates.join(',')} -ErrorAction SilentlyContinue | Select-Object Id,Path | ConvertTo-Json -Compress`
+        `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance Win32_Process -Filter '${candidates.map((pid) => `ProcessId=${pid}`).join(' OR ')}' -ErrorAction Stop | Select-Object ProcessId,ExecutablePath,ParentProcessId | ConvertTo-Json -Compress`
       ],
       { windowsHide: true, timeout: timeout + 2500, maxBuffer: 4 * 1024 * 1024 }
     )
     processInfo = result.stdout.trim()
   } catch (error) {
     managerLogger.warn('Failed to inspect core process paths:', error)
-    return candidates
+    return []
   }
   if (!processInfo) return []
 
@@ -79,7 +79,7 @@ async function findWindowsCorePids(timeout: number): Promise<number[]> {
     parsed = JSON.parse(processInfo)
   } catch (error) {
     managerLogger.warn('Failed to parse core process paths:', error)
-    return candidates
+    return []
   }
 
   const corePaths = windowsCoreExecutables.map((name) =>
@@ -87,11 +87,17 @@ async function findWindowsCorePids(timeout: number): Promise<number[]> {
   )
   const pids: number[] = []
   for (const proc of Array.isArray(parsed) ? parsed : [parsed]) {
-    const { Id: pid, Path: exePath } = (proc ?? {}) as { Id?: unknown; Path?: unknown }
-    if (typeof pid !== 'number' || !candidates.includes(pid)) continue
-    if (typeof exePath !== 'string' || !exePath) {
-      pids.push(pid)
-    } else if (corePaths.includes(path.win32.resolve(exePath).toLowerCase())) {
+    const {
+      ProcessId: pid,
+      ExecutablePath: exePath,
+      ParentProcessId: parentPid
+    } = (proc ?? {}) as { ProcessId?: unknown; ExecutablePath?: unknown; ParentProcessId?: unknown }
+    if (typeof pid !== 'number' || !candidates.includes(pid) || parentPid !== process.pid) continue
+    // An inaccessible path is not proof that this application owns the process.
+    if (
+      typeof exePath === 'string' &&
+      corePaths.includes(path.win32.resolve(exePath).toLowerCase())
+    ) {
       pids.push(pid)
     }
   }

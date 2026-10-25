@@ -2,7 +2,7 @@ import { access, cp, mkdir } from 'fs/promises'
 import path from 'path'
 import { app, dialog, type WebContents } from 'electron'
 import { getAppConfig } from '../config'
-import { getAppliedCoreConfig, getCurrentCorePID } from '../core/manager'
+import { getAppliedCoreConfig, getAppliedCoreRevision, getCurrentCorePID } from '../core/manager'
 import { getAxios } from '../core/mihomoApi'
 import { auditPrivacyConfig, type PrivacyProtectionReport } from '../../shared/privacyAudit'
 
@@ -21,11 +21,13 @@ export async function inspectPrivacyProtection(): Promise<PrivacyProtectionRepor
   })
   const corePid = getCurrentCorePID()
   const snapshot = getAppliedCoreConfig()
-  if (!snapshot || corePid === undefined) return unavailable()
+  const revision = getAppliedCoreRevision()
+  if (!snapshot || corePid === undefined || revision === undefined) return unavailable()
   try {
     const [config, instance] = await Promise.all([getAppConfig(), getAxios()])
     const live = await instance.get<never, IMihomoConfig>('/configs')
-    if (getCurrentCorePID() !== corePid || !getAppliedCoreConfig()) return unavailable()
+    if (getCurrentCorePID() !== corePid || getAppliedCoreRevision() !== revision)
+      return unavailable()
     const applied: Partial<IMihomoConfig> = {
       ...snapshot,
       tun: live.tun,

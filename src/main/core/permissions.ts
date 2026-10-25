@@ -345,6 +345,13 @@ export async function showErrorDialog(title: string, message: string): Promise<v
   })
 }
 
+export async function requireWindowsTunPrivileges(runtime: Partial<IMihomoConfig>): Promise<void> {
+  if (process.platform !== 'win32' || runtime.tun?.enable !== true) return
+  if (!(await checkAdminPrivileges())) {
+    throw new Error(i18next.t('tun.error.tunPermissionDenied'))
+  }
+}
+
 export async function validateTunPermissionsOnStartup(
   _restartCore: () => Promise<void>
 ): Promise<void> {
@@ -355,6 +362,10 @@ export async function validateTunPermissionsOnStartup(
   }
 
   const hasPermissions = await checkMihomoCorePermissions()
+
+  if (!hasPermissions && process.platform === 'win32') {
+    throw new Error(i18next.t('tun.error.tunPermissionDenied'))
+  }
 
   if (!hasPermissions) {
     // 启动时没有权限，静默禁用 TUN，不弹窗打扰用户

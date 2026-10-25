@@ -50,7 +50,7 @@ describe('self-build workflow safety', () => {
   it('prepares target resources on the corresponding OS and disables publication in build scripts', () => {
     const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
     for (const [name, job] of Object.entries(workflow.jobs) as [string, BuildJob][]) {
-      expect(job['runs-on']).toBe(name === 'windows' ? 'windows-latest' : 'macos-latest')
+      expect(job['runs-on']).toBe('${{ matrix.runner }}')
       expect(job.env.npm_config_arch).toBe('${{ matrix.arch }}')
       expect(job.steps.some((step) => step.run === 'pnpm install --frozen-lockfile')).toBe(true)
       expect(pkg.scripts[name === 'windows' ? 'build:win' : 'build:mac']).toContain(
