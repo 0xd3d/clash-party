@@ -10,7 +10,7 @@ Requirements: macOS, Xcode with iOS SDKs, Go 1.20.14 (the legacy mobile core is 
 ./scripts/update-georesources.sh
 ./scripts/build-mihomo-mobile.sh
 xcodebuild -project ClashParty.xcodeproj -scheme ClashParty -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath /tmp/clash-party-ios-device CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
-xcodebuild -project ClashParty.xcodeproj -scheme ClashParty -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/clash-party-ios-simulator CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+xcodebuild -project ClashParty.xcodeproj -scheme ClashParty -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/clash-party-ios-simulator ARCHS=arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
 ```
 
 `MIHOMO_CORE_ROOT` can override the source location. The script builds ARM64 device and simulator slices into ignored `Vendor/MihomoMobile.xcframework`; the simulator slice is for UI/debugging and has no usable TUN. See the core's `SOURCE.md` and `LICENSE` for provenance.

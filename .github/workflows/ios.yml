@@ -53,7 +53,7 @@ jobs:
         working-directory: apps/ios
         run: |
           xcodebuild -project ClashParty.xcodeproj -scheme ClashParty -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/ios-device" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
-          xcodebuild -project ClashParty.xcodeproj -scheme ClashParty -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/ios-simulator" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          xcodebuild -project ClashParty.xcodeproj -scheme ClashParty -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/ios-simulator" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
       - name: Archive unsigned applications and signing boundary
         run: |
           mkdir -p ios-artifacts
