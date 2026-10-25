@@ -1,4 +1,4 @@
-import { Button, Input, Switch, Tab, Tabs } from '@heroui/react'
+import { Button, Divider, Input, Switch, Tab, Tabs } from '@heroui/react'
 import BasePage from '@renderer/components/base/base-page'
 import { showErrorSync } from '@renderer/utils/error-display'
 import SettingCard from '@renderer/components/base/base-setting-card'
@@ -6,8 +6,8 @@ import SettingItem from '@renderer/components/base/base-setting-item'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import { grantTunPermissions, restartCore, setupFirewall } from '@renderer/utils/ipc'
 import { platform } from '@renderer/utils/init'
-import { ipCIDRValidator } from '@renderer/utils/validate'
-import React, { Key, useState } from 'react'
+import { ipCIDRValidator, isIPv4 } from '@renderer/utils/validate'
+import React, { Key, useEffect, useState } from 'react'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { MdDeleteForever } from 'react-icons/md'
 import { useTranslation } from 'react-i18next'
@@ -17,7 +17,29 @@ const Tun: React.FC = () => {
   const { t } = useTranslation()
   const { controledMihomoConfig, patchControledMihomoConfig } = useControledMihomoConfig()
   const { appConfig, patchAppConfig } = useAppConfig()
-  const { autoSetDNS = true } = appConfig || {}
+  const {
+    autoSetDNS = true,
+    systemDNSAddress = '127.0.0.1',
+    systemDNSRestoreMode = 'original'
+  } = appConfig || {}
+  const [systemDNSAddressInput, setSystemDNSAddressInput] = useState(systemDNSAddress)
+  const [savingSystemDNSAddress, setSavingSystemDNSAddress] = useState(false)
+  useEffect(() => {
+    setSystemDNSAddressInput(systemDNSAddress)
+  }, [systemDNSAddress])
+  const normalizedSystemDNSAddress = systemDNSAddressInput.trim()
+  const hasInvalidSystemDNSAddress =
+    normalizedSystemDNSAddress !== '::1' &&
+    !(isIPv4(normalizedSystemDNSAddress).ok && normalizedSystemDNSAddress.startsWith('127.'))
+  const saveSystemDNSAddress = async (): Promise<void> => {
+    if (hasInvalidSystemDNSAddress || normalizedSystemDNSAddress === systemDNSAddress) return
+    setSavingSystemDNSAddress(true)
+    try {
+      await patchAppConfig({ systemDNSAddress: normalizedSystemDNSAddress })
+    } finally {
+      setSavingSystemDNSAddress(false)
+    }
+  }
   const { tun } = controledMihomoConfig || {}
   const [loading, setLoading] = useState(false)
   const {
@@ -178,15 +200,70 @@ const Tun: React.FC = () => {
             </SettingItem>
           )}
           {platform === 'darwin' && (
-            <SettingItem title={t('tun.dns.autoSet')} divider>
-              <Switch
-                size="sm"
-                isSelected={autoSetDNS}
-                onValueChange={async (v) => {
-                  await patchAppConfig({ autoSetDNS: v })
-                }}
-              />
-            </SettingItem>
+            <>
+              <SettingItem title={t('tun.dns.autoSet')} divider>
+                <Switch
+                  size="sm"
+                  isSelected={autoSetDNS}
+                  onValueChange={async (v) => {
+                    await patchAppConfig({ autoSetDNS: v })
+                  }}
+                />
+              </SettingItem>
+              {autoSetDNS && (
+                <>
+                  <SettingItem title={t('tun.dns.address')}>
+                    <div className="flex gap-2">
+                      {normalizedSystemDNSAddress !== systemDNSAddress && (
+                        <Button
+                          size="sm"
+                          color="primary"
+                          isDisabled={hasInvalidSystemDNSAddress}
+                          isLoading={savingSystemDNSAddress}
+                          onPress={saveSystemDNSAddress}
+                        >
+                          {t('common.save')}
+                        </Button>
+                      )}
+                      <Input
+                        size="sm"
+                        className="w-48"
+                        aria-label={t('tun.dns.address')}
+                        placeholder="127.0.0.1"
+                        value={systemDNSAddressInput}
+                        isInvalid={hasInvalidSystemDNSAddress}
+                        onValueChange={setSystemDNSAddressInput}
+                        onBlur={() => setSystemDNSAddressInput(normalizedSystemDNSAddress)}
+                      />
+                    </div>
+                  </SettingItem>
+                  {hasInvalidSystemDNSAddress && (
+                    <div className="mt-1 text-right text-xs text-danger">
+                      {t('tun.dns.addressInvalid')}
+                    </div>
+                  )}
+                  <div className="mt-2 text-xs text-default-500">{t('tun.dns.readyHint')}</div>
+                  <Divider className="my-2" />
+                  <SettingItem title={t('tun.dns.restoreMode')}>
+                    <Tabs
+                      size="sm"
+                      color="primary"
+                      selectedKey={systemDNSRestoreMode}
+                      onSelectionChange={async (key: Key) => {
+                        if (key === 'original' || key === 'automatic') {
+                          await patchAppConfig({ systemDNSRestoreMode: key })
+                        }
+                      }}
+                    >
+                      <Tab key="original" title={t('tun.dns.restoreOriginal')} />
+                      <Tab key="automatic" title={t('tun.dns.restoreAutomatic')} />
+                    </Tabs>
+                  </SettingItem>
+                  <div className="mt-2 text-xs text-default-500">{t('tun.dns.restoreHint')}</div>
+                  <Divider className="my-2" />
+                </>
+              )}
+            </>
           )}
 
           <SettingItem title={t('tun.stack.title')} divider>

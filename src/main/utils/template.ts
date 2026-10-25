@@ -85,6 +85,8 @@ export const defaultConfig: IAppConfig = {
   enableTproxyPort: false,
   testProfileOnStart: true,
   coreStartupMode: 'log',
+  systemDNSAddress: '127.0.0.1',
+  systemDNSRestoreMode: 'original',
   useHotReloadProfile: false,
   hotReloadProfileAutoCloseConnection: false
 }

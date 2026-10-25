@@ -12,7 +12,15 @@ import { createLogger } from '../utils/logger'
 import { mihomoWorkConfigPath } from '../utils/dirs'
 import { generateProfile, getRuntimeConfig } from './factory'
 import { syncControlDnsAfterApply } from './dnsOverrideGuard'
-import { getMihomoIpcPath, hasCoreProcess, restartCore } from './manager'
+import {
+  getMihomoIpcPath,
+  hasCoreProcess,
+  restartCore,
+  getCurrentCorePID,
+  prepareSystemDNSReload,
+  commitSystemDNSReload
+} from './manager'
+import { patchSystemDNSRuntime } from './dns'
 
 const mihomoApiLogger = createLogger('MihomoApi')
 
@@ -210,7 +218,17 @@ export async function mihomoVersion(): Promise<IMihomoVersion> {
 export const patchMihomoConfig = async (patch: Partial<IMihomoConfig>): Promise<void> => {
   const patchConfig = async (): Promise<void> => {
     const instance = await getAxios()
+    const corePid = getCurrentCorePID()
     await instance.patch('/configs', patch)
+    if (patch.tun) {
+      try {
+        const applied = await instance.get<never, IMihomoConfig>('/configs')
+        patchSystemDNSRuntime({ tun: applied.tun }, corePid)
+      } catch (error) {
+        // Keep the last confirmed DNS state when readback fails.
+        mihomoApiLogger.warn('Could not confirm applied TUN state for system DNS', error)
+      }
+    }
   }
 
   // Configuration patches can also be the first recovery action after startup
@@ -451,12 +469,14 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
   // Smart 覆写脚本由应用配置生成，必须先同步再生成配置，
   // 否则界面上改动的 Smart 选项会沿用旧脚本，要等到下次重启内核才生效
   await manageSmartOverride()
-  const { profileId: current, dnsGuard } = await generateProfile()
+  const { profileId: current, dnsGuard, runtimeConfig: appliedCandidate } = await generateProfile()
   const appConfig = await getAppConfig()
   const diffWorkDir = appConfig.operationMode === 'simple' ? false : appConfig.diffWorkDir === true
   const configPath = diffWorkDir ? mihomoWorkConfigPath(current) : mihomoWorkConfigPath('work')
   mihomoApiLogger.info(`hot reload config path: ${configPath}`)
   const instance = await getAxios()
+  const corePid = getCurrentCorePID()
+  prepareSystemDNSReload(appliedCandidate, corePid)
   try {
     await instance.put('/configs?force=true', { path: configPath })
   } catch (error) {
@@ -465,6 +485,7 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
     await restartCore()
     return
   }
+  commitSystemDNSReload(appliedCandidate, corePid)
   mihomoApiLogger.info('hot reload config completed')
   try {
     await syncControlDnsAfterApply(dnsGuard)

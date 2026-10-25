@@ -354,6 +354,8 @@ interface IAppConfig {
   customSubStoreUrl?: string
   diffWorkDir?: boolean
   autoSetDNS?: boolean
+  systemDNSAddress?: string
+  systemDNSRestoreMode?: 'original' | 'automatic'
   originDNS?: string
   useWindowFrame: boolean
   proxyInTray: boolean

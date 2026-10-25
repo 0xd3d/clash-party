@@ -61,7 +61,13 @@ import {
   waitForCoreReady,
   verifyProcessOwner
 } from './process'
-import { setPublicDNS, recoverDNS } from './dns'
+import {
+  startSystemDNSMonitoring,
+  stopSystemDNSMonitoring,
+  recoverDNS,
+  updateSystemDNSRuntime
+} from './dns'
+import { SystemDNSListenerProof } from './systemDNSRuntime'
 
 // 重新导出权限相关函数
 export {
@@ -100,6 +106,11 @@ interface CoreProcessWatchdog {
 }
 
 let child: ChildProcess | null = null
+const dnsIneligibleProcesses = new WeakSet<ChildProcess>()
+const coreDNSStates = new WeakMap<
+  ChildProcess,
+  { proof: SystemDNSListenerProof; runtime: IMihomoConfig }
+>()
 let coreProcessWatchdog: CoreProcessWatchdog | null = null
 let isRestarting = false
 let coreOperationPhase: 'initializing' | 'ready' | 'blocked' | 'shutting-down' = 'ready'
@@ -129,6 +140,30 @@ interface CoreHookWaiter {
 
 export function hasCoreProcess(): boolean {
   return Boolean(child && !child.killed && child.exitCode === null && child.signalCode === null)
+}
+
+export function getCurrentCorePID(): number | undefined {
+  return child?.pid
+}
+
+export function prepareSystemDNSReload(runtime: IMihomoConfig, corePid: number | undefined): void {
+  if (!child || child.pid !== corePid) return
+  const state = coreDNSStates.get(child)
+  if (
+    state &&
+    (state.runtime.dns?.listen !== runtime.dns?.listen ||
+      state.runtime.dns?.enable !== runtime.dns?.enable)
+  ) {
+    // A changed listener needs fresh binding evidence from this core's stdout.
+    state.proof.clear()
+  }
+}
+
+export function commitSystemDNSReload(runtime: IMihomoConfig, corePid: number | undefined): void {
+  if (!child || child.pid !== corePid || dnsIneligibleProcesses.has(child)) return
+  const state = coreDNSStates.get(child)
+  if (state) state.runtime = structuredClone(runtime)
+  updateSystemDNSRuntime(runtime, corePid)
 }
 
 export function beginCoreInitialization(): void {
@@ -431,6 +466,7 @@ interface CoreConfig {
   startupMode: CoreStartupMode
   startupHook?: CoreStartupHook
   dnsGuard: DnsOverrideGuardResult
+  runtimeConfig: IMihomoConfig
 }
 
 function buildCoreEnv(safePath?: string, ageSecretKey?: string): NodeJS.ProcessEnv {
@@ -451,6 +487,13 @@ function buildCoreEnv(safePath?: string, ageSecretKey?: string): NodeJS.ProcessE
 // 准备核心配置
 async function prepareCore(detached: boolean, skipStop = false): Promise<CoreConfig> {
   await ensureRuntimeFiles()
+  if (!hasCoreProcess() && !skipStop) {
+    try {
+      await recoverDNS({ force: true, timeout: 750 })
+    } catch (error) {
+      managerLogger.warn('Previous system DNS recovery remains pending', error)
+    }
+  }
 
   const [appConfig, mihomoConfig] = await Promise.all([getAppConfig(), getControledMihomoConfig()])
 
@@ -473,7 +516,7 @@ async function prepareCore(detached: boolean, skipStop = false): Promise<CoreCon
   await manageSmartOverride()
 
   // generateProfile 返回实际使用的 current
-  const { profileId: current, dnsGuard } = await generateProfile()
+  const { profileId: current, dnsGuard, runtimeConfig } = await generateProfile()
   if (appConfig.operationMode === 'simple') {
     const simpleRuntime = await getRuntimeConfig()
     logLevel = simpleRuntime['log-level'] || 'info'
@@ -487,17 +530,6 @@ async function prepareCore(detached: boolean, skipStop = false): Promise<CoreCon
     await stopCoreInternal()
   }
   await cleanupSocketFile()
-
-  // 设置 DNS
-  if (tun?.enable && autoSetDNS) {
-    ensureNotShuttingDown()
-    try {
-      await setPublicDNS()
-    } catch (error) {
-      managerLogger.error('set dns failed', error)
-    }
-    ensureNotShuttingDown()
-  }
 
   // 获取动态 IPC 路径
   const ipcPath = getMihomoIpcPath()
@@ -524,7 +556,8 @@ async function prepareCore(detached: boolean, skipStop = false): Promise<CoreCon
     detached,
     startupMode,
     startupHook,
-    dnsGuard
+    dnsGuard,
+    runtimeConfig
   }
 }
 
@@ -582,6 +615,8 @@ function setupCoreListeners(
   reject: (reason: unknown) => void
 ): void {
   const { logLevel, startupMode } = config
+  const dnsProof = new SystemDNSListenerProof()
+  coreDNSStates.set(proc, { proof: dnsProof, runtime: structuredClone(config.runtimeConfig) })
   let startupSettled = false
   const startupTimer =
     startupMode === 'log'
@@ -644,6 +679,7 @@ function setupCoreListeners(
     stopCoreProcessWatchdog(proc.pid)
 
     if (child === proc) {
+      stopSystemDNSMonitoring()
       child = null
     }
 
@@ -677,6 +713,7 @@ function setupCoreListeners(
 
   proc.stdout?.on('data', async (data) => {
     const str = data.toString()
+    dnsProof.record(str)
 
     // TUN 权限错误
     if (str.includes('configure tun interface: operation not permitted')) {
@@ -815,6 +852,19 @@ async function startCoreInternal(detached = false, skipStop = false): Promise<Co
   const readiness = new Promise<Promise<void>[]>((resolve, reject) => {
     setupCoreListeners(proc, config, hookWaiter, resolve, reject)
   }).then(async (value) => {
+    const corePid = proc.pid
+    if (corePid !== undefined) {
+      await startSystemDNSMonitoring(
+        () =>
+          child === proc &&
+          !dnsIneligibleProcesses.has(proc) &&
+          coreOperationPhase !== 'shutting-down' &&
+          hasCoreProcess(),
+        config.runtimeConfig,
+        corePid,
+        (address) => coreDNSStates.get(proc)?.proof.isReady(address) === true
+      )
+    }
     // API 就绪后同步本次 DNS 保护结果。
     try {
       await syncControlDnsAfterApply(config.dnsGuard)
@@ -864,6 +914,9 @@ export function startCoreForStartup(): Promise<Promise<void>[]> {
 }
 
 async function stopCoreInternal(force = false, cancelStartup = true): Promise<void> {
+  // A delayed readiness continuation must not create a new DNS session after this barrier.
+  if (child) dnsIneligibleProcesses.add(child)
+  stopSystemDNSMonitoring()
   if (!force && process.platform === 'darwin') {
     try {
       await recoverDNS()
@@ -890,6 +943,8 @@ function stopCoreProcessAndStreams(
   cancelStartup = true,
   keepWatchdog = false
 ): ChildProcess | null {
+  if (child) dnsIneligibleProcesses.add(child)
+  stopSystemDNSMonitoring()
   if (cancelStartup) {
     cancelActiveStartup?.(new Error('Core startup was cancelled by a stop request'))
     cancelActiveStartup = null
@@ -932,7 +987,7 @@ export async function stopCore(force = false): Promise<void> {
   return runCoreOperation(() => stopCoreInternal(force))
 }
 
-// 退出不排队等待启动/重启完成：先同步终止子进程，再做有界清理。
+// 退出不等待启动/重启队列：先失效 DNS 接管任务并恢复系统 DNS，再终止子进程。
 // SIGINT 之后必须确认核心真的退出：core.pid 只在轻量模式写入，普通运行时
 // stopPidFileCore 是空操作，没有任何 SIGKILL 兜底。核心若在退出预算内没走完
 // （例如 TUN 拆除慢），主进程 app.exit() 后它就成了孤儿进程。
@@ -940,9 +995,14 @@ export async function stopCore(force = false): Promise<void> {
 export async function stopCoreForExit(): Promise<void> {
   coreOperationPhase = 'shutting-down'
   cancelAutomaticRestart()
+  stopSystemDNSMonitoring()
+  try {
+    await recoverDNS({ force: true, timeout: 750 })
+  } catch (error) {
+    managerLogger.error('System DNS recovery incomplete; journal retained for next launch', error)
+  }
   const stoppedChild = stopCoreProcessAndStreams(true, true)
   await Promise.allSettled([
-    recoverDNS({ force: true, timeout: 750 }),
     cleanupStoppedCoreResources(),
     // 确认退出后才撤 watchdog；确认失败时留着它，让它在主进程退出时补 kill -9。
     ensureCoreProcessExited(stoppedChild).then(() => stopCoreProcessWatchdog(stoppedChild?.pid))

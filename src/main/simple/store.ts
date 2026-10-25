@@ -4,6 +4,8 @@ import path from 'path'
 import { isDeepStrictEqual } from 'util'
 import { BrowserWindow } from 'electron'
 import { atomicWriteFile, WriteQueue } from '../utils/safeFile'
+import { getAppConfig } from '../config/app'
+import { prepareSystemDNSListener } from '../core/systemDNSRuntime'
 import { parse, stringify } from '../utils/yaml'
 import {
   simpleConfigPath,
@@ -101,6 +103,9 @@ export async function compileAndWriteSimple(
     effectiveShared
   )
   if (result.errors.length) return result
+  const runtime = parse(result.yaml) as IMihomoConfig
+  prepareSystemDNSListener(runtime, await getAppConfig())
+  result.yaml = stringify(runtime)
   await mkdir(mihomoWorkDir(), { recursive: true })
   await atomicWriteFile(simpleOutputPath(), result.yaml, { encoding: 'utf8' })
   await atomicWriteFile(mihomoWorkConfigPath('work'), result.yaml, { encoding: 'utf8' })
