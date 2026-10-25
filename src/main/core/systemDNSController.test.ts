@@ -472,7 +472,7 @@ describe('SystemDNSController', () => {
     state.setDNS(wifi, ['198.51.100.53'])
     state.deps.writeDNS.mockClear()
 
-    await state.controller.acquire(generation, target)
+    await expect(state.controller.acquire(generation, target)).rejects.toThrow('changed outside')
     await state.controller.restore()
 
     expect(state.deps.writeDNS).not.toHaveBeenCalled()

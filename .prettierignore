@@ -6,3 +6,6 @@ LICENSE.md
 tsconfig.json
 tsconfig.*.json
 .codex-review
+
+/apps/ios/
+/modules/mihomo-ios-core/

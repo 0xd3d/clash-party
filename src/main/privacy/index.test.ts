@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentCorePID: vi.fn(),
   getAppliedCoreRevision: vi.fn(),
   get: vi.fn(),
+  inspectGuard: vi.fn(),
   auditPrivacyConfig: vi.fn(),
   app: { isPackaged: false, getAppPath: () => '/mock/repository' }
 }))
@@ -23,6 +24,7 @@ vi.mock('../core/manager', () => ({
   getCurrentCorePID: mocks.getCurrentCorePID,
   getAppliedCoreRevision: mocks.getAppliedCoreRevision
 }))
+vi.mock('../core/macDNSGuard', () => ({ inspectMacDNSGuard: mocks.inspectGuard }))
 vi.mock('../core/mihomoApi', () => ({ getAxios: async () => ({ get: mocks.get }) }))
 vi.mock('../../shared/privacyAudit', () => ({ auditPrivacyConfig: mocks.auditPrivacyConfig }))
 
@@ -47,6 +49,7 @@ beforeEach(() => {
     dns: { nameserver: ['https://dns.example.test#Proxy'] }
   })
   mocks.get.mockResolvedValue({ tun: { enable: true }, ipv6: true, 'allow-lan': false })
+  mocks.inspectGuard.mockResolvedValue({ active: true, ownerUid: 501, corePid: 1234 })
   mocks.auditPrivacyConfig.mockReturnValue([{ id: 'scope', level: 'info' }])
   mocks.access.mockResolvedValue(undefined)
   mocks.mkdir.mockResolvedValue(undefined)

@@ -6,6 +6,9 @@ on:
     tags: ['v[0-9]*']
     paths-ignore:
       - '**/*.md'
+      - 'apps/ios/**'
+      - 'modules/mihomo-ios-core/**'
+      - '.github/workflows/ios.yml'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/workflows/issues.yml'
   workflow_dispatch:

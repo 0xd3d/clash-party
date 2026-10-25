@@ -1,0 +1,813 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 71;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000010000000000000000 /* ClashPartyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000000 /* ClashPartyApp.swift */; };
+		A10000020000000000000000 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000020000000000000000 /* ContentView.swift */; };
+		A10000030000000000000000 /* TunnelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000030000000000000000 /* TunnelManager.swift */; };
+		A10000040000000000000000 /* RuntimeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000040000000000000000 /* RuntimeModels.swift */; };
+		A10000050000000000000000 /* CompatibilityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000050000000000000000 /* CompatibilityModels.swift */; };
+		A10000060000000000000000 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000060000000000000000 /* SharedStore.swift */; };
+		A10000070000000000000000 /* CompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000070000000000000000 /* CompatibilityService.swift */; };
+		A10000080000000000000000 /* RuntimeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000080000000000000000 /* RuntimeBridge.swift */; };
+		A10000090000000000000000 /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000090000000000000000 /* PacketTunnelProvider.swift */; };
+		A10000100000000000000000 /* RuntimeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000040000000000000000 /* RuntimeModels.swift */; };
+		A10000110000000000000000 /* CompatibilityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000050000000000000000 /* CompatibilityModels.swift */; };
+		A10000120000000000000000 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000060000000000000000 /* SharedStore.swift */; };
+		A10000130000000000000000 /* CompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000070000000000000000 /* CompatibilityService.swift */; };
+		A10000140000000000000000 /* RuntimeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000080000000000000000 /* RuntimeBridge.swift */; };
+		A10000150000000000000000 /* RuntimeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000040000000000000000 /* RuntimeModels.swift */; };
+		A10000160000000000000000 /* CompatibilityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000050000000000000000 /* CompatibilityModels.swift */; };
+		A10000170000000000000000 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000060000000000000000 /* SharedStore.swift */; };
+		A10000180000000000000000 /* CompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000070000000000000000 /* CompatibilityService.swift */; };
+		A10000190000000000000000 /* RuntimeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000080000000000000000 /* RuntimeBridge.swift */; };
+		A10000200000000000000000 /* ClashPartyTunnel.appex in CopyFiles */ = {isa = PBXBuildFile; fileRef = A30000020000000000000000 /* ClashPartyTunnel.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A10000210000000000000000 /* ConsoleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000160000000000000000 /* ConsoleViewModel.swift */; };
+		A10000220000000000000000 /* MihomoCoreFFI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000170000000000000000 /* MihomoCoreFFI.swift */; };
+		A10000230000000000000000 /* MihomoCoreFFI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000170000000000000000 /* MihomoCoreFFI.swift */; };
+		A10000240000000000000000 /* MihomoCoreFFI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000170000000000000000 /* MihomoCoreFFI.swift */; };
+		A10000250000000000000000 /* MihomoControllerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000180000000000000000 /* MihomoControllerClient.swift */; };
+		A10000260000000000000000 /* MihomoControllerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000180000000000000000 /* MihomoControllerClient.swift */; };
+		A10000270000000000000000 /* MihomoControllerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000180000000000000000 /* MihomoControllerClient.swift */; };
+		A10000280000000000000000 /* MihomoRuntimeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000190000000000000000 /* MihomoRuntimeBridge.swift */; };
+		A10000290000000000000000 /* MihomoRuntimeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000190000000000000000 /* MihomoRuntimeBridge.swift */; };
+		A10000300000000000000000 /* MihomoRuntimeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000190000000000000000 /* MihomoRuntimeBridge.swift */; };
+		A10000310000000000000000 /* Vendor/MihomoMobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000200000000000000000 /* Vendor/MihomoMobile.xcframework */; };
+		A10000320000000000000000 /* Vendor/MihomoMobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000200000000000000000 /* Vendor/MihomoMobile.xcframework */; };
+		A10000330000000000000000 /* Vendor/MihomoMobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000200000000000000000 /* Vendor/MihomoMobile.xcframework */; };
+		A10000340000000000000000 /* MihomoPacketFlowBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000210000000000000000 /* MihomoPacketFlowBridge.swift */; };
+		A10000350000000000000000 /* MihomoPacketFlowBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000210000000000000000 /* MihomoPacketFlowBridge.swift */; };
+		A10000360000000000000000 /* MihomoPacketFlowBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000210000000000000000 /* MihomoPacketFlowBridge.swift */; };
+		A10000370000000000000000 /* MihomoPacketFlowBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A20000230000000000000000 /* MihomoPacketFlowBridge.m */; };
+		A10000380000000000000000 /* MihomoPacketFlowBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A20000230000000000000000 /* MihomoPacketFlowBridge.m */; };
+		A10000390000000000000000 /* MihomoPacketFlowBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A20000230000000000000000 /* MihomoPacketFlowBridge.m */; };
+		A10000400000000000000000 /* AppDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000240000000000000000 /* AppDesignSystem.swift */; };
+		A10000410000000000000000 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000250000000000000000 /* AppShellView.swift */; };
+		A10000420000000000000000 /* AppPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000260000000000000000 /* AppPages.swift */; };
+		A10000430000000000000000 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000270000000000000000 /* L10n.swift */; };
+		A10000440000000000000000 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000270000000000000000 /* L10n.swift */; };
+		A10000450000000000000000 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000270000000000000000 /* L10n.swift */; };
+		A10000460000000000000000 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A20000280000000000000000 /* Localizable.xcstrings */; };
+		A10000470000000000000000 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000290000000000000000 /* Assets.xcassets */; };
+		A10000530000000000000000 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A20000330000000000000000 /* LaunchScreen.storyboard */; };
+		A10000480000000000000000 /* GeoResourceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000300000000000000000 /* GeoResourceManager.swift */; };
+		A10000490000000000000000 /* GeoResourceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000300000000000000000 /* GeoResourceManager.swift */; };
+		A10000500000000000000000 /* GeoResourceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000300000000000000000 /* GeoResourceManager.swift */; };
+		A10000510000000000000000 /* GeoResources in Resources */ = {isa = PBXBuildFile; fileRef = A20000310000000000000000 /* GeoResources */; };
+		A10000520000000000000000 /* GeoResources in Resources */ = {isa = PBXBuildFile; fileRef = A20000320000000000000000 /* GeoResources */; };
+		A10000540000000000000000 /* ConsolePresentationDerivers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000340000000000000000 /* ConsolePresentationDerivers.swift */; };
+		A10000550000000000000000 /* ConsoleRuntimeIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000350000000000000000 /* ConsoleRuntimeIO.swift */; };
+		A10000560000000000000000 /* ConsoleProxySelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000360000000000000000 /* ConsoleProxySelection.swift */; };
+		A10000570000000000000000 /* ConsoleDiagnosticsWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000370000000000000000 /* ConsoleDiagnosticsWriter.swift */; };
+		A10000580000000000000000 /* ConsoleProxyDelayTesting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000380000000000000000 /* ConsoleProxyDelayTesting.swift */; };
+		A10000590000000000000000 /* ConsoleProfileLibraryCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000390000000000000000 /* ConsoleProfileLibraryCoordinator.swift */; };
+		A10000600000000000000000 /* RoutingPolicyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000400000000000000000 /* RoutingPolicyService.swift */; };
+		A10000610000000000000000 /* RoutingPolicyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000400000000000000000 /* RoutingPolicyService.swift */; };
+		A10000620000000000000000 /* RoutingPolicyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000400000000000000000 /* RoutingPolicyService.swift */; };
+		A10000630000000000000000 /* RuleResources in Resources */ = {isa = PBXBuildFile; fileRef = A20000410000000000000000 /* RuleResources */; };
+		A10000640000000000000000 /* RuleResources in Resources */ = {isa = PBXBuildFile; fileRef = A20000420000000000000000 /* RuleResources */; };
+		F1A200110000000000000000 /* EncryptedBootstrapResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100010000000000000000 /* EncryptedBootstrapResolver.swift */; };
+		F1A200120000000000000000 /* EncryptedBootstrapResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100010000000000000000 /* EncryptedBootstrapResolver.swift */; };
+		F1A200130000000000000000 /* EncryptedBootstrapResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100010000000000000000 /* EncryptedBootstrapResolver.swift */; };
+		F1A200210000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100020000000000000000 /* PacketTunnelIPv6Policy.swift */; };
+		F1A200220000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100020000000000000000 /* PacketTunnelIPv6Policy.swift */; };
+		F1A200230000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100020000000000000000 /* PacketTunnelIPv6Policy.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A80000010000000000000000 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A60000010000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A50000020000000000000000;
+			remoteInfo = ClashPartyTunnel;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A40000010000000000000000 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A10000200000000000000000 /* ClashPartyTunnel.appex in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A20000010000000000000000 /* ClashPartyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClashPartyApp.swift; sourceTree = "<group>"; };
+		A20000020000000000000000 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A20000030000000000000000 /* TunnelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunnelManager.swift; sourceTree = "<group>"; };
+		A20000040000000000000000 /* RuntimeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeModels.swift; sourceTree = "<group>"; };
+		A20000050000000000000000 /* CompatibilityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityModels.swift; sourceTree = "<group>"; };
+		A20000060000000000000000 /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
+		A20000070000000000000000 /* CompatibilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityService.swift; sourceTree = "<group>"; };
+		A20000080000000000000000 /* RuntimeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeBridge.swift; sourceTree = "<group>"; };
+		A20000090000000000000000 /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
+		A20000100000000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A20000110000000000000000 /* ClashParty.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClashParty.entitlements; sourceTree = "<group>"; };
+		A20000120000000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A20000130000000000000000 /* ClashPartyTunnel.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClashPartyTunnel.entitlements; sourceTree = "<group>"; };
+		A20000140000000000000000 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
+		A20000150000000000000000 /* docs/runtime-integration.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "docs/runtime-integration.md"; sourceTree = SOURCE_ROOT; };
+		A20000160000000000000000 /* ConsoleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsoleViewModel.swift; sourceTree = "<group>"; };
+		A20000170000000000000000 /* MihomoCoreFFI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MihomoCoreFFI.swift; sourceTree = "<group>"; };
+		A20000180000000000000000 /* MihomoControllerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MihomoControllerClient.swift; sourceTree = "<group>"; };
+		A20000190000000000000000 /* MihomoRuntimeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MihomoRuntimeBridge.swift; sourceTree = "<group>"; };
+		A20000200000000000000000 /* Vendor/MihomoMobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Vendor/MihomoMobile.xcframework; sourceTree = SOURCE_ROOT; };
+		A20000210000000000000000 /* MihomoPacketFlowBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MihomoPacketFlowBridge.swift; sourceTree = "<group>"; };
+		A20000220000000000000000 /* MihomoPacketFlowBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MihomoPacketFlowBridge.h; sourceTree = "<group>"; };
+		A20000230000000000000000 /* MihomoPacketFlowBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MihomoPacketFlowBridge.m; sourceTree = "<group>"; };
+		A20000240000000000000000 /* AppDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDesignSystem.swift; sourceTree = "<group>"; };
+		A20000250000000000000000 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
+		A20000260000000000000000 /* AppPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPages.swift; sourceTree = "<group>"; };
+		A20000270000000000000000 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		A20000280000000000000000 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		A20000290000000000000000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000300000000000000000 /* GeoResourceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoResourceManager.swift; sourceTree = "<group>"; };
+		A20000310000000000000000 /* GeoResources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = GeoResources; sourceTree = "<group>"; };
+		A20000320000000000000000 /* GeoResources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = GeoResources; sourceTree = "<group>"; };
+		A20000330000000000000000 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A20000340000000000000000 /* ConsolePresentationDerivers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsolePresentationDerivers.swift; sourceTree = "<group>"; };
+		A20000350000000000000000 /* ConsoleRuntimeIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsoleRuntimeIO.swift; sourceTree = "<group>"; };
+		A20000360000000000000000 /* ConsoleProxySelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsoleProxySelection.swift; sourceTree = "<group>"; };
+		A20000370000000000000000 /* ConsoleDiagnosticsWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsoleDiagnosticsWriter.swift; sourceTree = "<group>"; };
+		A20000380000000000000000 /* ConsoleProxyDelayTesting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsoleProxyDelayTesting.swift; sourceTree = "<group>"; };
+		A20000390000000000000000 /* ConsoleProfileLibraryCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsoleProfileLibraryCoordinator.swift; sourceTree = "<group>"; };
+		A30000010000000000000000 /* ClashParty.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClashParty.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A30000020000000000000000 /* ClashPartyTunnel.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ClashPartyTunnel.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A30000030000000000000000 /* ClashPartyShared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ClashPartyShared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000400000000000000000 /* RoutingPolicyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutingPolicyService.swift; sourceTree = "<group>"; };
+		A20000410000000000000000 /* RuleResources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = RuleResources; sourceTree = "<group>"; };
+		A20000420000000000000000 /* RuleResources */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuleResources; path = "../../ClashParty/Resources/RuleResources"; sourceTree = "<group>"; };
+		AC0000010000000000000001 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Shared.xcconfig; sourceTree = SOURCE_ROOT; };
+		F1A100010000000000000000 /* EncryptedBootstrapResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptedBootstrapResolver.swift; sourceTree = "<group>"; };
+		F1A100020000000000000000 /* PacketTunnelIPv6Policy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelIPv6Policy.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A40000020000000000000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000310000000000000000 /* Vendor/MihomoMobile.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000030000000000000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000320000000000000000 /* Vendor/MihomoMobile.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000040000000000000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000330000000000000000 /* Vendor/MihomoMobile.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A70000010000000000000000 = {
+			isa = PBXGroup;
+			children = (
+				A70000020000000000000000 /* ClashParty */,
+				A70000030000000000000000 /* ClashPartyTunnel */,
+				A70000040000000000000000 /* ClashPartyShared */,
+				A70000050000000000000000,
+				A70000190000000000000000 /* Vendor */,
+				A70000060000000000000000 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A70000020000000000000000 /* ClashParty */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000000 /* ClashPartyApp.swift */,
+				A70000100000000000000000 /* Services */,
+				A70000110000000000000000 /* ViewModels */,
+				A70000120000000000000000 /* Views */,
+				A70000130000000000000000 /* Resources */,
+			);
+			path = ClashParty;
+			sourceTree = SOURCE_ROOT;
+		};
+		A70000030000000000000000 /* ClashPartyTunnel */ = {
+			isa = PBXGroup;
+			children = (
+				A20000090000000000000000 /* PacketTunnelProvider.swift */,
+				A70000140000000000000000 /* Resources */,
+			);
+			path = ClashPartyTunnel;
+			sourceTree = SOURCE_ROOT;
+		};
+		A70000040000000000000000 /* ClashPartyShared */ = {
+			isa = PBXGroup;
+			children = (
+				A70000150000000000000000 /* Models */,
+				A70000160000000000000000 /* Store */,
+				A70000170000000000000000 /* Compatibility */,
+				A70000180000000000000000 /* Runtime */,
+			);
+			path = ClashPartyShared;
+			sourceTree = SOURCE_ROOT;
+		};
+		A70000050000000000000000 = {
+			isa = PBXGroup;
+			children = (
+				A20000140000000000000000 /* README.md */,
+				A20000150000000000000000 /* docs/runtime-integration.md */,
+			);
+			sourceTree = "<group>";
+		};
+		A70000060000000000000000 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A30000010000000000000000 /* ClashParty.app */,
+				A30000020000000000000000 /* ClashPartyTunnel.appex */,
+				A30000030000000000000000 /* ClashPartyShared.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A70000100000000000000000 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A20000030000000000000000 /* TunnelManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A70000110000000000000000 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A20000160000000000000000 /* ConsoleViewModel.swift */,
+				A20000340000000000000000 /* ConsolePresentationDerivers.swift */,
+				A20000350000000000000000 /* ConsoleRuntimeIO.swift */,
+				A20000360000000000000000 /* ConsoleProxySelection.swift */,
+				A20000370000000000000000 /* ConsoleDiagnosticsWriter.swift */,
+				A20000380000000000000000 /* ConsoleProxyDelayTesting.swift */,
+				A20000390000000000000000 /* ConsoleProfileLibraryCoordinator.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A70000120000000000000000 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A20000020000000000000000 /* ContentView.swift */,
+				A20000240000000000000000 /* AppDesignSystem.swift */,
+				A20000250000000000000000 /* AppShellView.swift */,
+				A20000260000000000000000 /* AppPages.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A70000130000000000000000 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A20000410000000000000000 /* RuleResources */,
+				A20000100000000000000000 /* Info.plist */,
+				A20000110000000000000000 /* ClashParty.entitlements */,
+				A20000330000000000000000 /* LaunchScreen.storyboard */,
+				A20000280000000000000000 /* Localizable.xcstrings */,
+				A20000290000000000000000 /* Assets.xcassets */,
+				A20000310000000000000000 /* GeoResources */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A70000140000000000000000 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A20000420000000000000000 /* RuleResources */,
+				A20000120000000000000000 /* Info.plist */,
+				A20000130000000000000000 /* ClashPartyTunnel.entitlements */,
+				A20000320000000000000000 /* GeoResources */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A70000150000000000000000 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A20000040000000000000000 /* RuntimeModels.swift */,
+				A20000050000000000000000 /* CompatibilityModels.swift */,
+				A20000270000000000000000 /* L10n.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A70000160000000000000000 /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				A20000060000000000000000 /* SharedStore.swift */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
+		A70000170000000000000000 /* Compatibility */ = {
+			isa = PBXGroup;
+			children = (
+				A20000400000000000000000 /* RoutingPolicyService.swift */,
+				A20000070000000000000000 /* CompatibilityService.swift */,
+			);
+			path = Compatibility;
+			sourceTree = "<group>";
+		};
+		A70000180000000000000000 /* Runtime */ = {
+			isa = PBXGroup;
+			children = (
+				F1A100020000000000000000 /* PacketTunnelIPv6Policy.swift */,
+				F1A100010000000000000000 /* EncryptedBootstrapResolver.swift */,
+				A20000080000000000000000 /* RuntimeBridge.swift */,
+				A20000170000000000000000 /* MihomoCoreFFI.swift */,
+				A20000180000000000000000 /* MihomoControllerClient.swift */,
+				A20000190000000000000000 /* MihomoRuntimeBridge.swift */,
+				A20000300000000000000000 /* GeoResourceManager.swift */,
+				A20000210000000000000000 /* MihomoPacketFlowBridge.swift */,
+				A20000220000000000000000 /* MihomoPacketFlowBridge.h */,
+				A20000230000000000000000 /* MihomoPacketFlowBridge.m */,
+			);
+			path = Runtime;
+			sourceTree = "<group>";
+		};
+		A70000190000000000000000 /* Vendor */ = {
+			isa = PBXGroup;
+			children = (
+				A20000200000000000000000 /* Vendor/MihomoMobile.xcframework */,
+			);
+			path = Vendor;
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000010000000000000000 /* ClashParty */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A90000010000000000000000 /* Build configuration list for PBXNativeTarget "ClashParty" */;
+			buildPhases = (
+				A40000050000000000000000 /* Sources */,
+				A40000020000000000000000 /* Frameworks */,
+				A40000060000000000000000 /* Resources */,
+				A40000010000000000000000 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0000010000000000000000 /* PBXTargetDependency */,
+			);
+			name = ClashParty;
+			productName = ClashParty;
+			productReference = A30000010000000000000000 /* ClashParty.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A50000020000000000000000 /* ClashPartyTunnel */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A90000020000000000000000 /* Build configuration list for PBXNativeTarget "ClashPartyTunnel" */;
+			buildPhases = (
+				A40000070000000000000000 /* Sources */,
+				A40000030000000000000000 /* Frameworks */,
+				A40000080000000000000000 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ClashPartyTunnel;
+			productName = ClashPartyTunnel;
+			productReference = A30000020000000000000000 /* ClashPartyTunnel.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A50000030000000000000000 /* ClashPartyShared */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A90000030000000000000000 /* Build configuration list for PBXNativeTarget "ClashPartyShared" */;
+			buildPhases = (
+				A40000090000000000000000 /* Sources */,
+				A40000040000000000000000 /* Frameworks */,
+				A40000100000000000000000 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ClashPartyShared;
+			productName = ClashPartyShared;
+			productReference = A30000030000000000000000 /* ClashPartyShared.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A60000010000000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 2603;
+				LastUpgradeCheck = 2603;
+				TargetAttributes = {
+					A50000010000000000000000 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					A50000020000000000000000 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					A50000030000000000000000 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+				};
+			};
+			buildConfigurationList = A90000040000000000000000 /* Build configuration list for PBXProject "ClashParty" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				"zh-Hans",
+			);
+			mainGroup = A70000010000000000000000;
+			productRefGroup = A70000060000000000000000 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50000010000000000000000 /* ClashParty */,
+				A50000020000000000000000 /* ClashPartyTunnel */,
+				A50000030000000000000000 /* ClashPartyShared */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A40000060000000000000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000630000000000000000 /* RuleResources in Resources */,
+				A10000460000000000000000 /* Localizable.xcstrings in Resources */,
+				A10000470000000000000000 /* Assets.xcassets in Resources */,
+				A10000530000000000000000 /* LaunchScreen.storyboard in Resources */,
+				A10000510000000000000000 /* GeoResources in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000080000000000000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000640000000000000000 /* RuleResources in Resources */,
+				A10000520000000000000000 /* GeoResources in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000100000000000000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A40000050000000000000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1A200210000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */,
+				F1A200110000000000000000 /* EncryptedBootstrapResolver.swift in Sources */,
+				A10000600000000000000000 /* RoutingPolicyService.swift in Sources */,
+				A10000010000000000000000 /* ClashPartyApp.swift in Sources */,
+				A10000020000000000000000 /* ContentView.swift in Sources */,
+				A10000030000000000000000 /* TunnelManager.swift in Sources */,
+				A10000040000000000000000 /* RuntimeModels.swift in Sources */,
+				A10000050000000000000000 /* CompatibilityModels.swift in Sources */,
+				A10000060000000000000000 /* SharedStore.swift in Sources */,
+				A10000070000000000000000 /* CompatibilityService.swift in Sources */,
+				A10000080000000000000000 /* RuntimeBridge.swift in Sources */,
+				A10000220000000000000000 /* MihomoCoreFFI.swift in Sources */,
+				A10000250000000000000000 /* MihomoControllerClient.swift in Sources */,
+				A10000280000000000000000 /* MihomoRuntimeBridge.swift in Sources */,
+				A10000340000000000000000 /* MihomoPacketFlowBridge.swift in Sources */,
+				A10000370000000000000000 /* MihomoPacketFlowBridge.m in Sources */,
+				A10000480000000000000000 /* GeoResourceManager.swift in Sources */,
+				A10000550000000000000000 /* ConsoleRuntimeIO.swift in Sources */,
+				A10000560000000000000000 /* ConsoleProxySelection.swift in Sources */,
+				A10000570000000000000000 /* ConsoleDiagnosticsWriter.swift in Sources */,
+				A10000580000000000000000 /* ConsoleProxyDelayTesting.swift in Sources */,
+				A10000590000000000000000 /* ConsoleProfileLibraryCoordinator.swift in Sources */,
+				A10000210000000000000000 /* ConsoleViewModel.swift in Sources */,
+				A10000540000000000000000 /* ConsolePresentationDerivers.swift in Sources */,
+				A10000400000000000000000 /* AppDesignSystem.swift in Sources */,
+				A10000410000000000000000 /* AppShellView.swift in Sources */,
+				A10000420000000000000000 /* AppPages.swift in Sources */,
+				A10000430000000000000000 /* L10n.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000070000000000000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1A200220000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */,
+				F1A200120000000000000000 /* EncryptedBootstrapResolver.swift in Sources */,
+				A10000610000000000000000 /* RoutingPolicyService.swift in Sources */,
+				A10000090000000000000000 /* PacketTunnelProvider.swift in Sources */,
+				A10000100000000000000000 /* RuntimeModels.swift in Sources */,
+				A10000110000000000000000 /* CompatibilityModels.swift in Sources */,
+				A10000120000000000000000 /* SharedStore.swift in Sources */,
+				A10000130000000000000000 /* CompatibilityService.swift in Sources */,
+				A10000140000000000000000 /* RuntimeBridge.swift in Sources */,
+				A10000230000000000000000 /* MihomoCoreFFI.swift in Sources */,
+				A10000260000000000000000 /* MihomoControllerClient.swift in Sources */,
+				A10000290000000000000000 /* MihomoRuntimeBridge.swift in Sources */,
+				A10000350000000000000000 /* MihomoPacketFlowBridge.swift in Sources */,
+				A10000380000000000000000 /* MihomoPacketFlowBridge.m in Sources */,
+				A10000490000000000000000 /* GeoResourceManager.swift in Sources */,
+				A10000440000000000000000 /* L10n.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000090000000000000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1A200230000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */,
+				F1A200130000000000000000 /* EncryptedBootstrapResolver.swift in Sources */,
+				A10000620000000000000000 /* RoutingPolicyService.swift in Sources */,
+				A10000150000000000000000 /* RuntimeModels.swift in Sources */,
+				A10000160000000000000000 /* CompatibilityModels.swift in Sources */,
+				A10000170000000000000000 /* SharedStore.swift in Sources */,
+				A10000180000000000000000 /* CompatibilityService.swift in Sources */,
+				A10000190000000000000000 /* RuntimeBridge.swift in Sources */,
+				A10000240000000000000000 /* MihomoCoreFFI.swift in Sources */,
+				A10000270000000000000000 /* MihomoControllerClient.swift in Sources */,
+				A10000300000000000000000 /* MihomoRuntimeBridge.swift in Sources */,
+				A10000360000000000000000 /* MihomoPacketFlowBridge.swift in Sources */,
+				A10000390000000000000000 /* MihomoPacketFlowBridge.m in Sources */,
+				A10000500000000000000000 /* GeoResourceManager.swift in Sources */,
+				A10000450000000000000000 /* L10n.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA0000010000000000000000 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A50000020000000000000000 /* ClashPartyTunnel */;
+			targetProxy = A80000010000000000000000 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AB0000010000000000000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AC0000010000000000000001 /* Shared.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AB0000020000000000000000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AC0000010000000000000001 /* Shared.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AB0000030000000000000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ClashParty/Resources/ClashParty.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ClashParty/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CLASH_PARTY_IOS_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "ClashParty/Resources/ClashParty-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AB0000040000000000000000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ClashParty/Resources/ClashParty.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ClashParty/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CLASH_PARTY_IOS_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "ClashParty/Resources/ClashParty-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AB0000050000000000000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ClashPartyTunnel/Resources/ClashPartyTunnel.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ClashPartyTunnel/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CLASH_PARTY_IOS_BUNDLE_ID).tunnel";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "ClashPartyTunnel/Resources/ClashPartyTunnel-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AB0000060000000000000000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ClashPartyTunnel/Resources/ClashPartyTunnel.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ClashPartyTunnel/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CLASH_PARTY_IOS_BUNDLE_ID).tunnel";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "ClashPartyTunnel/Resources/ClashPartyTunnel-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		AB0000070000000000000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				DEFINES_MODULE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CLASH_PARTY_IOS_BUNDLE_ID).shared";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AB0000080000000000000000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				DEFINES_MODULE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CLASH_PARTY_IOS_BUNDLE_ID).shared";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A90000010000000000000000 /* Build configuration list for PBXNativeTarget "ClashParty" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0000030000000000000000 /* Debug */,
+				AB0000040000000000000000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A90000020000000000000000 /* Build configuration list for PBXNativeTarget "ClashPartyTunnel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0000050000000000000000 /* Debug */,
+				AB0000060000000000000000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A90000030000000000000000 /* Build configuration list for PBXNativeTarget "ClashPartyShared" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0000070000000000000000 /* Debug */,
+				AB0000080000000000000000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A90000040000000000000000 /* Build configuration list for PBXProject "ClashParty" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0000010000000000000000 /* Debug */,
+				AB0000020000000000000000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A60000010000000000000000 /* Project object */;
+}

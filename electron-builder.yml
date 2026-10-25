@@ -3,6 +3,8 @@ productName: Clash Party
 directories:
   buildResources: build
 files:
+  - '!apps{,/**}'
+  - '!modules{,/**}'
   - '!**/.vscode/*'
   - '!src/*'
   - '!aur/*'
@@ -53,7 +55,11 @@ nsis:
 mac:
   target:
     - pkg
+  binaries:
+    - 'Contents/Resources/files/party.mihomo.dns-guard'
   extraResources:
+    - from: './build/native/party.mihomo.dns-guard'
+      to: 'files/party.mihomo.dns-guard'
     - from: './integrations/macos-dns-guard/'
       to: 'integrations/macos-dns-guard'
     - from: './build/pkg-scripts/party.mihomo.helper.plist'

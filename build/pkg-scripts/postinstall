@@ -1,9 +1,15 @@
 #!/bin/bash
 set -e
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # 设置日志文件
-LOG_FILE="/tmp/mihomo-party-install.log"
-exec > "$LOG_FILE" 2>&1
+umask 077
+LOG_FILE="/private/var/log/ClashParty-install.log"
+if [[ -L "$LOG_FILE" ]] || { [[ -e "$LOG_FILE" ]] && [[ ! -f "$LOG_FILE" || "$(stat -f '%u:%l' "$LOG_FILE")" != '0:1' ]]; }; then
+    echo "Refusing an unsafe installer log path" >&2
+    exit 1
+fi
+exec >> "$LOG_FILE" 2>&1
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
@@ -71,6 +77,17 @@ else
     log "Error: Helper file not found at $APP_PATH/Contents/Resources/files/party.mihomo.helper"
     exit 1
 fi
+
+# Install the narrow native DNS guard without changing PF or its recovery state.
+DNS_GUARD_SOURCE="$APP_PATH/Contents/Resources/files/party.mihomo.dns-guard"
+DNS_GUARD_PATH="/Library/PrivilegedHelperTools/party.mihomo.dns-guard"
+if [ ! -f "$DNS_GUARD_SOURCE" ]; then
+    log "Error: Fixed-purpose DNS guard missing from package"
+    exit 1
+fi
+/usr/bin/codesign --verify --strict "$DNS_GUARD_SOURCE"
+/usr/bin/install -o root -g wheel -m 4755 "$DNS_GUARD_SOURCE" "$DNS_GUARD_PATH"
+log "Installed fixed-purpose DNS guard; existing PF policy and recovery state preserved"
 
 # 创建并配置 LaunchDaemon
 log "Configuring LaunchDaemon..."

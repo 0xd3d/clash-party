@@ -1,0 +1,4 @@
+// Copy to Local.xcconfig. Never commit real signing identities or profiles.
+// DEVELOPMENT_TEAM = YOUR_TEAM_ID
+// CLASH_PARTY_IOS_BUNDLE_ID = com.example.clashparty
+// CLASH_PARTY_IOS_APP_GROUP = group.com.example.clashparty

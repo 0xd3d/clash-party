@@ -1,0 +1,16 @@
+Bundled public rule seeds (not a personal desktop snapshot)
+
+private.yaml, gfw.yaml, telegramcidr.yaml, lancidr.yaml and cncidr.yaml:
+https://github.com/Loyalsoldier/clash-rules, release branch, GPL-3.0.
+The retained LICENSE.txt applies to those seeds.
+
+non-cn.yaml:
+https://github.com/MetaCubeX/meta-rules-dat/blob/meta/geo/geosite/geolocation-!cn.yaml
+Public YAML domain-provider seed; no MRS decoder is embedded in the mobile core.
+LICENSE-MetaCubeX.txt retains that repository's GPL-3.0 notice.
+
+Runtime update interval: 86400 seconds. Rules update from their corresponding
+public upstream URLs; user node credentials remain in private imported profiles.
+
+desktop-routing-snapshot.json is a small public policy-only example maintained
+in this repository. It contains no personal backend domains, nodes or accounts.

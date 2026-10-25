@@ -1,0 +1,70 @@
+name: iOS source build
+
+on:
+  push:
+    branches: [smart_core]
+    paths:
+      - 'apps/ios/**'
+      - 'modules/mihomo-ios-core/**'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    paths:
+      - 'apps/ios/**'
+      - 'modules/mihomo-ios-core/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unsigned-build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.20.14'
+          architecture: arm64
+          cache-dependency-path: modules/mihomo-ios-core/go.sum
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Assert the mobile toolchain host
+        run: test "$(uname -m)" = arm64
+      - name: Install the policy-export test dependency
+        run: python3 -m pip install 'PyYAML==6.0.3'
+      - name: Prepare public Geo resources
+        run: apps/ios/scripts/update-georesources.sh
+      - name: Run Swift and real mobile-core policy checks
+        run: apps/ios/scripts/check-portable-routing.sh
+      - name: Build the mobile core from checked-in source
+        run: apps/ios/scripts/build-mihomo-mobile.sh
+      - name: Compile unsigned ARM64 device and simulator apps
+        working-directory: apps/ios
+        run: |
+          xcodebuild -project ClashParty.xcodeproj -scheme ClashParty -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/ios-device" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          xcodebuild -project ClashParty.xcodeproj -scheme ClashParty -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/ios-simulator" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+      - name: Archive unsigned applications and signing boundary
+        run: |
+          mkdir -p ios-artifacts
+          ditto -c -k --keepParent "$RUNNER_TEMP/ios-device/Build/Products/Debug-iphoneos/ClashParty.app" ios-artifacts/ClashParty-ios-device-unsigned.zip
+          ditto -c -k --keepParent "$RUNNER_TEMP/ios-simulator/Build/Products/Debug-iphonesimulator/ClashParty.app" ios-artifacts/ClashParty-ios-simulator-arm64.zip
+          printf '%s\n' 'Unsigned build verification artifacts. The device archive is not an installable signed IPA. Signing, App Group and Network Extension provisioning must be supplied privately by the developer. No connected device was accessed.' > ios-artifacts/SIGNING.txt
+          shasum -a 256 ios-artifacts/*.zip > ios-artifacts/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ios-unsigned-${{ github.sha }}
+          path: ios-artifacts/
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0

@@ -22,6 +22,11 @@ export function assertBinaryArchitecture(bytes, platform, arch) {
   } else throw new Error('Unsupported package platform')
 }
 
+export function assertDesktopArchivePaths(paths) {
+  if (paths.some((name) => /^[\\/]*(?:apps|modules)(?:[\\/]|$)/.test(name)))
+    throw new Error('Native mobile sources or build artifacts leaked into the desktop package')
+}
+
 export function packagedAppDirectory(platform, arch) {
   if (platform === 'darwin')
     return arch === 'x64' ? 'dist/mac/Clash Party.app' : 'dist/mac-arm64/Clash Party.app'
@@ -52,9 +57,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       ),
       path.join(resources, 'sidecar', binding)
     ]
-    if (platform === 'darwin') binaries.push(path.join(resources, 'files/party.mihomo.helper'))
+    if (platform === 'darwin')
+      binaries.push(
+        path.join(resources, 'files/party.mihomo.helper'),
+        path.join(resources, 'files/party.mihomo.dns-guard')
+      )
     for (const binary of binaries) assertBinaryArchitecture(readFileSync(binary), platform, arch)
     const archive = path.join(resources, 'app.asar')
+    assertDesktopArchivePaths(asar.listPackage(archive))
     const pkg = JSON.parse(asar.extractFile(archive, 'package.json').toString())
     const main = asar.extractFile(archive, path.normalize(pkg.main)).toString()
     for (const marker of [

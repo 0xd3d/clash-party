@@ -4,6 +4,8 @@ import type { SystemDNSJournal } from './systemDNSController'
 
 const mocks = vi.hoisted(() => ({
   execFile: vi.fn(),
+  acquireGuard: vi.fn(),
+  releaseGuard: vi.fn(),
   readFile: vi.fn(),
   post: vi.fn(),
   getAppConfig: vi.fn(),
@@ -22,6 +24,10 @@ vi.mock('../config', () => ({ getAppConfig: mocks.getAppConfig }))
 vi.mock('../utils/dirs', () => ({ dataDir: () => '/mock/system-dns' }))
 vi.mock('../utils/logger', () => ({ createLogger: () => mocks.logger }))
 vi.mock('../utils/safeFile', () => ({ atomicWriteFile: mocks.atomicWriteFile }))
+vi.mock('./macDNSGuard', () => ({
+  acquireMacDNSGuard: mocks.acquireGuard,
+  releaseMacDNSGuard: mocks.releaseGuard
+}))
 vi.mock('./factory', () => ({ getRuntimeConfig: mocks.getRuntimeConfig }))
 vi.mock('./systemDNSRuntime', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./systemDNSRuntime')>()
@@ -96,6 +102,8 @@ beforeEach(async () => {
   mocks.assertSystemDNSListener.mockImplementation(actualRuntime.assertSystemDNSListener)
   mocks.hasListenerProof.mockReturnValue(true)
   mocks.probeSystemDNS.mockResolvedValue(undefined)
+  mocks.acquireGuard.mockResolvedValue({ active: true, ownerUid: 501, corePid })
+  mocks.releaseGuard.mockResolvedValue(undefined)
   mocks.readFile.mockImplementation(async () => {
     if (journalText === undefined) throw Object.assign(new Error('missing'), { code: 'ENOENT' })
     return journalText
@@ -540,4 +548,50 @@ describe('system DNS platform boundary', () => {
     expect(mocks.atomicWriteFile).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   })
+})
+
+describe('native DNS bypass guard lifecycle', () => {
+  it('retains loopback DNS while native filtering remains unconfirmed', async () => {
+    mocks.acquireGuard.mockRejectedValue(new Error('helper unavailable'))
+    await startMonitoring()
+    expect(currentDNS.get(wifi.name)).toEqual(['127.0.0.1'])
+    expect(journal().services).toHaveLength(2)
+    expect(mocks.releaseGuard).not.toHaveBeenCalled()
+  })
+  it('retains protection through automatic recovery and releases only on explicit exit', async () => {
+    await startMonitoring()
+    await dns.recoverDNS()
+    expect(mocks.releaseGuard).not.toHaveBeenCalled()
+    await dns.recoverDNS({ releaseGuard: true })
+    expect(mocks.releaseGuard).toHaveBeenCalledOnce()
+  })
+})
+
+it('rejects protected startup when native guard activation failed', async () => {
+  mocks.acquireGuard.mockRejectedValue(new Error('native tool unavailable'))
+  await startMonitoring()
+  await expect(dns.assertSystemDNSProtection(appliedRuntime, corePid)).rejects.toThrow('not ready')
+})
+it('confirms protected readiness only after both native guard and per-service DNS succeed', async () => {
+  await startMonitoring()
+  await expect(dns.assertSystemDNSProtection(appliedRuntime, corePid)).resolves.toBeUndefined()
+  config.autoSetDNS = false
+  await expect(dns.assertSystemDNSProtection(appliedRuntime, corePid)).resolves.toBeUndefined()
+})
+
+it('activates a deferred macOS proxy once after native protection eventually confirms', async () => {
+  const ready = vi.fn().mockResolvedValue(undefined)
+  mocks.acquireGuard.mockRejectedValueOnce(new Error('old external DNS state'))
+  await dns.startSystemDNSMonitoring(
+    () => true,
+    appliedRuntime,
+    corePid,
+    mocks.hasListenerProof,
+    ready
+  )
+  expect(ready).not.toHaveBeenCalled()
+  await vi.advanceTimersByTimeAsync(5000)
+  expect(ready).toHaveBeenCalledOnce()
+  await vi.advanceTimersByTimeAsync(5000)
+  expect(ready).toHaveBeenCalledOnce()
 })

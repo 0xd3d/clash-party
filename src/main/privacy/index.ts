@@ -4,6 +4,7 @@ import { app, dialog, type WebContents } from 'electron'
 import { getAppConfig } from '../config'
 import { getAppliedCoreConfig, getAppliedCoreRevision, getCurrentCorePID } from '../core/manager'
 import { getAxios } from '../core/mihomoApi'
+import { inspectMacDNSGuard } from '../core/macDNSGuard'
 import { auditPrivacyConfig, type PrivacyProtectionReport } from '../../shared/privacyAudit'
 
 /** Covers this application's own pages, not external browser processes. */
@@ -35,11 +36,22 @@ export async function inspectPrivacyProtection(): Promise<PrivacyProtectionRepor
       'allow-lan': live['allow-lan'],
       'bind-address': live['bind-address']
     }
-    return {
-      platform: process.platform,
-      source: 'applied',
-      findings: auditPrivacyConfig(applied, process.platform, config)
+    const findings = [...auditPrivacyConfig(applied, process.platform, config)]
+    if (process.platform === 'darwin' && config.autoSetDNS !== false && live.tun?.enable) {
+      try {
+        const guard = await inspectMacDNSGuard()
+        findings.push({
+          id: 'macDNSGuard',
+          level: guard.active && guard.corePid === corePid ? 'pass' : 'warning'
+        })
+      } catch {
+        findings.push({ id: 'macDNSGuard', level: 'warning' })
+      }
     }
+    // Native status is asynchronous too; reject reports crossing a restart or hot reload.
+    if (getCurrentCorePID() !== corePid || getAppliedCoreRevision() !== revision)
+      return unavailable()
+    return { platform: process.platform, source: 'applied', findings }
   } catch {
     return unavailable()
   }

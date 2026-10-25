@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # 检查 root 权限
 if [ "$EUID" -ne 0 ]; then

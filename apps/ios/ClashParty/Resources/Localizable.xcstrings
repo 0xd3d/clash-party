@@ -1,0 +1,4345 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ -> %@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ -> %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "%@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "action.clear": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除"
+          }
+        }
+      }
+    },
+    "action.connect": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接"
+          }
+        }
+      }
+    },
+    "action.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制"
+          }
+        }
+      }
+    },
+    "action.delete": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除"
+          }
+        }
+      }
+    },
+    "action.disconnect": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "断开"
+          }
+        }
+      }
+    },
+    "action.done": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
+        }
+      }
+    },
+    "action.export_bundle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出配置包"
+          }
+        }
+      }
+    },
+    "action.import_config": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入配置"
+          }
+        }
+      }
+    },
+    "action.load": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加载"
+          }
+        }
+      }
+    },
+    "action.persist_bundle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "写入配置"
+          }
+        }
+      }
+    },
+    "action.refresh": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刷新"
+          }
+        }
+      }
+    },
+    "action.reload_runtime": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重载运行时"
+          }
+        }
+      }
+    },
+    "action.restore": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复"
+          }
+        }
+      }
+    },
+    "action.start_tunnel": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动 Tunnel"
+          }
+        }
+      }
+    },
+    "action.stop_tunnel": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止 Tunnel"
+          }
+        }
+      }
+    },
+    "action.validate": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "校验"
+          }
+        }
+      }
+    },
+    "app.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clash Party iOS"
+          }
+        }
+      }
+    },
+    "backups.create": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建备份"
+          }
+        }
+      }
+    },
+    "backups.default_name": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地备份"
+          }
+        }
+      }
+    },
+    "backups.empty_message": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在尝试高风险运行时改动前，先创建本地快照。"
+          }
+        }
+      }
+    },
+    "backups.empty_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无备份"
+          }
+        }
+      }
+    },
+    "backups.field.name": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份名称"
+          }
+        }
+      }
+    },
+    "backups.generated_name": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份 %d"
+          }
+        }
+      }
+    },
+    "backups.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在设备内为当前配置创建快照，稍后可直接恢复。"
+          }
+        }
+      }
+    },
+    "backups.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地备份"
+          }
+        }
+      }
+    },
+    "Clash Party": {},
+    "common.direct": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DIRECT"
+          }
+        }
+      }
+    },
+    "common.disabled": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已关闭"
+          }
+        }
+      }
+    },
+    "common.enabled": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已启用"
+          }
+        }
+      }
+    },
+    "common.na": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不适用"
+          }
+        }
+      }
+    },
+    "common.no": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "否"
+          }
+        }
+      }
+    },
+    "common.none": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无"
+          }
+        }
+      }
+    },
+    "common.unknown": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未知"
+          }
+        }
+      }
+    },
+    "common.yes": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "是"
+          }
+        }
+      }
+    },
+    "connections.chain_rule": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链路：%@ · 规则：%@"
+          }
+        }
+      }
+    },
+    "connections.empty_message": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一旦运行时开始处理流量，这里会显示连接快照。"
+          }
+        }
+      }
+    },
+    "connections.empty_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无实时连接"
+          }
+        }
+      }
+    },
+    "connections.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追踪实时请求链路、命中规则和传输量。"
+          }
+        }
+      }
+    },
+    "connections.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接"
+          }
+        }
+      }
+    },
+    "connections.traffic": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上传 %@ · 下载 %@"
+          }
+        }
+      }
+    },
+    "core.mihomo.allow_lan": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许局域网"
+          }
+        }
+      }
+    },
+    "core.mihomo.log_level": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志级别"
+          }
+        }
+      }
+    },
+    "core.mihomo.mixed_port": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "混合端口"
+          }
+        }
+      }
+    },
+    "core.mihomo.redir_port": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redir 端口"
+          }
+        }
+      }
+    },
+    "core.mihomo.socks_port": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Socks 端口"
+          }
+        }
+      }
+    },
+    "core.mihomo.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看当前代理模式和日志级别。"
+          }
+        }
+      }
+    },
+    "core.mihomo.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mihomo 摘要"
+          }
+        }
+      }
+    },
+    "core.mihomo.tproxy_port": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TProxy 端口"
+          }
+        }
+      }
+    },
+    "core.tun.auto_detect": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动识别接口"
+          }
+        }
+      }
+    },
+    "core.tun.auto_route": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动路由"
+          }
+        }
+      }
+    },
+    "core.tun.dns_hijack": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DNS 劫持"
+          }
+        }
+      }
+    },
+    "core.tun.enabled": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已启用"
+          }
+        }
+      }
+    },
+    "core.tun.stack": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "协议栈"
+          }
+        }
+      }
+    },
+    "core.tun.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这里展示运行时启动前持久化的 Packet Tunnel 与 DNS 接管配置。"
+          }
+        }
+      }
+    },
+    "core.tun.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TUN 摘要"
+          }
+        }
+      }
+    },
+    "dns.direct_nameservers": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直连 Nameserver"
+          }
+        }
+      }
+    },
+    "dns.editor.prompt": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持 dns、fake-ip 和 TUN 配置与运行时要求一致。"
+          }
+        }
+      }
+    },
+    "dns.editor.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controlled Mihomo YAML"
+          }
+        }
+      }
+    },
+    "dns.enabled": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已启用"
+          }
+        }
+      }
+    },
+    "dns.enhanced_mode": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "增强模式"
+          }
+        }
+      }
+    },
+    "dns.fake_ip_filter": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fake IP 过滤"
+          }
+        }
+      }
+    },
+    "dns.fake_ip_range": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fake IP 范围"
+          }
+        }
+      }
+    },
+    "dns.fallback": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fallback"
+          }
+        }
+      }
+    },
+    "dns.nameservers": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nameserver"
+          }
+        }
+      }
+    },
+    "dns.policy_keys": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nameserver Policy Key"
+          }
+        }
+      }
+    },
+    "dns.proxy_nameservers": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理 Nameserver"
+          }
+        }
+      }
+    },
+    "dns.summary.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看 Fake-IP、上游 DNS 与域名解析策略。"
+          }
+        }
+      }
+    },
+    "dns.summary.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fake DNS 摘要"
+          }
+        }
+      }
+    },
+    "error.controller.http": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时控制器请求失败，HTTP %d。\n%@"
+          }
+        }
+      }
+    },
+    "error.controller.invalid_metadata": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时控制器元数据缺失。"
+          }
+        }
+      }
+    },
+    "error.controller.invalid_response": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时控制器返回了无效响应。"
+          }
+        }
+      }
+    },
+    "error.controller.timeout": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时控制器请求超时。"
+          }
+        }
+      }
+    },
+    "error.core.unavailable": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未链接 MihomoMobile 核心。请先构建 xcframework 并接入 Xcode 工程，再启用真实运行时。"
+          }
+        }
+      }
+    },
+    "error.runtime.app_cannot_control_core": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App 进程不能直接持有嵌入式核心生命周期。请通过 PacketTunnelProvider 启停运行时。"
+          }
+        }
+      }
+    },
+    "error.runtime.controller_unavailable": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "嵌入式控制器当前不可用。"
+          }
+        }
+      }
+    },
+    "error.runtime.invalid_compatibility": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "兼容性校验失败。\n%@"
+          }
+        }
+      }
+    },
+    "error.runtime.invalid_config_path": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时配置路径无效。"
+          }
+        }
+      }
+    },
+    "error.runtime.proxy_group_not_found": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到代理组“%@”。"
+          }
+        }
+      }
+    },
+    "error.shared_store.missing_app_group": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Group 容器不可用，请检查 entitlement 和模拟器或真机环境。"
+          }
+        }
+      }
+    },
+    "error.tunnel.configuration_disabled": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前设备上的 VPN 配置处于禁用状态。请到系统 VPN 设置里允许 Clash Party 配置后重试。"
+          }
+        }
+      }
+    },
+    "error.tunnel.configuration_invalid": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前 VPN 配置无效。请重新保存 Tunnel 配置，并确认 Packet Tunnel capability 已启用。"
+          }
+        }
+      }
+    },
+    "error.tunnel.configuration_rw_failed": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统拒绝读写 VPN 配置。请检查设备管理权限后重试。"
+          }
+        }
+      }
+    },
+    "error.tunnel.configuration_stale": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前 VPN 配置已过期。Clash Party 会自动刷新，请再尝试启动一次。"
+          }
+        }
+      }
+    },
+    "error.tunnel.configuration_unknown": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统返回了未知的 VPN 配置错误。"
+          }
+        }
+      }
+    },
+    "error.tunnel.connection_failed": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Packet Tunnel 扩展已经启动，但没有成功建立 VPN 连接。"
+          }
+        }
+      }
+    },
+    "error.tunnel.invalid_session": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tunnel 会话当前不可用。"
+          }
+        }
+      }
+    },
+    "error.tunnel.start_failed_without_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tunnel 没有进入运行状态。请检查 VPN 授权弹窗、系统 VPN 设置和 Packet Tunnel 日志。"
+          }
+        }
+      }
+    },
+    "log.runtime.controller_listening": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "控制器正在监听 %@。"
+          }
+        }
+      }
+    },
+    "log.runtime.core_started": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "嵌入式 Mihomo 核心已启动。"
+          }
+        }
+      }
+    },
+    "log.runtime.log_stream_attach_failed": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挂载日志流失败：%@"
+          }
+        }
+      }
+    },
+    "log.runtime.log_stream_closed": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志流已关闭：%@"
+          }
+        }
+      }
+    },
+    "log.runtime.stub_fallback": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未链接 MihomoMobile xcframework，当前 Packet Tunnel 正在以 stub 回退模式运行。"
+          }
+        }
+      }
+    },
+    "log.runtime.traffic_stream_attach_failed": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挂载流量流失败：%@"
+          }
+        }
+      }
+    },
+    "log.runtime.traffic_stream_closed": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "流量流已关闭：%@"
+          }
+        }
+      }
+    },
+    "log.stub.fake_dns_validated": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fake DNS 校验已通过。后续请用真正的 Mihomo iOS 核心替换 stub。"
+          }
+        }
+      }
+    },
+    "log.stub.loaded_summary": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加载 %d 条规则和 %d 个远程资源。"
+          }
+        }
+      }
+    },
+    "log.stub.proxy_selected": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已选择节点“%@”，所属代理组“%@”。"
+          }
+        }
+      }
+    },
+    "log.stub.reload_preserved": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重载后会继续保留 Override 与资源定义。"
+          }
+        }
+      }
+    },
+    "log.stub.reload_requested": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已请求 stub 运行时重载。"
+          }
+        }
+      }
+    },
+    "log.stub.started": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stub 运行时已使用配置路径 %@ 启动。"
+          }
+        }
+      }
+    },
+    "log.stub.stopped": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stub 运行时已停止。"
+          }
+        }
+      }
+    },
+    "logs.copy_success": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs copied to the clipboard."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志已复制到剪贴板。"
+          }
+        }
+      }
+    },
+    "logs.empty_message": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "嵌入式内核开始产生日志后，这里会显示运行时事件。"
+          }
+        }
+      }
+    },
+    "logs.empty_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无日志"
+          }
+        }
+      }
+    },
+    "logs.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聚焦展示最近的运行时事件流。"
+          }
+        }
+      }
+    },
+    "logs.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志"
+          }
+        }
+      }
+    },
+    "more.core.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看 Mihomo 与 TUN 的运行时摘要。"
+          }
+        }
+      }
+    },
+    "more.hub.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把低频页面集中到这里，让核心 Tab 保持聚焦。"
+          }
+        }
+      }
+    },
+    "more.hub.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多"
+          }
+        }
+      }
+    },
+    "more.override.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "调整分流、DNS 与资源配置。"
+          }
+        }
+      }
+    },
+    "more.profiles.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入订阅、管理协议模板，并维护已保存的配置包。"
+          }
+        }
+      }
+    },
+    "more.resources.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看远程 Provider、URL 与同步元数据。"
+          }
+        }
+      }
+    },
+    "more.rule_insight.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解释活跃流量为什么命中了某条规则、链路和最终节点。"
+          }
+        }
+      }
+    },
+    "more.settings.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用偏好、配置导入与导出。"
+          }
+        }
+      }
+    },
+    "more.substore.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查远程 Sub-Store 的连通性与同步配置。"
+          }
+        }
+      }
+    },
+    "nav.home": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首页"
+          }
+        }
+      }
+    },
+    "nav.more": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多"
+          }
+        }
+      }
+    },
+    "nav.nodes": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "节点"
+          }
+        }
+      }
+    },
+    "nav.overview": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "概览"
+          }
+        }
+      }
+    },
+    "nav.profiles": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置"
+          }
+        }
+      }
+    },
+    "nav.proxies": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理"
+          }
+        }
+      }
+    },
+    "nav.runtime": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时"
+          }
+        }
+      }
+    },
+    "override.editor.js_prompt": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为保持桌面对齐而保留，但当前 iOS 版本不会执行。"
+          }
+        }
+      }
+    },
+    "override.editor.js_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Override JavaScript"
+          }
+        }
+      }
+    },
+    "override.editor.yaml_prompt": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分流、DNS 与资源的 YAML 配置。"
+          }
+        }
+      }
+    },
+    "override.editor.yaml_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Override YAML"
+          }
+        }
+      }
+    },
+    "override.import_js": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 Override JS"
+          }
+        }
+      }
+    },
+    "override.import_yaml": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 Override YAML"
+          }
+        }
+      }
+    },
+    "override.js_bytes": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JS 字节数"
+          }
+        }
+      }
+    },
+    "override.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 YAML 调整分流、DNS 和资源提供者。"
+          }
+        }
+      }
+    },
+    "override.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Override"
+          }
+        }
+      }
+    },
+    "override.yaml_bytes": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YAML 字节数"
+          }
+        }
+      }
+    },
+    "overview.connect.no_profile": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有导入订阅"
+          }
+        }
+      }
+    },
+    "overview.connect.phase": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动阶段"
+          }
+        }
+      }
+    },
+    "overview.connect.profile": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前配置"
+          }
+        }
+      }
+    },
+    "overview.connect.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接"
+          }
+        }
+      }
+    },
+    "overview.controls.export_subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出当前兼容配置包，便于桌面端恢复。"
+          }
+        }
+      }
+    },
+    "overview.controls.import_subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前往配置页导入文件、订阅 URL 和协议模板。"
+          }
+        }
+      }
+    },
+    "overview.controls.reload_subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不离开首页直接重载 Mihomo。"
+          }
+        }
+      }
+    },
+    "overview.controls.start_subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授权 VPN 并拉起内嵌 Mihomo 内核。"
+          }
+        }
+      }
+    },
+    "overview.controls.stop_subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "优雅停止 Packet Tunnel 并释放运行时状态。"
+          }
+        }
+      }
+    },
+    "overview.controls.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直接在首页完成校验、持久化和 Tunnel 生命周期控制。"
+          }
+        }
+      }
+    },
+    "overview.controls.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时控制"
+          }
+        }
+      }
+    },
+    "overview.controls.validate_subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在写入运行时之前先跑兼容性校验。"
+          }
+        }
+      }
+    },
+    "overview.diagnostics.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这里显示 Packet Tunnel 扩展上报的最新阶段与失败原因。"
+          }
+        }
+      }
+    },
+    "overview.diagnostics.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动诊断"
+          }
+        }
+      }
+    },
+    "overview.error.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这里展示最近一次由 App 或运行时抛出的阻断错误。"
+          }
+        }
+      }
+    },
+    "overview.error.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近错误"
+          }
+        }
+      }
+    },
+    "overview.hero.active_proxy": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前节点"
+          }
+        }
+      }
+    },
+    "overview.hero.eyebrow": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clash Party iOS"
+          }
+        }
+      }
+    },
+    "overview.hero.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把运行状态、配置兼容性和代理切换放在同一个聚焦工作区里。"
+          }
+        }
+      }
+    },
+    "overview.hero.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mihomo 与 Fake DNS 的移动控制台。"
+          }
+        }
+      }
+    },
+    "overview.metrics.down": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下行流量"
+          }
+        }
+      }
+    },
+    "overview.metrics.logs": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志数"
+          }
+        }
+      }
+    },
+    "overview.metrics.profiles": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置包"
+          }
+        }
+      }
+    },
+    "overview.metrics.proxies": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理节点"
+          }
+        }
+      }
+    },
+    "overview.metrics.rules": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则数"
+          }
+        }
+      }
+    },
+    "overview.metrics.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关键数量和流量一眼可见。"
+          }
+        }
+      }
+    },
+    "overview.metrics.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时快照"
+          }
+        }
+      }
+    },
+    "overview.metrics.up": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上行流量"
+          }
+        }
+      }
+    },
+    "overview.onboarding.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持粘贴订阅链接或导入本地配置文件。导入成功后会自动作为当前工作配置。"
+          }
+        }
+      }
+    },
+    "overview.onboarding.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先导入一个订阅"
+          }
+        }
+      }
+    },
+    "overview.shortcuts.core": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看启动阶段、内核版本与后端状态。"
+          }
+        }
+      }
+    },
+    "overview.shortcuts.dns": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看 Fake DNS 配置。"
+          }
+        }
+      }
+    },
+    "overview.shortcuts.logs": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看运行时事件。"
+          }
+        }
+      }
+    },
+    "overview.shortcuts.profiles": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入并保存配置包。"
+          }
+        }
+      }
+    },
+    "overview.shortcuts.proxies": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换代理组与节点。"
+          }
+        }
+      }
+    },
+    "overview.shortcuts.resources": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看 Provider 与远程 URL。"
+          }
+        }
+      }
+    },
+    "overview.shortcuts.settings": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出配置包并查看兼容标记。"
+          }
+        }
+      }
+    },
+    "overview.shortcuts.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速进入网络验证期间最常打开的页面。"
+          }
+        }
+      }
+    },
+    "overview.shortcuts.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快捷入口"
+          }
+        }
+      }
+    },
+    "page.connections": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接"
+          }
+        }
+      }
+    },
+    "page.core": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核心"
+          }
+        }
+      }
+    },
+    "page.dns": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DNS"
+          }
+        }
+      }
+    },
+    "page.logs": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志"
+          }
+        }
+      }
+    },
+    "page.override": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Override"
+          }
+        }
+      }
+    },
+    "page.resources": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "资源"
+          }
+        }
+      }
+    },
+    "page.rule_insight": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则解释"
+          }
+        }
+      }
+    },
+    "page.rules": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则"
+          }
+        }
+      }
+    },
+    "page.settings": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置"
+          }
+        }
+      }
+    },
+    "page.substore": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sub-Store"
+          }
+        }
+      }
+    },
+    "profiles.current.active_profile": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前激活配置"
+          }
+        }
+      }
+    },
+    "profiles.current.last_export": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近导出"
+          }
+        }
+      }
+    },
+    "profiles.current.last_remote": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近远程导入"
+          }
+        }
+      }
+    },
+    "profiles.current.saved_count": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存数量"
+          }
+        }
+      }
+    },
+    "profiles.current.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前编辑区、已激活配置和本地配置库都集中在这里。"
+          }
+        }
+      }
+    },
+    "profiles.current.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前工作区"
+          }
+        }
+      }
+    },
+    "profiles.default_name": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "默认配置"
+          }
+        }
+      }
+    },
+    "profiles.editor.controlled_yaml_prompt": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TUN、DNS 和运行时控制层配置。"
+          }
+        }
+      }
+    },
+    "profiles.editor.controlled_yaml_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controlled Mihomo YAML"
+          }
+        }
+      }
+    },
+    "profiles.editor.profile_yaml_prompt": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桌面兼容的 Profile 内容。"
+          }
+        }
+      }
+    },
+    "profiles.editor.profile_yaml_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile YAML"
+          }
+        }
+      }
+    },
+    "profiles.field.profile_name": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置名称"
+          }
+        }
+      }
+    },
+    "profiles.generated_name": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置 %d"
+          }
+        }
+      }
+    },
+    "profiles.imports.controlled_yaml": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 Controlled YAML"
+          }
+        }
+      }
+    },
+    "profiles.imports.profile_yaml": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 Profile YAML"
+          }
+        }
+      }
+    },
+    "profiles.imports.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将桌面兼容的文本文件直接导入当前编辑区。"
+          }
+        }
+      }
+    },
+    "profiles.imports.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入来源"
+          }
+        }
+      }
+    },
+    "profiles.library.empty_message": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先保存当前配置包，再逐步积累可复用的本地配置库。"
+          }
+        }
+      }
+    },
+    "profiles.library.empty_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无已保存配置"
+          }
+        }
+      }
+    },
+    "profiles.library.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这里存放随时可回载到编辑器的兼容配置包。"
+          }
+        }
+      }
+    },
+    "profiles.library.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置库"
+          }
+        }
+      }
+    },
+    "profiles.remote.download": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载配置"
+          }
+        }
+      }
+    },
+    "profiles.remote.error.clipboard_empty": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clipboard does not contain a subscription URL."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剪贴板中没有可用的订阅链接。"
+          }
+        }
+      }
+    },
+    "profiles.remote.error.empty": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅链接为空。"
+          }
+        }
+      }
+    },
+    "profiles.remote.error.http": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "远端服务返回了 HTTP %d。"
+          }
+        }
+      }
+    },
+    "profiles.remote.error.invalid": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅链接无效。"
+          }
+        }
+      }
+    },
+    "profiles.remote.error.payload": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "远程订阅返回了空内容。"
+          }
+        }
+      }
+    },
+    "profiles.remote.error.scheme": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前仅支持 http 和 https 订阅链接。"
+          }
+        }
+      }
+    },
+    "profiles.remote.field.url": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅链接"
+          }
+        }
+      }
+    },
+    "profiles.remote.hint": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "兼容直接返回 Clash YAML 的订阅地址，以及带转换参数的聚合链接。"
+          }
+        }
+      }
+    },
+    "profiles.remote.paste": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste URL"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴链接"
+          }
+        }
+      }
+    },
+    "profiles.remote.paste_and_import": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste & Download"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴并下载"
+          }
+        }
+      }
+    },
+    "profiles.remote.placeholder": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://example.com/sub?target=clash"
+          }
+        }
+      }
+    },
+    "profiles.remote.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴 Clash 或 Mihomo 订阅链接，直接把最新 YAML 下载到编辑器。"
+          }
+        }
+      }
+    },
+    "profiles.remote.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "远程订阅"
+          }
+        }
+      }
+    },
+    "profiles.remote.use_default": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Default"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用默认"
+          }
+        }
+      }
+    },
+    "profiles.save": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存配置"
+          }
+        }
+      }
+    },
+    "profiles.templates.http.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用于兼容性验证的 HTTP 代理定义。"
+          }
+        }
+      }
+    },
+    "profiles.templates.http.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTP CONNECT"
+          }
+        }
+      }
+    },
+    "profiles.templates.socks.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地或远程 SOCKS5 代理定义。"
+          }
+        }
+      }
+    },
+    "profiles.templates.socks.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOCKS5"
+          }
+        }
+      }
+    },
+    "profiles.templates.ss.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AEAD 形态的 Shadowsocks 起步模板。"
+          }
+        }
+      }
+    },
+    "profiles.templates.ss.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shadowsocks"
+          }
+        }
+      }
+    },
+    "profiles.templates.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向当前 Profile 编辑器追加常用节点模板。内嵌 Mihomo 会直接消费这些协议字段。"
+          }
+        }
+      }
+    },
+    "profiles.templates.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "协议模板"
+          }
+        }
+      }
+    },
+    "profiles.templates.trojan.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "带 SNI 和 ALPN 占位的 Trojan TLS 节点。"
+          }
+        }
+      }
+    },
+    "profiles.templates.trojan.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trojan TLS"
+          }
+        }
+      }
+    },
+    "profiles.templates.vless.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "带 Reality + Vision 的起步模板，XTLS 字段会原样保留给 Mihomo。"
+          }
+        }
+      }
+    },
+    "profiles.templates.vless.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VLESS Reality / XTLS"
+          }
+        }
+      }
+    },
+    "profiles.templates.vmess.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常见机场形态的 TLS + WebSocket 示例。"
+          }
+        }
+      }
+    },
+    "profiles.templates.vmess.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VMess WebSocket"
+          }
+        }
+      }
+    },
+    "profiles.templates.xtls_note": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VLESS 模板会保留 XTLS / Reality 字段，iOS 端不会在兼容层里把它们裁掉。"
+          }
+        }
+      }
+    },
+    "proxies.delay.controller_offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controller Offline"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "控制器离线"
+          }
+        }
+      }
+    },
+    "proxies.empty_message": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入配置包后，这里会显示可切换的代理组。"
+          }
+        }
+      }
+    },
+    "proxies.empty_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无代理组"
+          }
+        }
+      }
+    },
+    "proxies.group.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前选择：%@"
+          }
+        }
+      }
+    },
+    "proxies.node.endpoint": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地址"
+          }
+        }
+      }
+    },
+    "proxies.node.security": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安全参数"
+          }
+        }
+      }
+    },
+    "proxies.node.transport": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "传输层"
+          }
+        }
+      }
+    },
+    "proxies.nodes.empty_message": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入订阅或手动 YAML 后，这里会展示具体代理节点。"
+          }
+        }
+      }
+    },
+    "proxies.nodes.empty_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有解析到节点"
+          }
+        }
+      }
+    },
+    "proxies.nodes.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前配置包里直接解析出的 %d 个节点。"
+          }
+        }
+      }
+    },
+    "proxies.nodes.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅节点"
+          }
+        }
+      }
+    },
+    "proxies.summary.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把模式、Fake DNS 和代理组切换收敛到同一个主工作区里。"
+          }
+        }
+      }
+    },
+    "proxies.summary.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理控制台"
+          }
+        }
+      }
+    },
+    "resources.empty_message": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前配置包里没有发现远程 Provider 或 URL。"
+          }
+        }
+      }
+    },
+    "resources.empty_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无远程资源"
+          }
+        }
+      }
+    },
+    "resources.interval": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "间隔：%@"
+          }
+        }
+      }
+    },
+    "resources.path": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "路径：%@"
+          }
+        }
+      }
+    },
+    "resources.source": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来源：%@"
+          }
+        }
+      }
+    },
+    "resources.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示当前配置包里发现的 Provider、远程 URL、路径和刷新周期。"
+          }
+        }
+      }
+    },
+    "resources.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "远程资源"
+          }
+        }
+      }
+    },
+    "rule_insight.card.chain": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理链路"
+          }
+        }
+      }
+    },
+    "rule_insight.card.final_node": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最终节点"
+          }
+        }
+      }
+    },
+    "rule_insight.card.matched_rule": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命中规则"
+          }
+        }
+      }
+    },
+    "rule_insight.card.traffic": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "流量"
+          }
+        }
+      }
+    },
+    "rule_insight.empty.message": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动 VPN 后打开一个网站，运行时处理流量后会在这里显示命中规则和节点解释。"
+          }
+        }
+      }
+    },
+    "rule_insight.empty.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无路由决策"
+          }
+        }
+      }
+    },
+    "rule_insight.explanation.direct": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命中 %@ 后直接走 DIRECT，没有选择代理节点。"
+          }
+        }
+      }
+    },
+    "rule_insight.explanation.rule_hit": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命中 %@ 后，经由 %@，最终选择 %@。"
+          }
+        }
+      }
+    },
+    "rule_insight.explanation.unknown": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "控制器暂时没有返回足够的链路信息，稍后刷新可继续观察。"
+          }
+        }
+      }
+    },
+    "rule_insight.preview_limit": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为了保持诊断页面流畅，当前显示前 %d 条实时连接。"
+          }
+        }
+      }
+    },
+    "rule_insight.routes.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每张卡片解释一条实时请求为什么走到对应节点。"
+          }
+        }
+      }
+    },
+    "rule_insight.routes.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为什么选择这个节点"
+          }
+        }
+      }
+    },
+    "rule_insight.summary.fake_dns": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fake DNS"
+          }
+        }
+      }
+    },
+    "rule_insight.summary.live_connections": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "实时连接"
+          }
+        }
+      }
+    },
+    "rule_insight.summary.proxied": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理连接"
+          }
+        }
+      }
+    },
+    "rule_insight.summary.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把实时流量串到命中规则、代理链路、最终节点和 Fake DNS 状态。"
+          }
+        }
+      }
+    },
+    "rule_insight.summary.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "路由解释"
+          }
+        }
+      }
+    },
+    "rules.empty_message": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前 Profile 暂时没有可解析的规则预览。"
+          }
+        }
+      }
+    },
+    "rules.empty_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无规则"
+          }
+        }
+      }
+    },
+    "rules.summary.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前生效配置共解析出 %d 条规则。"
+          }
+        }
+      }
+    },
+    "rules.summary.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则预览"
+          }
+        }
+      }
+    },
+    "runtime.connections.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追踪活跃链路、流量和命中规则。"
+          }
+        }
+      }
+    },
+    "runtime.dns.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看 Fake DNS、Nameserver Policy 和劫持输入。"
+          }
+        }
+      }
+    },
+    "runtime.hub.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则、DNS、日志和连接统一放在这里做网络级排查。"
+          }
+        }
+      }
+    },
+    "runtime.hub.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时"
+          }
+        }
+      }
+    },
+    "runtime.logs.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看最新运行时事件和告警。"
+          }
+        }
+      }
+    },
+    "runtime.mode.direct": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直连"
+          }
+        }
+      }
+    },
+    "runtime.mode.global": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全局"
+          }
+        }
+      }
+    },
+    "runtime.mode.rule": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则"
+          }
+        }
+      }
+    },
+    "runtime.phase.idle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时空闲。"
+          }
+        }
+      }
+    },
+    "runtime.phase.running": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行时已启动。"
+          }
+        }
+      }
+    },
+    "runtime.rules.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看规则预览和策略目标。"
+          }
+        }
+      }
+    },
+    "runtime.state.failed": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "失败"
+          }
+        }
+      }
+    },
+    "runtime.state.idle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空闲"
+          }
+        }
+      }
+    },
+    "runtime.state.running": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行中"
+          }
+        }
+      }
+    },
+    "runtime.state.starting": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动中"
+          }
+        }
+      }
+    },
+    "runtime.state.stopped": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已停止"
+          }
+        }
+      }
+    },
+    "runtime.state.stopping": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止中"
+          }
+        }
+      }
+    },
+    "runtime.summary.backend": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "后端"
+          }
+        }
+      }
+    },
+    "runtime.summary.fake_dns": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fake DNS"
+          }
+        }
+      }
+    },
+    "runtime.summary.mode": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模式"
+          }
+        }
+      }
+    },
+    "runtime.summary.state": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "状态"
+          }
+        }
+      }
+    },
+    "runtime.version.core_unavailable": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "嵌入式核心不可用"
+          }
+        }
+      }
+    },
+    "runtime.version.uninitialized": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未初始化"
+          }
+        }
+      }
+    },
+    "runtime.version.unknown": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未知"
+          }
+        }
+      }
+    },
+    "settings.app_config.prompt": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分流偏好与测速设置。"
+          }
+        }
+      }
+    },
+    "settings.app_config.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Config JSON"
+          }
+        }
+      }
+    },
+    "settings.compatibility.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入分流偏好与测速设置。"
+          }
+        }
+      }
+    },
+    "settings.compatibility.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用设置"
+          }
+        }
+      }
+    },
+    "settings.export.field_name": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出文件名"
+          }
+        }
+      }
+    },
+    "settings.export.now": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即导出"
+          }
+        }
+      }
+    },
+    "settings.export.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把当前配置包导出到共享容器的 exports 目录。"
+          }
+        }
+      }
+    },
+    "settings.export.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出配置包"
+          }
+        }
+      }
+    },
+    "settings.import_app_config": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 App Config JSON"
+          }
+        }
+      }
+    },
+    "substore.artifact": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "制品标识"
+          }
+        }
+      }
+    },
+    "substore.enabled": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已启用"
+          }
+        }
+      }
+    },
+    "substore.last_probe": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近探测"
+          }
+        }
+      }
+    },
+    "substore.probe": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "探测远端"
+          }
+        }
+      }
+    },
+    "substore.probe.connected": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已连接到 %@"
+          }
+        }
+      }
+    },
+    "substore.probe.empty_url": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sub-Store 远端 URL 为空。"
+          }
+        }
+      }
+    },
+    "substore.probe.http": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTP %d · %@"
+          }
+        }
+      }
+    },
+    "substore.probe.idle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未探测"
+          }
+        }
+      }
+    },
+    "substore.remote_url": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "远端 URL"
+          }
+        }
+      }
+    },
+    "substore.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看远程 Sub-Store 的连通性和同步配置。"
+          }
+        }
+      }
+    },
+    "substore.sync_interval": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步间隔"
+          }
+        }
+      }
+    },
+    "substore.sync_interval_minutes": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d 分钟"
+          }
+        }
+      }
+    },
+    "substore.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "远程 Sub-Store"
+          }
+        }
+      }
+    },
+    "tunnel.activity.starting": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在准备 VPN 配置，并请求 iOS 启动 Tunnel。"
+          }
+        }
+      }
+    },
+    "tunnel.activity.stopping": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在停止 Packet Tunnel 并释放运行时资源。"
+          }
+        }
+      }
+    },
+    "tunnel.activity.waiting": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已向 iOS 发送 Tunnel 启动请求，正在等待系统 VPN 状态变化。"
+          }
+        }
+      }
+    },
+    "tunnel.phase.validating": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在校验导入的配置后再启动 Tunnel。"
+          }
+        }
+      }
+    },
+    "validation.blocking": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阻断错误"
+          }
+        }
+      }
+    },
+    "validation.controlled.empty": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controlled Mihomo YAML 为空。"
+          }
+        }
+      }
+    },
+    "validation.controlled.missing_dns": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controlled Mihomo YAML 缺少 dns 段。"
+          }
+        }
+      }
+    },
+    "validation.dns.missing_direct_nameserver": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺少 dns.direct-nameserver。"
+          }
+        }
+      }
+    },
+    "validation.dns.missing_fake_ip_filter": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺少 dns.fake-ip-filter，行为可能与桌面默认值不一致。"
+          }
+        }
+      }
+    },
+    "validation.dns.missing_fake_ip_mode": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fake DNS 需要 dns.enhanced-mode 为 fake-ip。"
+          }
+        }
+      }
+    },
+    "validation.dns.missing_fake_ip_range": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fake DNS 需要 dns.fake-ip-range。"
+          }
+        }
+      }
+    },
+    "validation.dns.missing_fallback": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺少 dns.fallback。"
+          }
+        }
+      }
+    },
+    "validation.dns.missing_nameserver_policy": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺少 dns.nameserver-policy。"
+          }
+        }
+      }
+    },
+    "validation.dns.missing_proxy_nameserver": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺少 dns.proxy-server-nameserver。"
+          }
+        }
+      }
+    },
+    "validation.override.preserved_only": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Override JavaScript 会被保留，但当前 iOS 运行时不会执行它。"
+          }
+        }
+      }
+    },
+    "validation.preserved": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保留但未启用"
+          }
+        }
+      }
+    },
+    "validation.profile.empty": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile YAML 为空。"
+          }
+        }
+      }
+    },
+    "validation.subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在把当前桌面兼容配置写入运行时之前，先做结构校验。"
+          }
+        }
+      }
+    },
+    "validation.title": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "兼容性校验"
+          }
+        }
+      }
+    },
+    "validation.warnings": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "警告"
+          }
+        }
+      }
+    },
+    "overview.plan.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接信息"
+          }
+        }
+      }
+    },
+    "overview.plan.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认当前节点、配置和连接状态。"
+          }
+        }
+      }
+    },
+    "overview.connect.node": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前节点"
+          }
+        }
+      }
+    },
+    "overview.metrics.traffic": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "累计流量"
+          }
+        }
+      }
+    },
+    "proxies.groups.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理分组"
+          }
+        }
+      }
+    },
+    "proxies.groups.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择分组，测试延迟或切换节点。"
+          }
+        }
+      }
+    },
+    "proxies.group.detail.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "节点选择"
+          }
+        }
+      }
+    },
+    "proxies.group.selection": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前节点"
+          }
+        }
+      }
+    },
+    "proxies.group.type": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分组类型"
+          }
+        }
+      }
+    },
+    "proxies.group.delay": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "延迟"
+          }
+        }
+      }
+    },
+    "proxies.group.option_count": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "节点数"
+          }
+        }
+      }
+    },
+    "proxies.group.options.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可选节点"
+          }
+        }
+      }
+    },
+    "proxies.group.options.count": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d 个节点"
+          }
+        }
+      }
+    },
+    "proxies.group.option.selected": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前已选"
+          }
+        }
+      }
+    },
+    "proxies.group.option.tap": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击切换到此节点"
+          }
+        }
+      }
+    },
+    "proxies.group.option.locked": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由内核自动选择"
+          }
+        }
+      }
+    },
+    "proxies.delay.not_tested": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未测试"
+          }
+        }
+      }
+    },
+    "proxies.delay.test_all": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部测速"
+          }
+        }
+      }
+    },
+    "proxies.sort.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排序"
+          }
+        }
+      }
+    },
+    "proxies.sort.profile_order": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅顺序"
+          }
+        }
+      }
+    },
+    "proxies.sort.latency": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "延迟优先"
+          }
+        }
+      }
+    },
+    "routing.title": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外网分流"
+          }
+        }
+      }
+    },
+    "routing.description": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通用分流代理国外服务和未命中流量，国内常见服务与局域网直连。"
+          }
+        }
+      }
+    },
+    "routing.mode.automatic": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动"
+          }
+        }
+      }
+    },
+    "routing.mode.profile": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置原规则"
+          }
+        }
+      }
+    },
+    "routing.mode.general": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通用分流"
+          }
+        }
+      }
+    },
+    "routing.mode.desktop": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义规则"
+          }
+        }
+      }
+    },
+    "routing.policy": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分流策略"
+          }
+        }
+      }
+    },
+    "routing.effective": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "实际策略"
+          }
+        }
+      }
+    },
+    "routing.automatic_help": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动模式保留配置已有分流；如果配置只覆盖 OpenAI，会补充通用外网规则。"
+          }
+        }
+      }
+    },
+    "routing.cache_help": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首次使用内置规则；VPN 运行期间每 24 小时检查更新，更新失败保留有效缓存。"
+          }
+        }
+      }
+    },
+    "routing.update": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新通用规则"
+          }
+        }
+      }
+    },
+    "routing.import": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入规则"
+          }
+        }
+      }
+    },
+    "routing.snapshot_count": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则数量"
+          }
+        }
+      }
+    },
+    "routing.snapshot_date": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新时间"
+          }
+        }
+      }
+    },
+    "routing.snapshot_help": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "域名/IP 规则定义代理、直连和拦截行为。导入的规则集使用当前设备节点，可在不同设备间复用。"
+          }
+        }
+      }
+    },
+    "routing.updating": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在更新规则…"
+          }
+        }
+      }
+    },
+    "routing.updated": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则已更新。VPN 运行期间每 24 小时自动检查更新。"
+          }
+        }
+      }
+    },
+    "routing.update_partial": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d 个规则源更新失败，已保留其有效缓存。"
+          }
+        }
+      }
+    },
+    "routing.snapshot_imported": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则已导入，并使用当前节点应用分流。"
+          }
+        }
+      }
+    },
+    "routing.error.snapshot": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则集无效或包含不支持的策略。"
+          }
+        }
+      }
+    },
+    "routing.error.missing_snapshot": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先导入规则集。"
+          }
+        }
+      }
+    },
+    "routing.error.proxy": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用通用分流前，请先导入至少一个内核支持的代理节点。"
+          }
+        }
+      }
+    },
+    "routing.error.groups": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "proxy-groups 必须为 YAML 列表。"
+          }
+        }
+      }
+    },
+    "routing.error.payload": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则为空或无效，已保留上次有效缓存。"
+          }
+        }
+      }
+    },
+    "core.tun.mtu": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MTU"
+          }
+        }
+      }
+    },
+    "validation.tun.mtu": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TUN MTU 必须在 1280 至 9000 字节之间。"
+          }
+        }
+      }
+    },
+    "core.network.path": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前网络"
+          }
+        }
+      }
+    },
+    "core.network.waiting": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待网络"
+          }
+        }
+      }
+    },
+    "core.queue.current": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数据包缓存"
+          }
+        }
+      }
+    },
+    "core.queue.peak": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缓存峰值"
+          }
+        }
+      }
+    },
+    "core.queue.dropped": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "丢弃的数据包"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -123,7 +123,12 @@ export class SystemDNSController {
           !sameDNS(current, existing.applied) &&
           !sameDNS(current, existing.original)
         ) {
-          // A later reconciliation must not overwrite a user's new DNS configuration.
+          // Preserve an operator's new value, but never report an unowned resolver as ready.
+          failures.push(
+            new Error(
+              `System DNS for "${service.name}" was changed outside the application; keeping the operator value`
+            )
+          )
           continue
         }
         if (!existing && restoreMode === 'original' && sameDNS(current, applied)) {

@@ -988,5 +988,7 @@
   "privacy.finding.udpComplexRules.warning": "較早存在規則集、子規則或邏輯規則，靜態檢查無法完整判斷其 UDP 行為，需手動檢查。",
   "privacy.finding.windowsDnsMode.pass": "Windows 已設定自動路由、嚴格路由和有效 DNS 攔截；實際網卡及 WFP 狀態仍需原生驗證。",
   "privacy.finding.windowsDnsMode.warning": "Windows DNS 攔截設定不完整，請檢查 dns-mode、自動路由和嚴格路由。",
-  "privacy.finding.windowsDnsMode.error": "Windows 系統 DNS 攔截已停用；僅有 53 連接埠規則無法保護其他網卡。"
+  "privacy.finding.windowsDnsMode.error": "Windows 系統 DNS 攔截已停用；僅有 53 連接埠規則無法保護其他網卡。",
+  "privacy.finding.macDNSGuard.pass": "目前核心的原生 PF DNS 防旁路規則已確認生效；這不等同於網路洩漏實測通過。",
+  "privacy.finding.macDNSGuard.warning": "尚未確認原生 DNS 防旁路生效，請安裝此 Fork 的原生輔助工具並檢查狀態。"
 }

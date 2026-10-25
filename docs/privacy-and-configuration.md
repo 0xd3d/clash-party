@@ -1,6 +1,6 @@
 # Privacy features and user configuration
 
-The application manages capabilities; profiles manage network policy. A server move or routing change must not require rebuilding the application.
+The application manages capabilities; profiles manage network policy. The repository now includes an independently built iOS app and mobile core; see [three-platform protection](three-platform-privacy.md). A server move or routing change must not require rebuilding the application.
 
 | Layer                         | Responsibilities                                                                                                                                                             |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -48,7 +48,7 @@ Both platforms share the core's routing policy, UDP/TCP 53 hijack settings, encr
 
 On current Mihomo, Windows with auto-route defaults an unspecified DNS mode to hijack. The inspector separately flags explicit disabled/native mode and missing strict-route/auto-route; port rules alone are not proof of other adapters being intercepted. Existing saved settings are preserved. Windows TUN startup requires administrator rights before stopping a working core or spawning a new one. Missing privileges no longer silently persist tun.enable=false. System proxy activation waits for a live, owned core and the requested TUN state, covering initial mode selection and retries. This is not an operating-system-wide kill switch.
 
-An external app that hardcodes a LAN DNS server can bypass the normal TUN route on macOS. A successful browser leak test does not disprove that route. The optional [administrator session guard](../integrations/macos-dns-guard/README.md) is a separate advanced layer with an explicit lifetime; it is never represented as automatically active. It is included only as a macOS resource, and requires deliberate administrator execution.
+An external app that hardcodes a LAN DNS server can bypass the normal TUN route on macOS. A successful browser leak test does not disprove that route. PKG builds now include an authenticated [native DNS guard](../integrations/macos-dns-guard-native/README.md), activated with automatic system DNS and verified against actual PF state. The older [administrator session script](../integrations/macos-dns-guard/README.md) remains an optional advanced diagnostic tool; it is never represented as automatically active. Neither layer is a permanent OS-wide traffic kill switch.
 
 Privacy inspection now checks the applied configuration revision as well as process identity, rejecting a report that spans an in-place hot reload. Windows startup cleanup never terminates an unknown-path process based only on its name. Packaged native modules always prefer their own resources over a source checkout in the working directory.
 

@@ -40,8 +40,8 @@
     "postinstall": "pnpm run ensure:electron && electron-builder install-app-deps",
     "build:win": "electron-vite build && electron-builder --publish never --win",
     "build:win:dev": "pnpm run prepare:dev && electron-vite build && electron-builder --publish never --win",
-    "build:mac": "electron-vite build && electron-builder --publish never --mac",
-    "build:mac:dev": "pnpm run prepare:dev && electron-vite build && electron-builder --publish never --mac",
+    "build:mac": "node scripts/build-macos-dns-guard.mjs && electron-vite build && electron-builder --publish never --mac",
+    "build:mac:dev": "node scripts/build-macos-dns-guard.mjs && pnpm run prepare:dev && electron-vite build && electron-builder --publish never --mac",
     "build:linux": "electron-vite build && electron-builder --publish never --linux",
     "build:linux:dev": "pnpm run prepare:dev && electron-vite build && electron-builder --publish never --linux"
   },

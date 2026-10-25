@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-25T00:00:00Z",
+  "sourceRuleCount": 23,
+  "skippedProcessRuleCount": 0,
+  "policyMap": {
+    "DIRECT": "DIRECT",
+    "Egress": "__IOS_PROXY__"
+  },
+  "rules": [
+    "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+    "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+    "IP-CIDR6,::1/128,DIRECT,no-resolve",
+    "IP-CIDR6,fc00::/7,DIRECT,no-resolve",
+    "IP-CIDR6,fe80::/10,DIRECT,no-resolve",
+    "NETWORK,udp,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,chatgpt.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,openai.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,oaistatic.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,oaiusercontent.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,claude.ai,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,claude.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,claudeusercontent.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,anthropic.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,google.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,github.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,wikipedia.org,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,qq.com,DIRECT",
+    "DOMAIN-SUFFIX,baidu.com,DIRECT",
+    "GEOIP,CN,DIRECT",
+    "MATCH,__IOS_PROXY__"
+  ]
+}

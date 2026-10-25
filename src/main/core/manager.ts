@@ -64,12 +64,15 @@ import {
 } from './process'
 import {
   startSystemDNSMonitoring,
+  assertSystemDNSProtection,
   stopSystemDNSMonitoring,
   recoverDNS,
   updateSystemDNSRuntime
 } from './dns'
 import { SystemDNSListenerProof } from './systemDNSRuntime'
 import { activateWindowsCoreProxy } from './startupProxy'
+import { shutdownProtectedCore } from './protectedShutdown'
+import { releaseMacDNSGuard } from './macDNSGuard'
 
 // 重新导出权限相关函数
 export {
@@ -937,8 +940,19 @@ async function startCoreInternal(
           hasCoreProcess(),
         config.runtimeConfig,
         corePid,
-        (address) => coreDNSStates.get(proc)?.proof.isReady(address) === true
+        (address) => coreDNSStates.get(proc)?.proof.isReady(address) === true,
+        async () => {
+          if (
+            child !== proc ||
+            dnsIneligibleProcesses.has(proc) ||
+            coreOperationPhase === 'shutting-down'
+          )
+            throw new Error('Core changed before macOS proxy activation')
+          await initSystemProxy()
+          mainWindow?.webContents.send('appConfigUpdated')
+        }
       )
+      await assertSystemDNSProtection(config.runtimeConfig, corePid)
     }
     // API 就绪后同步本次 DNS 保护结果。
     try {
@@ -988,13 +1002,17 @@ export function startCoreForStartup(): Promise<Promise<void>[]> {
   return queueCoreStart()
 }
 
-async function stopCoreInternal(force = false, cancelStartup = true): Promise<void> {
+async function stopCoreInternal(
+  force = false,
+  cancelStartup = true,
+  releaseGuard = false
+): Promise<void> {
   // A delayed readiness continuation must not create a new DNS session after this barrier.
   if (child) dnsIneligibleProcesses.add(child)
   stopSystemDNSMonitoring()
   if (!force && process.platform === 'darwin') {
     try {
-      await recoverDNS()
+      await recoverDNS({ releaseGuard })
     } catch (error) {
       managerLogger.error('recover dns failed', error)
     }
@@ -1059,7 +1077,7 @@ async function cleanupStoppedCoreResources(): Promise<void> {
 export async function stopCore(force = false): Promise<void> {
   ensureCoreOperationAllowed()
   cancelAutomaticRestart()
-  return runCoreOperation(() => stopCoreInternal(force))
+  return runCoreOperation(() => stopCoreInternal(force, true, true))
 }
 
 // 退出不等待启动/重启队列：先失效 DNS 接管任务并恢复系统 DNS，再终止子进程。
@@ -1071,17 +1089,20 @@ export async function stopCoreForExit(): Promise<void> {
   coreOperationPhase = 'shutting-down'
   cancelAutomaticRestart()
   stopSystemDNSMonitoring()
-  try {
-    await recoverDNS({ force: true, timeout: 750 })
-  } catch (error) {
-    managerLogger.error('System DNS recovery incomplete; journal retained for next launch', error)
-  }
-  const stoppedChild = stopCoreProcessAndStreams(true, true)
-  await Promise.allSettled([
-    cleanupStoppedCoreResources(),
-    // 确认退出后才撤 watchdog；确认失败时留着它，让它在主进程退出时补 kill -9。
-    ensureCoreProcessExited(stoppedChild).then(() => stopCoreProcessWatchdog(stoppedChild?.pid))
-  ])
+  await shutdownProtectedCore({
+    restoreDNS: () => recoverDNS({ force: true, timeout: 750 }),
+    stopCore: async () => {
+      const stoppedChild = stopCoreProcessAndStreams(true, true)
+      await Promise.allSettled([
+        cleanupStoppedCoreResources(),
+        ensureCoreProcessExited(stoppedChild).then(() => stopCoreProcessWatchdog(stoppedChild?.pid))
+      ])
+    },
+    releaseGuard: async () => {
+      if (process.platform === 'darwin') await releaseMacDNSGuard()
+    },
+    onError: (message, error) => managerLogger.error(message, error)
+  })
 }
 
 setStopCoreBeforeAdminRestart(stopCore)

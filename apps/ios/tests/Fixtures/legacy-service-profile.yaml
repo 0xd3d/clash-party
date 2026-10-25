@@ -1,0 +1,22 @@
+mode: rule
+proxies:
+  - name: Sample Node
+    type: vless
+    server: 198.51.100.10
+    port: 443
+    uuid: 00000000-0000-0000-0000-000000000001
+    tls: true
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      short-id: 0000000000000000
+      support-x25519mlkem768: true
+proxy-groups:
+  - name: OpenAI
+    type: select
+    proxies:
+      - Sample Node
+rules:
+  - DOMAIN-SUFFIX,chatgpt.com,OpenAI
+  - DOMAIN-SUFFIX,challenges.cloudflare.com,OpenAI
+  - MATCH,DIRECT

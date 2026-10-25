@@ -502,7 +502,8 @@ export async function init(): Promise<void> {
 
   const initTasks: Promise<void>[] = [ensureRuntimeFiles(), startSSIDCheck()]
 
-  if (process.platform !== 'win32') initTasks.push(initSystemProxy())
+  if (process.platform !== 'win32' && process.platform !== 'darwin')
+    initTasks.push(initSystemProxy())
 
   await Promise.all(initTasks)
   initDeeplink()

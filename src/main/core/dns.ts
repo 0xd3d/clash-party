@@ -14,6 +14,7 @@ import {
   type SystemDNSService
 } from './systemDNSController'
 import { assertSystemDNSListener, getSystemDNSAddress, probeSystemDNS } from './systemDNSRuntime'
+import { acquireMacDNSGuard, releaseMacDNSGuard } from './macDNSGuard'
 
 const execFilePromise = promisify(execFile)
 const logger = createLogger('SystemDNS')
@@ -118,6 +119,8 @@ interface DNSSession {
   signature: string | null
   busy: boolean
   lastError: string | null
+  onReady: () => Promise<void>
+  readyNotified: boolean
 }
 
 let session: DNSSession | null = null
@@ -130,6 +133,12 @@ export function stopSystemDNSMonitoring(): void {
   controller.cancel()
 }
 
+async function notifyReady(current: DNSSession): Promise<void> {
+  if (current.readyNotified || session !== current || !current.isCurrent()) return
+  await current.onReady()
+  if (session === current && current.isCurrent()) current.readyNotified = true
+}
+
 async function synchronize(current: DNSSession): Promise<void> {
   if (current.busy || session !== current || !current.isCurrent()) return
   current.busy = true
@@ -140,8 +149,12 @@ async function synchronize(current: DNSSession): Promise<void> {
     if (config.autoSetDNS === false || !runtime.tun?.enable) {
       await controller.restore({ timeout: 750 })
       if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
+      await releaseMacDNSGuard()
+      if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
       current.generation = controller.beginSession()
       current.signature = null
+      current.lastError = null
+      await notifyReady(current)
       return
     }
     const address = getSystemDNSAddress(config)
@@ -160,10 +173,15 @@ async function synchronize(current: DNSSession): Promise<void> {
       current.generation = controller.beginSession()
     }
     if (!current.hasListenerProof(address)) return
+    // Migrate regular system queries first so old external DNS states can expire.
+    // If native filtering is unconfirmed, retain loopback DNS and its recovery journal.
     await controller.acquire(current.generation, [address], { restoreMode })
+    if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
+    await acquireMacDNSGuard(current.corePid)
     if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
     current.signature = signature
     current.lastError = null
+    await notifyReady(current)
   } catch (error) {
     // A transient probe/network failure must never enable a router/public DNS fallback.
     const message = String(error)
@@ -196,7 +214,8 @@ export async function startSystemDNSMonitoring(
   isCurrent: () => boolean,
   appliedRuntime: IMihomoConfig,
   corePid: number,
-  hasListenerProof: (address: string) => boolean
+  hasListenerProof: (address: string) => boolean,
+  onReady: () => Promise<void> = async () => {}
 ): Promise<void> {
   if (process.platform !== 'darwin' || !isCurrent()) return
   stopSystemDNSMonitoring()
@@ -208,7 +227,9 @@ export async function startSystemDNSMonitoring(
     generation: controller.beginSession(),
     signature: null,
     busy: false,
-    lastError: null
+    lastError: null,
+    onReady,
+    readyNotified: false
   }
   session = current
   await synchronize(current)
@@ -217,10 +238,30 @@ export async function startSystemDNSMonitoring(
   monitor.unref()
 }
 
+/** Startup must not report protected readiness after a failed native guard or DNS takeover. */
+export async function assertSystemDNSProtection(
+  runtime: Partial<IMihomoConfig>,
+  corePid: number
+): Promise<void> {
+  if (process.platform !== 'darwin' || runtime.tun?.enable !== true) return
+  const config = await getAppConfig()
+  if (config.autoSetDNS === false) return
+  const current = session
+  if (
+    !current ||
+    current.corePid !== corePid ||
+    !current.isCurrent() ||
+    current.signature === null ||
+    current.lastError !== null
+  )
+    throw new Error('Native DNS bypass protection or system DNS takeover is not ready')
+}
+
 export async function recoverDNS(
-  options: { force?: boolean; timeout?: number } = {}
+  options: { force?: boolean; timeout?: number; releaseGuard?: boolean } = {}
 ): Promise<void> {
   if (process.platform !== 'darwin') return
   stopSystemDNSMonitoring()
   await controller.restore({ timeout: options.timeout ?? 750 })
+  if (options.releaseGuard) await releaseMacDNSGuard()
 }

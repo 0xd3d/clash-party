@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import { createReleasePlan } from './release-plan.mjs'
-import { assertBinaryArchitecture, packagedAppDirectory } from './verify-package.mjs'
+import {
+  assertBinaryArchitecture,
+  assertDesktopArchivePaths,
+  packagedAppDirectory
+} from './verify-package.mjs'
 const env = {
   GITHUB_SHA: 'a'.repeat(40),
   GITHUB_REF: 'refs/heads/smart_core',
@@ -102,5 +106,21 @@ describe('binary architecture gates', () => {
     expect(() => assertBinaryArchitecture(Buffer.alloc(4), 'win32', 'x64')).toThrow('PE')
     expect(() => assertBinaryArchitecture(Buffer.alloc(4), 'darwin', 'arm64')).toThrow('Mach-O')
     expect(() => assertBinaryArchitecture(Buffer.alloc(4), 'linux', 'x64')).toThrow('Unsupported')
+  })
+})
+
+describe('monorepo package boundary', () => {
+  it('rejects mobile source and generated frameworks at the archive root on both hosts', () => {
+    for (const entry of [
+      '/apps/ios/ClashParty/App.swift',
+      '\\modules\\mihomo-ios-core\\go.mod',
+      'apps/ios/Vendor/MihomoMobile.xcframework/a'
+    ])
+      expect(() => assertDesktopArchivePaths([entry])).toThrow('leaked')
+  })
+  it('allows dependencies with their own internal modules directories', () => {
+    expect(() =>
+      assertDesktopArchivePaths(['/out/main/index.js', '/node_modules/package/modules/index.js'])
+    ).not.toThrow()
   })
 })

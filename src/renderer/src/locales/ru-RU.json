@@ -971,5 +971,7 @@
   "privacy.finding.udpComplexRules.warning": "Ранние наборы правил, подправила или логические правила требуют ручной проверки. Статический анализ не определяет всю обработку UDP.",
   "privacy.finding.windowsDnsMode.pass": "Настроены перехват DNS, auto-route и strict-route Windows; адаптеры и WFP требуют проверки.",
   "privacy.finding.windowsDnsMode.warning": "Перехват DNS Windows настроен не полностью: проверьте dns-mode, auto-route и strict-route.",
-  "privacy.finding.windowsDnsMode.error": "Перехват системного DNS Windows отключён; одних правил порта 53 недостаточно."
+  "privacy.finding.windowsDnsMode.error": "Перехват системного DNS Windows отключён; одних правил порта 53 недостаточно.",
+  "privacy.finding.macDNSGuard.pass": "Правила PF для DNS текущего ядра активны. Это не результат проверки утечек.",
+  "privacy.finding.macDNSGuard.warning": "Защита DNS от обхода не подтверждена. Установите системный помощник этого форка и проверьте статус."
 }

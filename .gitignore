@@ -15,3 +15,25 @@ tsconfig.node.tsbuildinfo
 
 release-metadata/
 release-assets/
+
+# Native iOS source is versioned; generated binaries and personal signing are not.
+apps/ios/.build/
+apps/ios/.derived-data*/
+apps/ios/DerivedData/
+apps/ios/Vendor/
+apps/ios/Config/Local.xcconfig
+apps/ios/**/xcuserdata/
+apps/ios/**/Resources/GeoResources/*.dat
+apps/ios/**/Resources/GeoResources/*.mmdb
+apps/ios/**/Resources/GeoResources/*.metadb
+**/*.mobileprovision
+**/*.p12
+**/*.p8
+modules/mihomo-ios-core/iosbridge
+
+# Locally compiled privileged tools are generated, never versioned.
+/build/native/
+
+build/native/
+__pycache__/
+*.pyc

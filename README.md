@@ -1,3 +1,8 @@
+> This fork also contains a native [iOS app](apps/ios/README.md) and its
+> [mobile core source](modules/mihomo-ios-core/SOURCE.md). Desktop and mobile keep
+> independent native builds. See [three-platform protection](docs/three-platform-privacy.md)
+> and [fork build/Release instructions](docs/self-build.md).
+
 <h3 align="center">
   <img height='48px' src='./images/icon-white.png#gh-dark-mode-only'>
   <img height='48px' src='./images/icon-black.png#gh-light-mode-only'>

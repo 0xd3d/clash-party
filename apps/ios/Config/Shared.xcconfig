@@ -1,0 +1,4 @@
+// Public defaults; override only in the ignored Local.xcconfig or CI signing settings.
+CLASH_PARTY_IOS_BUNDLE_ID = org.clashparty.ios
+CLASH_PARTY_IOS_APP_GROUP = group.$(CLASH_PARTY_IOS_BUNDLE_ID)
+#include? "Local.xcconfig"
