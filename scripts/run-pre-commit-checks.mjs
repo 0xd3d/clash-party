@@ -46,7 +46,7 @@ function spawnCommand(command, { stdio = 'inherit' } = {}) {
     })
   }
 
-  return spawnSync('sh', ['-lc', command], {
+  return spawnSync('sh', ['-c', command], {
     cwd: process.cwd(),
     stdio
   })
