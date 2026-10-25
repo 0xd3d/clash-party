@@ -56,7 +56,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     for (const binary of binaries) assertBinaryArchitecture(readFileSync(binary), platform, arch)
     const archive = path.join(resources, 'app.asar')
     const pkg = JSON.parse(asar.extractFile(archive, 'package.json').toString())
-    const main = asar.extractFile(archive, 'out/main/index.js').toString()
+    const main = asar.extractFile(archive, path.normalize(pkg.main)).toString()
     for (const marker of [
       'system-dns-state.json',
       'inspectPrivacyProtection',

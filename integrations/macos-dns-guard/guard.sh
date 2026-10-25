@@ -12,6 +12,16 @@ actual=$(/bin/ps -p "$app_pid" -o comm= | /usr/bin/sed 's/^ *//')
 owner=$(/bin/ps -p "$app_pid" -o uid= | /usr/bin/tr -d ' ')
 [ "$owner" = "${SUDO_UID:-$owner}" ] || { echo 'Application belongs to another user'; exit 1; }
 /usr/bin/nc -z -w 2 127.0.0.1 53 || { echo 'Local TCP DNS must be ready before enabling this guard'; exit 1; }
+# A scoped resolver can override localhost even after all adapters were migrated.
+# Do not silently delete corporate/admin resolver files or enable a guard that would break them.
+for resolver in /etc/resolver/*; do
+  [ -f "$resolver" ] || continue
+  if /usr/bin/awk '$1 == "nameserver" && $2 !~ /^127[.]/ && $2 != "::1" { bad=1 } END { exit !bad }' "$resolver"; then
+    echo "Conflicting domain-specific DNS override: $resolver" >&2
+    echo 'Review and back up this override before enabling the DNS guard. No PF rules changed.' >&2
+    exit 1
+  fi
+done
 umask 077
 work=$(/usr/bin/mktemp -d /private/tmp/clash-party-pf.XXXXXX)
 suffix=${work##*.}
