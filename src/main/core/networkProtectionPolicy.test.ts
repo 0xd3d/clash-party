@@ -74,6 +74,10 @@ describe('protected runtime policy', () => {
       rules.indexOf('IP-CIDR6,fe80::/10,DIRECT,no-resolve')
     )
     expect(rules).toContain('IP-CIDR6,fe80::/10,DIRECT,no-resolve')
+    // Even a known resolver mapped to a LAN address must not win the LAN DIRECT rule.
+    expect(rules.indexOf('DOMAIN-SUFFIX,dns.google,Protected')).toBeLessThan(
+      rules.indexOf('IP-CIDR,192.168.0.0/16,DIRECT,no-resolve')
+    )
     expect(rules.slice(-3)).toEqual(original)
     expect(value.dns?.nameserver).toEqual(['https://dns.google/dns-query#h3=true&Protected'])
     expect(value.dns?.['nameserver-policy']?.['aqqmusic.tc.qq.com']).toEqual([

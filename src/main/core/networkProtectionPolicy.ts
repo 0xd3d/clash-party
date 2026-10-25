@@ -222,11 +222,6 @@ export function applyNetworkProtectionPolicy(profile: IMihomoConfig, settings: S
   const prefix = [
     // A hardcoded router/LAN resolver must not bypass business DNS through DIRECT.
     ...[53, 853].map((port) => `DST-PORT,${port},${target}`),
-    ...LOCAL_NETWORKS.map(
-      (cidr) => `${cidr.includes(':') ? 'IP-CIDR6' : 'IP-CIDR'},${cidr},DIRECT,no-resolve`
-    ),
-    'DOMAIN-SUFFIX,local,DIRECT',
-    'DOMAIN-SUFFIX,lan,DIRECT',
     ...[...resolverHosts]
       .filter((host) => !isIP(host))
       .map((domain) => `DOMAIN-SUFFIX,${domain},${target}`),
@@ -236,6 +231,11 @@ export function applyNetworkProtectionPolicy(profile: IMihomoConfig, settings: S
         (ip) =>
           `${ip.includes(':') ? 'IP-CIDR6' : 'IP-CIDR'},${ip}/${ip.includes(':') ? 128 : 32},${target},no-resolve`
       ),
+    ...LOCAL_NETWORKS.map(
+      (cidr) => `${cidr.includes(':') ? 'IP-CIDR6' : 'IP-CIDR'},${cidr},DIRECT,no-resolve`
+    ),
+    'DOMAIN-SUFFIX,local,DIRECT',
+    'DOMAIN-SUFFIX,lan,DIRECT',
     ...[3478, 5349].map((port) => `DST-PORT,${port},${target}`),
     ...(settings.networkProtectionPublicUDP !== false ? [`NETWORK,UDP,${target}`] : [])
   ]
