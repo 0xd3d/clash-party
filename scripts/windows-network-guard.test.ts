@@ -106,22 +106,31 @@ describe('Windows guard native build and boundary', () => {
       const directory = mkdtempSync(path.join(os.tmpdir(), 'clash-network-guard-fixtures-'))
       try {
         const output = path.join(directory, 'policy-selftest')
-        execFileSync('c++', [
-          '-std=c++17',
-          '-Wall',
-          '-Wextra',
-          '-Werror',
-          'integrations/windows-network-guard/policy-selftest.cpp',
-          '-o',
-          output
-        ])
-        expect(JSON.parse(execFileSync(output, { encoding: 'utf8' }))).toMatchObject({
-          protocolVersion: 1,
-          selfTest: 'passed'
-        })
+        // A cold Apple SDK/compiler on a hosted runner exceeds Vitest's default
+        // five seconds. Bound compilation separately from the pure fixture run.
+        execFileSync(
+          'c++',
+          [
+            '-std=c++17',
+            '-Wall',
+            '-Wextra',
+            '-Werror',
+            'integrations/windows-network-guard/policy-selftest.cpp',
+            '-o',
+            output
+          ],
+          { timeout: 30000 }
+        )
+        expect(JSON.parse(execFileSync(output, { encoding: 'utf8', timeout: 5000 }))).toMatchObject(
+          {
+            protocolVersion: 1,
+            selfTest: 'passed'
+          }
+        )
       } finally {
         rmSync(directory, { recursive: true, force: true })
       }
-    }
+    },
+    40000
   )
 })
