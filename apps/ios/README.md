@@ -23,6 +23,8 @@ Nodes, credentials, subscription URLs and user exceptions are imported configura
 
 The legacy mobile core supports YAML rule providers but not MRS. Desktop policy export must convert supported providers or fail clearly; it must never ship MRS into this core or silently discard rules. The existing portable snapshot format includes NETWORK transport rules. Desktop-only process rules are intentionally omitted; node credentials are never part of a policy-only export.
 
+Portable snapshots support at most 50,000 rules after provider expansion. The current large desktop `cn-domain` provider exceeds that limit, so the complete desktop main configuration cannot be directly synchronized through this exporter; oversized or unsupported policies fail explicitly without truncation. iOS General Routing instead uses the existing compact `GEOSITE,cn` matcher and public YAML providers to retain the same policy goals. Named public traffic, including unknown domains resolving to CN/CDN IPs, uses the selected outbound; country-IP DIRECT fallbacks apply only after named traffic is classified and retain IP-only domestic CDN access. Node profiles and credentials are imported independently.
+
 This mobile core is a custom 1.10.0 base. It does not support every current desktop protocol or DNS/TUN option; for example Hysteria2 and desktop JS overrides are absent. Keep capability handling in the existing iOS compatibility layer, not a new policy language. REALITY ML-KEM, Fake-IP persistence, DoH and packet-flow lifetime changes retain their existing regression checks.
 
 ## Verification

@@ -36,6 +36,11 @@ struct RoutingChecks {
     check(udpIndex < strings.firstIndex(of: "GEOIP,CN,DIRECT")!, "Public UDP must precede country DIRECT")
     check(nonCNIndex < strings.firstIndex(of: "DOMAIN-SUFFIX,qq.com,DIRECT")!, "Non-CN classification must precede domestic shortcuts")
     check(strings.contains("DOMAIN-SUFFIX,claude.ai,\(RoutingPolicyService.managedGroupName)"), "General routing must cover Claude alongside other external services")
+    let cnDomainIndex = strings.firstIndex(of: "GEOSITE,cn,DIRECT")!
+    let namedPublicIndex = strings.firstIndex(of: "GEOSITE,!private,\(RoutingPolicyService.managedGroupName)")!
+    let namedPrivateIndex = strings.firstIndex(of: "GEOSITE,private,\(RoutingPolicyService.managedGroupName)")!
+    let cnIPIndex = strings.firstIndex(of: "RULE-SET,ios-cncidr,DIRECT")!
+    check(cnDomainIndex < namedPublicIndex && namedPublicIndex < namedPrivateIndex && namedPrivateIndex < cnIPIndex, "Named traffic must not reach the CN-IP DIRECT fallback")
     let beforeNodes = service.extractProxyNodes(from: profile)
     let afterNodes = service.extractProxyNodes(from: general)
     check(beforeNodes == afterNodes, "Routing changes must preserve proxy credentials and REALITY options")

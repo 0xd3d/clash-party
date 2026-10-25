@@ -90,6 +90,26 @@ func TestIOSPortablePolicy(t *testing.T) {
 						name, host, destination string
 						network                 C.NetWork
 						target                  string
+					}{"unknown named host before CN IP", "unlisted-public-routing-check.org", "223.5.5.5", C.TCP, "iOS 外网"},
+					struct {
+						name, host, destination string
+						network                 C.NetWork
+						target                  string
+					}{"single-label public host before CN IP", "unlisted-public-routing-host", "223.5.5.5", C.TCP, "iOS 外网"},
+					struct {
+						name, host, destination string
+						network                 C.NetWork
+						target                  string
+					}{"IP-only domestic CDN", "", "223.5.5.5", C.TCP, "DIRECT"},
+					struct {
+						name, host, destination string
+						network                 C.NetWork
+						target                  string
+					}{"CN domain before overseas CDN IP", "iqiyi.com", "1.1.1.1", C.TCP, "DIRECT"},
+					struct {
+						name, host, destination string
+						network                 C.NetWork
+						target                  string
 					}{"public YAML provider before CN", "1password.drift.click", "223.5.5.5", C.TCP, "iOS 外网"},
 					struct {
 						name, host, destination string

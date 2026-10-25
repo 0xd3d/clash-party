@@ -13,9 +13,9 @@ fi
 CORE_ROOT="$(cd "$CORE_ROOT" && pwd)"
 
 BUILD_ROOT="${BUILD_ROOT:-$(mktemp -d /tmp/mihomo-mobile-build.XXXXXX)}"
-GOCACHE_DIR="${GOCACHE_DIR:-/tmp/go-build}"
-GOMODCACHE_DIR="${GOMODCACHE_DIR:-/tmp/gomodcache}"
 GO_TOOLCHAIN="${GOTOOLCHAIN:-go1.20.14+auto}"
+GOCACHE_DIR="${GOCACHE_DIR:-${GOCACHE:-$(GOTOOLCHAIN="$GO_TOOLCHAIN" go env GOCACHE)}}"
+GOMODCACHE_DIR="${GOMODCACHE_DIR:-${GOMODCACHE:-$(GOTOOLCHAIN="$GO_TOOLCHAIN" go env GOMODCACHE)}}"
 MIN_IOS_VERSION="${MIN_IOS_VERSION:-17.0}"
 DEVICE_BUILD_TAGS="${DEVICE_BUILD_TAGS:-with_gvisor with_lwip}"
 SIMULATOR_BUILD_TAGS="${SIMULATOR_BUILD_TAGS:-}"
@@ -27,7 +27,8 @@ HEADERS_DIR="$BUILD_ROOT/Headers"
 DEVICE_ARCHIVE="$ARCHIVE_BASE.a"
 SIMULATOR_ARCHIVE="$ARCHIVE_BASE-simulator.a"
 
-mkdir -p "$BUILD_ROOT" "$HEADERS_DIR" "$OUTPUT_ROOT" "$GOCACHE_DIR" "$GOMODCACHE_DIR"
+mkdir -p "$BUILD_ROOT" "$HEADERS_DIR" "$OUTPUT_ROOT" "$GOMODCACHE_DIR"
+if [[ "$GOCACHE_DIR" != "off" ]]; then mkdir -p "$GOCACHE_DIR"; fi
 
 IOS_SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
 IOS_CLANG="$(xcrun --sdk iphoneos --find clang)"

@@ -159,6 +159,10 @@ public enum RoutingPolicyService {
       general += ["RULE-SET,ios-private,DIRECT", "RULE-SET,ios-gfw,\(groupName)", "RULE-SET,ios-telegramcidr,\(groupName),no-resolve"]
       general += ["qq.com", "weixin.com", "wechat.com", "qpic.cn", "qlogo.cn", "gtimg.com", "baidu.com", "bilibili.com", "biliapi.net", "taobao.com", "tmall.com", "alipay.com", "jd.com", "163.com", "126.com", "mi.com", "aliyun.com", "cn"]
         .map { "DOMAIN-SUFFIX,\($0),DIRECT" }
+      // Both complementary tiny matchers skip empty hosts. Their pair catches
+      // every remaining named host, including single labels classified PRIVATE,
+      // without loading a second large CN matcher. Explicit LAN rules run first.
+      general += ["GEOSITE,cn,DIRECT", "GEOSITE,!private,\(groupName)", "GEOSITE,private,\(groupName)"]
       general += ["RULE-SET,ios-lancidr,DIRECT,no-resolve", "RULE-SET,ios-cncidr,DIRECT", "GEOIP,CN,DIRECT", "MATCH,\(groupName)"]
       rules = general
       result = try appendingProviders(to: result)
