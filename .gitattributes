@@ -1,0 +1,4 @@
+
+# Preserve the imported upstream snapshot and patch whitespace verbatim.
+# Mobile Go edits are formatted and tested in the native iOS checks.
+modules/mihomo-ios-core/** -whitespace

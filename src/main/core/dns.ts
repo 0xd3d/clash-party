@@ -147,6 +147,7 @@ async function synchronize(current: DNSSession): Promise<void> {
     if (session !== current || !current.isCurrent()) return
     const runtime = current.runtime
     if (config.autoSetDNS === false || !runtime.tun?.enable) {
+      if (current.readyNotified && current.signature === null && current.lastError === null) return
       await controller.restore({ timeout: 750 })
       if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
       await releaseMacDNSGuard()

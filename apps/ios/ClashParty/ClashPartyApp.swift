@@ -8,4 +8,3 @@ struct ClashPartyApp: App {
     }
   }
 }
-

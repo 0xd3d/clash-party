@@ -595,3 +595,11 @@ it('activates a deferred macOS proxy once after native protection eventually con
   await vi.advanceTimersByTimeAsync(5000)
   expect(ready).toHaveBeenCalledOnce()
 })
+
+it('does not repeatedly invoke privileged recovery after an inactive session is reconciled', async () => {
+  config.autoSetDNS = false
+  await startMonitoring()
+  expect(mocks.releaseGuard).toHaveBeenCalledOnce()
+  await vi.advanceTimersByTimeAsync(15000)
+  expect(mocks.releaseGuard).toHaveBeenCalledOnce()
+})
