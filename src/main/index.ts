@@ -43,6 +43,7 @@ import {
 } from './lifecycle'
 import { configureAppPaths } from './utils/dirs'
 import { setTrafficUsageEnabled } from './traffic/recorder'
+import { protectWebContentsPrivacy } from './privacy'
 
 async function getWindowsPowerShellMajorVersion(): Promise<number | null> {
   // 仅 PS 3.0+ 写入 \3\ 键（\1\ 键恒为 2.0，不可用）。
@@ -88,6 +89,7 @@ async function ensureSupportedWindowsPowerShell(): Promise<boolean> {
 }
 
 configureAppPaths()
+app.on('web-contents-created', (_event, contents) => protectWebContentsPrivacy(contents))
 subscribeAppConfig((config) => setTrafficUsageEnabled(config.enableTrafficLogger === true))
 
 const mainLogger = createLogger('Main')

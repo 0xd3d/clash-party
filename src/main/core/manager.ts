@@ -146,6 +146,12 @@ export function getCurrentCorePID(): number | undefined {
   return child?.pid
 }
 
+export function getAppliedCoreConfig(): IMihomoConfig | null {
+  if (!child || !hasCoreProcess() || dnsIneligibleProcesses.has(child)) return null
+  const state = coreDNSStates.get(child)
+  return state ? structuredClone(state.runtime) : null
+}
+
 export function prepareSystemDNSReload(runtime: IMihomoConfig, corePid: number | undefined): void {
   if (!child || child.pid !== corePid) return
   const state = coreDNSStates.get(child)

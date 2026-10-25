@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 // https://github.com/vdesjs/vite-plugin-monaco-editor/issues/21#issuecomment-1827562674
 import monacoEditorPluginModule from 'vite-plugin-monaco-editor'
+import { getReleaseRepository } from './scripts/release-repository.mjs'
 const isObjectWithDefaultFunction = (
   module: unknown
 ): module is { default: typeof monacoEditorPluginModule } =>
@@ -18,10 +19,14 @@ const monacoEditorPlugin = isObjectWithDefaultFunction(monacoEditorPluginModule)
 // Win7 build: bundle all deps (Vite converts ESM→CJS), only externalize native modules
 const isLegacyBuild = process.env.LEGACY_BUILD === 'true'
 const legacyExternal = ['sysproxy-rs', 'electron', 'utf-8-validate', 'bufferutil']
+const buildDefines = {
+  __LEGACY_BUILD__: JSON.stringify(isLegacyBuild),
+  __UPDATE_REPOSITORY__: JSON.stringify(getReleaseRepository())
+}
 
 export default defineConfig({
   main: {
-    define: { __LEGACY_BUILD__: JSON.stringify(isLegacyBuild) },
+    define: buildDefines,
     plugins: isLegacyBuild ? [] : [externalizeDepsPlugin()],
     build: isLegacyBuild
       ? { rollupOptions: { external: legacyExternal, output: { format: 'cjs' } } }
@@ -40,7 +45,7 @@ export default defineConfig({
     }
   },
   renderer: {
-    define: { __LEGACY_BUILD__: JSON.stringify(isLegacyBuild) },
+    define: buildDefines,
     build: {
       rollupOptions: {
         input: {

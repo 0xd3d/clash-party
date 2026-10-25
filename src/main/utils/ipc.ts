@@ -164,6 +164,7 @@ import {
   removeSimpleSource
 } from '../simple/service'
 import { setOperationMode } from '../simple/mode'
+import { inspectPrivacyProtection, exportWebRTCGuard } from '../privacy'
 import { getImageDataURL } from './image'
 import { get as httpGet } from './chromeRequest'
 import { getAppInfo } from './app-info'
@@ -261,6 +262,8 @@ async function setTitleBarOverlay(overlay: Electron.TitleBarOverlayOptions): Pro
 }
 
 const asyncHandlers: Record<string, AsyncFn> = {
+  inspectPrivacyProtection,
+  exportWebRTCGuard,
   // Mihomo API
   mihomoVersion,
   mihomoCloseConnection,

@@ -1,5 +1,6 @@
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
+import { getReleaseRepository } from './release-repository.mjs'
 
 // 获取Git commit hash
 export function getGitCommitHash(short = true) {
@@ -62,10 +63,11 @@ export function getProcessedVersion() {
 
 // 生成下载URL
 export function getDownloadUrl(isDev, version) {
+  const repository = getReleaseRepository()
   if (isDev) {
-    return 'https://github.com/mihomo-party-org/clash-party/releases/download/dev'
+    return `https://github.com/${repository}/releases/download/dev`
   } else {
-    return `https://github.com/mihomo-party-org/clash-party/releases/download/v${version}`
+    return `https://github.com/${repository}/releases/download/v${encodeURIComponent(version)}`
   }
 }
 

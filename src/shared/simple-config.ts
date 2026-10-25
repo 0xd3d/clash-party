@@ -165,7 +165,7 @@ export function defaultSimpleDraft(): SimpleDraft {
       'sub-rules': '{}\n',
       dns: 'enable: true\nlisten: 127.0.0.1:1053\nenhanced-mode: fake-ip\nfake-ip-range: 198.18.0.1/16\nnameserver:\n  - https://doh.pub/dns-query\nproxy-server-nameserver:\n  - https://dns.alidns.com/dns-query\n',
       hosts: '{}\n',
-      tun: 'enable: false\nstack: mixed\nauto-route: true\nauto-detect-interface: true\ndns-hijack:\n  - any:53\n',
+      tun: 'enable: false\nstack: mixed\nauto-route: true\nauto-detect-interface: true\nstrict-route: true\ndns-hijack:\n  - any:53\n  - tcp://any:53\n',
       sniffer: 'enable: false\n'
     },
     preserved: {},

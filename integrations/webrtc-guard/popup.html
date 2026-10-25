@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebRTC Guard</title>
+    <link rel="stylesheet" href="popup.css" />
+    <script type="module" src="popup.mjs"></script>
+  </head>
+  <body>
+    <main>
+      <h1>WebRTC Guard</h1>
+      <p>当前浏览器配置文件 · Current browser profile</p>
+      <section aria-labelledby="regular-title">
+        <h2 id="regular-title">普通窗口 / Regular</h2>
+        <p id="regular-status" role="status">读取中 / Reading…</p>
+      </section>
+      <section aria-labelledby="incognito-title">
+        <h2 id="incognito-title">隐身窗口 / Private</h2>
+        <p id="incognito-status" role="status">读取中 / Reading…</p>
+        <p class="note">
+          仅查询隐身配置，未验证所有实际窗口。Settings only; windows are not tested.
+        </p>
+      </section>
+      <div class="actions">
+        <button id="enable" type="button">启用 / Enable</button>
+        <button id="restore" type="button">恢复 / Restore</button>
+        <button id="refresh" type="button">刷新 / Refresh</button>
+      </div>
+      <p id="result" role="status" aria-live="polite"></p>
+      <p class="note">恢复只撤销本扩展的控制。Restore clears only this extension's setting.</p>
+      <p class="note">
+        限制非代理 UDP 可能降低视频通话质量或使其失败。Video calls may fall back to TCP or fail.
+      </p>
+    </main>
+  </body>
+</html>

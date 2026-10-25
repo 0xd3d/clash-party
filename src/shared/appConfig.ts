@@ -63,6 +63,7 @@ type DefaultMihomoTunConfig = {
   'auto-redirect': boolean
   'auto-detect-interface': boolean
   'dns-hijack': string[]
+  'strict-route': boolean
   'route-exclude-address': string[]
   mtu: number
 }
@@ -73,7 +74,8 @@ export const DEFAULT_MIHOMO_TUN_CONFIG: DefaultMihomoTunConfig = {
   'auto-route': true,
   'auto-redirect': false,
   'auto-detect-interface': true,
-  'dns-hijack': ['any:53'],
+  'dns-hijack': ['any:53', 'tcp://any:53'],
+  'strict-route': true,
   'route-exclude-address': [],
   mtu: 1500
 }

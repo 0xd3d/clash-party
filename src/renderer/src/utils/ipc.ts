@@ -1,4 +1,5 @@
 import { TitleBarOverlayOptions } from 'electron'
+import type { PrivacyProtectionReport } from '../../../shared/privacyAudit'
 import type {
   TrafficUsageAggregate,
   TrafficUsageBreakdownQuery,
@@ -21,6 +22,8 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 
 // IPC API 类型定义
 interface IpcApi {
+  inspectPrivacyProtection: () => Promise<PrivacyProtectionReport>
+  exportWebRTCGuard: () => Promise<string | null>
   // Mihomo API
   mihomoVersion: () => Promise<IMihomoVersion>
   mihomoCloseConnection: (id: string) => Promise<void>
@@ -282,6 +285,8 @@ const ipc = new Proxy({} as IpcApi, {
 
 // 导出所有 IPC 方法
 export const {
+  inspectPrivacyProtection,
+  exportWebRTCGuard,
   // Mihomo API
   mihomoVersion,
   mihomoCloseConnection,

@@ -9,6 +9,7 @@ files:
   - '!images/*'
   - '!scripts/*'
   - '!extra/*'
+  - '!integrations/*'
   - '!tailwind.config.js'
   - '!postcss.config.js'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
@@ -18,6 +19,12 @@ files:
 asarUnpack:
   - 'node_modules/file-icon/file-icon'
 extraResources:
+  - from: './integrations/webrtc-guard/'
+    to: 'integrations/webrtc-guard'
+    filter:
+      - '**/*'
+      - '!**/*.d.ts'
+      - '!**/*.d.mts'
   - from: './extra/'
     to: ''
 protocols:

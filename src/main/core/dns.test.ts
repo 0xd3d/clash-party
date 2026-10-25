@@ -528,3 +528,16 @@ describe('system DNS integration', () => {
     expect(mocks.post).not.toHaveBeenCalled()
   })
 })
+
+describe('system DNS platform boundary', () => {
+  it.each(['win32', 'linux'] as const)('never invokes the macOS helper on %s', async (target) => {
+    Object.defineProperty(process, 'platform', { configurable: true, value: target })
+    await startMonitoring()
+    await dns.recoverDNS({ force: true, timeout: 750 })
+    expect(mocks.execFile).not.toHaveBeenCalled()
+    expect(mocks.post).not.toHaveBeenCalled()
+    expect(mocks.readFile).not.toHaveBeenCalled()
+    expect(mocks.atomicWriteFile).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+})

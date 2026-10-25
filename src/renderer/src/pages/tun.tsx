@@ -4,13 +4,19 @@ import { showErrorSync } from '@renderer/utils/error-display'
 import SettingCard from '@renderer/components/base/base-setting-card'
 import SettingItem from '@renderer/components/base/base-setting-item'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
-import { grantTunPermissions, restartCore, setupFirewall } from '@renderer/utils/ipc'
+import {
+  grantTunPermissions,
+  restartCore,
+  setupFirewall,
+  mihomoHotReloadConfig
+} from '@renderer/utils/ipc'
 import { platform } from '@renderer/utils/init'
 import { ipCIDRValidator, isIPv4 } from '@renderer/utils/validate'
 import React, { Key, useEffect, useState } from 'react'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { MdDeleteForever } from 'react-icons/md'
 import { useTranslation } from 'react-i18next'
+import PrivacyCheck from '@renderer/components/privacy/privacy-check'
 import { DEFAULT_MIHOMO_TUN_CONFIG, getDefaultMihomoTunDevice } from '../../../shared/appConfig'
 
 const Tun: React.FC = () => {
@@ -36,6 +42,9 @@ const Tun: React.FC = () => {
     setSavingSystemDNSAddress(true)
     try {
       await patchAppConfig({ systemDNSAddress: normalizedSystemDNSAddress })
+      await mihomoHotReloadConfig()
+    } catch (error) {
+      showErrorSync(error, t('common.error.updateCoreConfigFailed'))
     } finally {
       setSavingSystemDNSAddress(false)
     }
@@ -54,7 +63,7 @@ const Tun: React.FC = () => {
     'route-exclude-address': routeExcludeAddress = DEFAULT_MIHOMO_TUN_CONFIG[
       'route-exclude-address'
     ],
-    'strict-route': strictRoute = false,
+    'strict-route': strictRoute = DEFAULT_MIHOMO_TUN_CONFIG['strict-route'],
     mtu = DEFAULT_MIHOMO_TUN_CONFIG.mtu
   } = tun || {}
   const [changed, setChanged] = useState(false)
@@ -156,6 +165,7 @@ const Tun: React.FC = () => {
           )
         }
       >
+        <PrivacyCheck />
         <SettingCard className="tun-settings">
           {platform === 'win32' && (
             <SettingItem title={t('tun.firewall.title')} divider>
@@ -206,7 +216,12 @@ const Tun: React.FC = () => {
                   size="sm"
                   isSelected={autoSetDNS}
                   onValueChange={async (v) => {
-                    await patchAppConfig({ autoSetDNS: v })
+                    try {
+                      await patchAppConfig({ autoSetDNS: v })
+                      await mihomoHotReloadConfig()
+                    } catch (error) {
+                      showErrorSync(error, t('common.error.updateCoreConfigFailed'))
+                    }
                   }}
                 />
               </SettingItem>

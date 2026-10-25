@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Clash Party WebRTC Guard",
+  "version": "1.0.0",
+  "description": "Optional WebRTC IP handling control. No browsing data or network requests.",
+  "minimum_chrome_version": "96",
+  "permissions": ["privacy"],
+  "background": {
+    "service_worker": "background.mjs",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "WebRTC Guard",
+    "default_popup": "popup.html"
+  }
+}

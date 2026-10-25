@@ -21,7 +21,7 @@ In macOS TUN settings, enable automatic system DNS, select the loopback address,
 
 If the service already points to `127.0.0.1` or `::1` but there is no service-specific recovery record, the application cannot infer its earlier DNS. Previous-settings mode refuses to treat that unowned loopback setting as a usable original value. Restore the known original DNS before first use, or explicitly select automatic/DHCP restoration when that is the intended original state. Legacy `originDNS` has no service identity and is not blindly assigned to another interface.
 
-Changes to the listener address take effect when the runtime configuration is next loaded. The application validates the loaded listener before applying the new system DNS target; it does not silently use an unready address. Normal DNS-policy updates continue to use the existing configuration loading flow.
+Saving the listener address or toggling automatic system DNS in the TUN page uses the existing hot-reload flow. The application validates the successfully loaded listener before applying the new system DNS target; it does not silently use an unready address. Normal DNS-policy updates continue to use that same configuration loading flow.
 
 ## Boundaries
 

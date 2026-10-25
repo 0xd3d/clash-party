@@ -1,8 +1,8 @@
-import { copyFile, rm, writeFile } from 'fs/promises'
+import { copyFile, readFile, rm, writeFile } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
 import os from 'os'
-import { exec, execSync, spawn } from 'child_process'
+import { exec, execFile, execSync, spawn } from 'child_process'
 import { promisify } from 'util'
 import { createHash } from 'crypto'
 import { app, shell } from 'electron'
@@ -12,6 +12,7 @@ import { appLogger } from '../utils/logger'
 import { dataDir, exeDir, exePath, isPortable, resourcesFilesDir } from '../utils/dirs'
 import { getAppConfig, getControledMihomoConfig } from '../config'
 import { DEFAULT_MIHOMO_PORTS } from '../../shared/appConfig'
+import { latestReleaseMetadataUrl, releaseUrls, validateReleaseVersion } from '../../shared/release'
 import { checkAdminPrivileges } from '../core/manager'
 import { parse } from '../utils/yaml'
 import * as chromeRequest from '../utils/chromeRequest'
@@ -75,19 +76,15 @@ async function getGitHubAssetSha256(
   file: string,
   proxy: UpdaterProxy
 ): Promise<string> {
-  const releaseTag = encodeURIComponent(`v${version}`)
-  const res = await chromeRequest.get<GitHubRelease>(
-    `https://api.github.com/repos/mihomo-party-org/mihomo-party/releases/tags/${releaseTag}`,
-    {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28'
-      },
-      proxy,
-      timeout: 5000,
-      responseType: 'json'
-    }
-  )
+  const res = await chromeRequest.get<GitHubRelease>(releaseUrls(version).api, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    },
+    proxy,
+    timeout: 5000,
+    responseType: 'json'
+  })
   const digest = res.data.assets?.find((asset) => asset.name === file)?.digest
   const match = digest?.match(/^sha256:([a-f\d]{64})$/i)
   if (!match) {
@@ -99,8 +96,7 @@ async function getGitHubAssetSha256(
 export async function checkUpdate(): Promise<IAppVersion | undefined> {
   const [{ 'mixed-port': mixedPort = DEFAULT_MIHOMO_PORTS.mixed }, { githubProxy = '' }] =
     await Promise.all([getControledMihomoConfig(), getAppConfig()])
-  const githubUrl =
-    'https://github.com/mihomo-party-org/mihomo-party/releases/latest/download/latest.yml'
+  const githubUrl = latestReleaseMetadataUrl()
   const res = await tryDownload(buildDownloadUrls(githubUrl, githubProxy), {
     headers: { 'Content-Type': 'application/octet-stream' },
     proxy: updaterProxy(mixedPort),
@@ -111,6 +107,7 @@ export async function checkUpdate(): Promise<IAppVersion | undefined> {
   if (!latest || typeof latest.version !== 'string') {
     throw new Error('Invalid latest.yml from update source')
   }
+  validateReleaseVersion(latest.version)
   const currentVersion = app.getVersion()
   if (compareVersions(latest.version, currentVersion) > 0) {
     return latest
@@ -148,9 +145,9 @@ export function downloadAndInstallUpdate(version: string): Promise<void> {
 }
 
 async function installUpdate(version: string): Promise<void> {
+  const githubBase = releaseUrls(version).download
   const [{ 'mixed-port': mixedPort = DEFAULT_MIHOMO_PORTS.mixed }, { githubProxy = '' }] =
     await Promise.all([getControledMihomoConfig(), getAppConfig()])
-  const githubBase = `https://github.com/mihomo-party-org/mihomo-party/releases/download/v${version}/`
   const fileMap = {
     'win32-x64': `clash-party-windows-${version}-x64-setup.exe`,
     'win32-ia32': `clash-party-windows-${version}-ia32-setup.exe`,
@@ -178,21 +175,32 @@ async function installUpdate(version: string): Promise<void> {
   }
   const proxy = updaterProxy(mixedPort)
   try {
-    if (!existsSync(path.join(dataDir(), file))) {
-      let expectedHash: string
-      try {
-        expectedHash = await getGitHubAssetSha256(version, file, proxy)
-      } catch (e) {
-        await appLogger.warn(
-          'Failed to get update SHA-256 from GitHub API, falling back to release checksum file',
-          e
-        )
-        const sha256Res = await tryDownload(
-          buildDownloadUrls(`${githubBase}${file}.sha256`, githubProxy),
-          { proxy, responseType: 'text' }
-        )
-        expectedHash = (sha256Res.data as string).trim().split(/\s+/)[0]
+    // Always resolve the checksum from this build's repository, including for a cached installer.
+    // An installer left by an upstream build must not bypass the fork's update source.
+    let expectedHash: string
+    try {
+      expectedHash = await getGitHubAssetSha256(version, file, proxy)
+    } catch (e) {
+      await appLogger.warn(
+        'Failed to get update SHA-256 from GitHub API, falling back to release checksum file',
+        e
+      )
+      const sha256Res = await tryDownload(
+        buildDownloadUrls(`${githubBase}${file}.sha256`, githubProxy),
+        { proxy, responseType: 'text' }
+      )
+      expectedHash = (sha256Res.data as string).trim().split(/\s+/)[0]
+    }
+    if (!/^[a-f\d]{64}$/i.test(expectedHash)) throw new Error('Invalid update SHA-256 checksum')
+    if (existsSync(path.join(dataDir(), file))) {
+      const cachedHash = createHash('sha256')
+        .update(await readFile(path.join(dataDir(), file)))
+        .digest('hex')
+      if (cachedHash !== expectedHash.toLowerCase()) {
+        await rm(path.join(dataDir(), file), { force: true })
       }
+    }
+    if (!existsSync(path.join(dataDir(), file))) {
       // 进度只允许单调递增，避免多代理重试导致进度回退抽搐
       let lastPercent = -1
       const res = await tryDownload(buildDownloadUrls(`${githubBase}${file}`, githubProxy), {
@@ -281,10 +289,11 @@ async function installUpdate(version: string): Promise<void> {
     }
     if (file.endsWith('.pkg')) {
       try {
-        const execPromise = promisify(exec)
-        const shell = `installer -pkg ${path.join(dataDir(), file).replace(' ', '\\\\ ')} -target /`
-        const command = `do shell script "${shell}" with administrator privileges`
-        await execPromise(`osascript -e '${command}'`)
+        const execFilePromise = promisify(execFile)
+        const installerPath = `'${path.join(dataDir(), file).replace(/'/g, `'"'"'`)}'`
+        const shell = `/usr/sbin/installer -pkg ${installerPath} -target /`
+        const command = `do shell script ${JSON.stringify(shell)} with administrator privileges`
+        await execFilePromise('/usr/bin/osascript', ['-e', command])
         app.relaunch()
         app.quit()
       } catch {
