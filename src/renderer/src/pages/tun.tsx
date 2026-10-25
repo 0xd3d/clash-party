@@ -6,6 +6,7 @@ import SettingItem from '@renderer/components/base/base-setting-item'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import {
   grantTunPermissions,
+  configureNetworkProtection,
   restartCore,
   setupFirewall,
   mihomoHotReloadConfig
@@ -24,10 +25,34 @@ const Tun: React.FC = () => {
   const { controledMihomoConfig, patchControledMihomoConfig } = useControledMihomoConfig()
   const { appConfig, patchAppConfig } = useAppConfig()
   const {
+    networkProtection = false,
+    networkProtectionProxyGroup = '',
+    networkProtectionPublicUDP = true,
     autoSetDNS = true,
     systemDNSAddress = '127.0.0.1',
     systemDNSRestoreMode = 'original'
   } = appConfig || {}
+  const [protectionTargetInput, setProtectionTargetInput] = useState(networkProtectionProxyGroup)
+  const [protectionUDP, setProtectionUDP] = useState(networkProtectionPublicUDP)
+  const [protectionBusy, setProtectionBusy] = useState(false)
+  useEffect(() => {
+    setProtectionTargetInput(networkProtectionProxyGroup)
+    setProtectionUDP(networkProtectionPublicUDP)
+  }, [networkProtectionProxyGroup, networkProtectionPublicUDP])
+  const applyProtection = async (enabled: boolean): Promise<void> => {
+    setProtectionBusy(true)
+    try {
+      await configureNetworkProtection({
+        enabled,
+        proxyGroup: protectionTargetInput,
+        protectPublicUDP: protectionUDP
+      })
+    } catch (error) {
+      showErrorSync(error, t('common.error.updateCoreConfigFailed'))
+    } finally {
+      setProtectionBusy(false)
+    }
+  }
   const [systemDNSAddressInput, setSystemDNSAddressInput] = useState(systemDNSAddress)
   const [savingSystemDNSAddress, setSavingSystemDNSAddress] = useState(false)
   useEffect(() => {
@@ -166,6 +191,55 @@ const Tun: React.FC = () => {
         }
       >
         <PrivacyCheck />
+        {(platform === 'darwin' || platform === 'win32') && (
+          <SettingCard>
+            <SettingItem title={t('tun.protection.title')} divider>
+              <Switch
+                size="sm"
+                isSelected={networkProtection}
+                isDisabled={protectionBusy}
+                onValueChange={(enabled) => void applyProtection(enabled)}
+              />
+            </SettingItem>
+            <p className="text-xs text-default-500">{t('tun.protection.hint')}</p>
+            <SettingItem title={t('tun.protection.target')}>
+              <Input
+                size="sm"
+                className="w-56"
+                value={protectionTargetInput}
+                placeholder={t('tun.protection.autoTarget')}
+                onValueChange={setProtectionTargetInput}
+              />
+            </SettingItem>
+            <SettingItem title={t('tun.protection.publicUDP')}>
+              <Switch
+                size="sm"
+                isSelected={protectionUDP}
+                isDisabled={protectionBusy}
+                onValueChange={setProtectionUDP}
+              />
+            </SettingItem>
+            <p className="text-xs text-default-500">{t('tun.protection.udpHint')}</p>
+            {networkProtection && (
+              <Button
+                size="sm"
+                isLoading={protectionBusy}
+                onPress={() => void applyProtection(true)}
+              >
+                {t('common.save')}
+              </Button>
+            )}
+            {!networkProtection && (
+              <Button
+                size="sm"
+                isLoading={protectionBusy}
+                onPress={() => void applyProtection(false)}
+              >
+                {t('tun.protection.recover')}
+              </Button>
+            )}
+          </SettingCard>
+        )}
         <SettingCard className="tun-settings">
           {platform === 'win32' && (
             <SettingItem title={t('tun.firewall.title')} divider>
@@ -215,6 +289,7 @@ const Tun: React.FC = () => {
                 <Switch
                   size="sm"
                   isSelected={autoSetDNS}
+                  isDisabled={networkProtection}
                   onValueChange={async (v) => {
                     try {
                       await patchAppConfig({ autoSetDNS: v })

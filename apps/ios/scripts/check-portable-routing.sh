@@ -7,7 +7,7 @@ trap 'rm -rf "$CHECK_ROOT"' EXIT
 SHARED=("$IOS_ROOT"/ClashPartyShared/Models/*.swift "$IOS_ROOT"/ClashPartyShared/Compatibility/*.swift "$IOS_ROOT/ClashPartyShared/Store/SharedStore.swift")
 swiftc "${SHARED[@]}" "$IOS_ROOT/scripts/check_ios_routing.swift" -o "$CHECK_ROOT/routing-check"
 "$CHECK_ROOT/routing-check" "$IOS_ROOT/tests/Fixtures/legacy-service-profile.yaml" "$IOS_ROOT/ClashParty/Resources/RuleResources" "$CHECK_ROOT/runtime"
-for check in check_ios_doh_preservation check_mobile_runtime; do
+for check in check_ios_doh_preservation check_ios_dns_route_protection check_mobile_runtime; do
   swiftc "${SHARED[@]}" "$IOS_ROOT/scripts/$check.swift" -o "$CHECK_ROOT/$check"
   "$CHECK_ROOT/$check"
 done
@@ -20,6 +20,6 @@ swiftc -module-cache-path "$CHECK_ROOT/swift-cache" "${SHARED[@]}" "$IOS_ROOT/Cl
 python3 "$IOS_ROOT/scripts/test_export_ios_desktop_rules.py"
 (
   cd "$CORE_ROOT"
-  GOTOOLCHAIN="${GOTOOLCHAIN:-go1.20.14+auto}" go test ./component/resolver ./dns ./hub/executor ./config ./listener/inner ./component/http ./component/geodata ./component/mmdb
+  GOTOOLCHAIN="${GOTOOLCHAIN:-go1.20.14+auto}" go test ./adapter/outboundgroup ./component/resolver ./dns ./tunnel ./hub/executor ./config ./listener/inner ./component/http ./component/geodata ./component/mmdb
   IOS_POLICY_RUNTIME_DIR="$CHECK_ROOT/runtime" IOS_RULE_RESOURCE_DIR="$IOS_ROOT/ClashParty/Resources/RuleResources" IOS_GEO_RESOURCE_DIR="$IOS_ROOT/ClashParty/Resources/GeoResources" GOTOOLCHAIN="${GOTOOLCHAIN:-go1.20.14+auto}" go test ./rules -run '^TestIOSPortablePolicy$' -count=1
 )

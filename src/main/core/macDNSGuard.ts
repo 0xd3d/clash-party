@@ -9,6 +9,10 @@ export type MacDNSGuardStatus = {
   ownerUid: number
   corePid: number | null
   reason?: string
+  protection?: 'traffic' | 'dns' | 'none'
+  dnsLease?: boolean
+  trafficLease?: boolean
+  tunDevice?: string | null
 }
 
 export function parseMacDNSGuardStatus(raw: string, expectedUid: number): MacDNSGuardStatus {
@@ -22,13 +26,22 @@ export function parseMacDNSGuardStatus(raw: string, expectedUid: number): MacDNS
       state.corePid === null ||
       (Number.isSafeInteger(state.corePid) && Number(state.corePid) > 0)
     ) ||
-    (state.reason !== undefined && typeof state.reason !== 'string')
+    (state.reason !== undefined && typeof state.reason !== 'string') ||
+    (state.dnsLease !== undefined && typeof state.dnsLease !== 'boolean') ||
+    (state.trafficLease !== undefined && typeof state.trafficLease !== 'boolean') ||
+    (state.protection !== undefined &&
+      !['traffic', 'dns', 'none'].includes(String(state.protection)))
   )
     throw new Error('Invalid DNS guard identity or state')
   return {
     active: state.active,
     ownerUid: expectedUid,
     corePid: state.corePid as number | null,
+    ...(state.protection !== undefined
+      ? { protection: state.protection as MacDNSGuardStatus['protection'] }
+      : {}),
+    ...(typeof state.dnsLease === 'boolean' ? { dnsLease: state.dnsLease } : {}),
+    ...(typeof state.trafficLease === 'boolean' ? { trafficLease: state.trafficLease } : {}),
     ...(typeof state.reason === 'string' ? { reason: state.reason.slice(0, 160) } : {})
   }
 }
@@ -38,7 +51,7 @@ async function executeCommand(args: string[]): Promise<MacDNSGuardStatus> {
     throw new Error('macOS DNS guard is unavailable on this platform')
   try {
     const { stdout } = await execute(macDNSGuardPath, args, {
-      timeout: 6000,
+      timeout: args[0] === 'repair-core' ? 12000 : 6000,
       maxBuffer: 16 * 1024,
       encoding: 'utf8',
       // The native helper also constructs its own clean environment for fixed PF commands.
@@ -86,5 +99,10 @@ export async function inspectMacDNSGuard(): Promise<MacDNSGuardStatus> {
 
 export async function releaseMacDNSGuard(): Promise<void> {
   const state = await command(['stop'])
-  if (state.active) throw new Error('DNS guard restoration remains pending')
+  if (state.dnsLease === true || (state.dnsLease === undefined && state.active))
+    throw new Error('DNS guard restoration remains pending')
+}
+
+export async function repairMacTrafficCores(): Promise<void> {
+  await command(['repair-core'])
 }

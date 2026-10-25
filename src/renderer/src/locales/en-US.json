@@ -990,5 +990,15 @@
   "privacy.finding.windowsDnsMode.warning": "Windows DNS interception is incomplete: check dns-mode, auto-route and strict-route.",
   "privacy.finding.windowsDnsMode.error": "Windows system DNS interception is disabled. Port-53 rules alone do not protect other adapters.",
   "privacy.finding.macDNSGuard.pass": "Native PF DNS rules for this core are active. This is not a measured leak test.",
-  "privacy.finding.macDNSGuard.warning": "Native DNS bypass protection is unconfirmed. Install this fork’s native helper and check its status."
+  "privacy.finding.macDNSGuard.warning": "Native DNS bypass protection is unconfirmed. Install this fork’s native helper and check its status.",
+  "tun.protection.title": "Block public traffic after a tunnel failure",
+  "tun.protection.hint": "Requires an installed native guard and a proxy-only target. Public traffic remains blocked after a core failure; LAN stays available. Enabling interrupts existing public and old plaintext DNS connections. Enabling or releasing reconnects the core.",
+  "tun.protection.target": "Protected proxy target",
+  "tun.protection.autoTarget": "Use the MATCH proxy target",
+  "tun.protection.publicUDP": "Proxy all public UDP",
+  "tun.protection.udpHint": "Includes STUN on arbitrary ports. Domestic TCP still follows your rules; disabling this option cannot protect every application’s STUN traffic. QQ Music DNS exceptions are retained.",
+  "tun.protection.recover": "Release retained protection and reconnect",
+  "privacy.finding.networkGuard.pass": "Independent native guard confirms this core; system fault scenarios still require testing.",
+  "privacy.finding.networkGuard.warning": "Independent traffic protection is unconfirmed.",
+  "privacy.finding.publicUDPProtection.warning": "Public UDP is not forced through the proxy; unknown STUN may expose a direct egress."
 }

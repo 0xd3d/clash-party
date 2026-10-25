@@ -104,6 +104,8 @@ static BOOL MihomoPacketQueueInitialized = NO;
 static MihomoPacketQueueBudget MihomoPacketBudget = {0};
 static BOOL MihomoPacketFlowReadPaused = NO;
 static BOOL MihomoPacketFlowDropIPv6 = NO;
+static BOOL MihomoPacketFlowBlocked = NO;
+static uint64_t MihomoPacketFlowBlockedPackets = 0;
 static uint64_t MihomoPacketFlowDroppedIPv6 = 0;
 static uint64_t MihomoPacketFlowGeneration = 0;
 static uint64_t MihomoPacketReaderGeneration = 0;
@@ -282,6 +284,7 @@ static void MihomoPacketFlowScheduleReadLocked(void) {
         }
 
         NSData *packet = (NSData *)candidate;
+        if (MihomoPacketFlowBlocked) { MihomoPacketFlowBlockedPackets++; continue; }
         if (MihomoPacketFlowDropIPv6 && packet.length > 0 && (((const uint8_t *)packet.bytes)[0] >> 4) == 6) {
           MihomoPacketFlowDroppedIPv6++;
           continue;
@@ -312,6 +315,8 @@ static void MihomoPacketFlowAttachWithPolicy(NEPacketTunnelFlow *flow, BOOL drop
     MihomoAttachedFlow = flow;
     MihomoPacketFlowActive = (flow != nil);
     MihomoPacketFlowDropIPv6 = dropIPv6;
+    MihomoPacketFlowBlocked = NO;
+    MihomoPacketFlowBlockedPackets = 0;
     MihomoPacketFlowDroppedIPv6 = 0;
     MihomoPacketFlowReadPending = NO;
     MihomoPacketFlowReadingArmed = NO;
@@ -358,6 +363,7 @@ static void MihomoPacketFlowClear(void) {
     MihomoPacketReaderGeneration++;
     MihomoPacketFlowActive = NO;
     MihomoPacketFlowDropIPv6 = NO;
+    MihomoPacketFlowBlocked = NO;
     MihomoAttachedFlow = nil;
     MihomoPacketFlowReadPending = NO;
     MihomoPacketFlowReadingArmed = NO;
@@ -610,7 +616,7 @@ static int MihomoPacketFlowReadIntoBufferForReader(void *buffer, int maxLength, 
     __block BOOL readingArmed = NO;
     __block NSUInteger queueCountAfterPop = 0;
     MihomoPacketFlowPerformLocked(^{
-      if (generation != MihomoPacketFlowGeneration || expectedReader != MihomoPacketReaderGeneration) { return; }
+      if (generation != MihomoPacketFlowGeneration || expectedReader != MihomoPacketReaderGeneration || MihomoPacketFlowBlocked) { return; }
       if (MihomoPacketQueueCount > 0) {
         packetNode = MihomoPacketQueuePopLocked();
         if (packetNode->length <= (NSUInteger)maxLength) {
@@ -717,6 +723,11 @@ static int MihomoPacketFlowWriteFromBuffer(const void *buffer, int length) {
   __block BOOL droppedByPolicy = NO;
   MihomoPacketFlowPerformLocked(^{
     if (generation != MihomoPacketFlowGeneration || !MihomoPacketFlowActive || MihomoAttachedFlow != flow) { return; }
+    if (MihomoPacketFlowBlocked) {
+      MihomoPacketFlowBlockedPackets++;
+      droppedByPolicy = YES;
+      return;
+    }
     if (family == AF_INET6 && MihomoPacketFlowDropIPv6) {
       MihomoPacketFlowDroppedIPv6++;
       droppedByPolicy = YES;
@@ -850,7 +861,7 @@ int MihomoIOSPacketFlowReaderActive(uint64_t reader) {
   @autoreleasepool {
     __block BOOL active = NO;
     MihomoPacketFlowPerformLocked(^{
-      active = reader == MihomoPacketReaderGeneration && MihomoPacketFlowActive;
+      active = reader == MihomoPacketReaderGeneration && MihomoPacketFlowActive && !MihomoPacketFlowBlocked;
     });
     return active ? 1 : 0;
   }
@@ -882,6 +893,23 @@ int MihomoIOSWritePacket(const void *buffer, int len) {
 
 + (void)attachPacketFlow:(NEPacketTunnelFlow *)flow dropIPv6:(BOOL)dropIPv6 {
   MihomoPacketFlowAttachWithPolicy(flow, dropIPv6);
+}
+
++ (BOOL)blockAllTrafficForPacketFlow:(NEPacketTunnelFlow *)flow {
+  __block BOOL updated = NO;
+  MihomoPacketFlowPerformLocked(^{
+    if (!MihomoPacketFlowActive || MihomoAttachedFlow != flow) { return; }
+    // One-way latch for this attachment. Only an explicit new session may
+    // reopen forwarding; late callbacks cannot undo failure protection.
+    MihomoPacketFlowBlocked = YES;
+    MihomoPacketFlowBlockedPackets += MihomoPacketBudget.count;
+    MihomoPacketQueueClearLocked();
+    MihomoPacketReaderGeneration++;
+    MihomoPacketFlowScheduleReadLocked();
+    dispatch_semaphore_signal(MihomoPacketFlowSemaphore());
+    updated = YES;
+  });
+  return updated;
 }
 
 + (BOOL)setDropIPv6:(BOOL)dropIPv6 forPacketFlow:(NEPacketTunnelFlow *)flow {
@@ -935,6 +963,7 @@ int MihomoIOSWritePacket(const void *buffer, int len) {
       @"peakBytes": @(MihomoPacketBudget.peakBytes), @"peakPackets": @(MihomoPacketBudget.peakCount),
       @"droppedPackets": @(MihomoPacketBudget.droppedPackets), @"oversizedPackets": @(MihomoPacketBudget.oversizedPackets),
       @"readBytes": @(MihomoPacketBudget.readBytes), @"writtenBytes": @(MihomoPacketBudget.writtenBytes),
+      @"blocked": @(MihomoPacketFlowBlocked), @"blockedPackets": @(MihomoPacketFlowBlockedPackets),
       @"dropIPv6": @(MihomoPacketFlowDropIPv6), @"droppedIPv6Packets": @(MihomoPacketFlowDroppedIPv6),
       @"readPaused": @(MihomoPacketFlowReadPaused), @"limitBytes": @(MIHOMO_PACKET_QUEUE_MAX_BYTES)};
   });

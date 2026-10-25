@@ -22,6 +22,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     qos: .utility
   )
   private var startupPhaseTimer: DispatchSourceTimer?
+  private var runtimeHealthTimer: DispatchSourceTimer?
+  private let runtimeHealthLock = NSLock()
+  private var runtimeHealthIdentity: UUID?
   private var retainedPacketFlow: NEPacketTunnelFlow?
   private var activeNetworkSettings: NEPacketTunnelNetworkSettings?
   private var rollbackNetworkSettings: NEPacketTunnelNetworkSettings?
@@ -135,7 +138,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
       guard report.isValid else {
         throw PacketTunnelError.invalidConfiguration(report.blockingErrors.joined(separator: "\n"))
       }
-      var runtimeConfig = configurationBundle.runtimeConfig
+      // Regenerate old saved bundles with this build's privacy policy before
+      // the provider creates any business resolver or starts the core.
+      var runtimeConfig = compatibilityService.buildRuntimeConfig(from: input)
       let networkPlan = compatibilityService.makePacketTunnelNetworkPlan(from: runtimeConfig)
       failurePhase = "resolvingProxyEndpoints"
       updateRuntimeState(.starting, startupPhase: failurePhase,
@@ -230,7 +235,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
           )
           MihomoPacketFlowBridge.attach(packetFlow, dropIPv6: PacketTunnelIPv6Policy(plan: networkPlan).dropsIPv6)
           self.appendLog(level: "info", message: "Packet flow bridge attach request submitted. Waiting for bridge registration.")
-          guard self.waitForPacketFlowAttachment() else {
+          let attached = self.waitForPacketFlowAttachment()
+          guard self.isCurrentStartup(identity) else { completionHandler(CancellationError()); return }
+          guard attached else {
             let error = PacketTunnelError.packetFlowAttachTimedOut
             self.handleRuntimeBootstrapFailure(
               error,
@@ -253,7 +260,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             clearLastStopReason: true
           )
           completionHandler(nil)
-          self.bootstrapRuntimeAsync(configPath: runtimeConfigPath)
+          self.bootstrapRuntimeAsync(configPath: runtimeConfigPath, identity: identity)
         }
       }
     } catch {
@@ -343,7 +350,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     try runtimeConfig.write(to: runtimeConfigURL, atomically: true, encoding: .utf8)
     appendLog(
       level: "info",
-      message: "Packet Tunnel injected dynamically resolved proxy server host overrides into the runtime config before starting the embedded core."
+      message: "Packet Tunnel applied session privacy policy and resolved proxy host overrides before starting the embedded core."
     )
   }
 
@@ -583,6 +590,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     )
     appendLog(level: "info", message: "Packet Tunnel received stopTunnel(with:) reason: \(stopReason)")
     stopStartupPhaseTimer()
+    stopRuntimeHealthMonitor()
     stopNetworkPathMonitoring()
     appendLog(level: "info", message: "Packet flow counters at stop: \(MihomoPacketFlowBridge.queueStatistics)")
     try? runtime.stop()
@@ -637,7 +645,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     let nextStatus = RuntimeStatus(
         state: state,
         mode: previous.mode,
-        vpnConnected: state == .running,
+        vpnConnected: state == .running || (state == .failed && startupPhase == "trafficBlocked"),
         fakeDnsEnabled: previous.fakeDnsEnabled,
         activeProfileId: previous.activeProfileId,
         dnsMode: previous.dnsMode,
@@ -655,18 +663,19 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
   private func currentExtensionSnapshot() -> TunnelExtensionSnapshot {
     let previous = SharedStore.readRuntimeStatus()
-    let phase = MihomoCoreFFI.startupPhase()
-    let message = MihomoCoreFFI.startupMessage()
+    let blocked = MihomoPacketFlowBridge.queueStatistics["blocked"] == 1
+    let phase = blocked ? "trafficBlocked" : MihomoCoreFFI.startupPhase()
+    let message = blocked ? previous.startupMessage : MihomoCoreFFI.startupMessage()
     let failureReason = MihomoCoreFFI.lastStartupError() ?? previous.lastFailureReason
     let failurePhase = failureReason == nil ? previous.lastFailurePhase : phase
     let controllerAddress = MihomoCoreFFI.controllerAddress()
     publishPendingControllerAddressIfNeeded(controllerAddress)
-    let running = MihomoCoreFFI.isRunning()
+    let running = !blocked && MihomoCoreFFI.isRunning()
     let state: RuntimeConnectionState = running ? .running : (previous.state == .failed ? .failed : previous.state)
     let nextStatus = RuntimeStatus(
       state: state,
       mode: previous.mode,
-      vpnConnected: running,
+      vpnConnected: running || blocked,
       fakeDnsEnabled: previous.fakeDnsEnabled,
       activeProfileId: previous.activeProfileId,
       dnsMode: previous.dnsMode,
@@ -745,7 +754,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     )
   }
 
-  private func bootstrapRuntimeAsync(configPath: String) {
+  private func bootstrapRuntimeAsync(configPath: String, identity: UUID) {
     stopStartupPhaseTimer()
     let attemptID = UUID().uuidString
     startStartupPhaseTimer(attemptID: attemptID)
@@ -777,6 +786,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     }
 
     func persistSuccessfulBootstrap(snapshot: TunnelExtensionSnapshot, source: String) {
+      guard self.isCurrentStartup(identity) else { return }
       self.stopStartupPhaseTimer()
       var persistedStatus = snapshot.runtimeStatus
       persistedStatus.state = .running
@@ -798,6 +808,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         message: "\(source) Phase: \(snapshot.startupPhase). Running: \(snapshot.running ? "yes" : "no")."
       )
       _ = try? SharedStore.writeRuntimeStatusIfChanged(persistedStatus)
+      self.startRuntimeHealthMonitor()
     }
 
     func recordLateStartupError(_ error: Error, snapshot: TunnelExtensionSnapshot) {
@@ -807,18 +818,13 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         level: "error",
         message: "Embedded runtime returned a late startup error after the provider already marked the tunnel ready. Phase: \(phase). Reason: \(reason)"
       )
-      self.updateRuntimeState(
-        .running,
-        startupPhase: snapshot.startupPhase,
-        startupMessage: snapshot.startupMessage,
-        lastFailureReason: "Late startup error: \(reason)",
-        lastFailurePhase: phase
-      )
+      guard self.isCurrentStartup(identity) else { return }
+      self.handleRuntimeBootstrapFailure(error, phase: phase, reason: "Late startup error: \(reason)")
     }
 
     func scheduleRunningProbe() {
       startupPhaseQueue.asyncAfter(deadline: .now() + .milliseconds(250)) { [weak self] in
-        guard let self else { return }
+        guard let self, self.isCurrentStartup(identity) else { return }
 
         stateLock.lock()
         let alreadyFinished = finished
@@ -852,11 +858,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     }
 
     runtimeBootstrapQueue.async { [weak self] in
-      guard let self else { return }
+      guard let self, self.isCurrentStartup(identity) else { return }
       self.prepareGeoResourcesBeforeCoreStart(configPath: configPath)
       self.appendLog(level: "info", message: "Calling runtime.start(configPath:) for the embedded core.")
       do {
         try self.runtime.start(configPath: configPath)
+        guard self.isCurrentStartup(identity) else { return }
         let snapshot = self.currentExtensionSnapshot()
         if !finish({
           persistSuccessfulBootstrap(
@@ -870,6 +877,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
           )
         }
       } catch {
+        guard self.isCurrentStartup(identity) else { return }
         let snapshot = self.currentExtensionSnapshot()
         if !finish({
           self.handleRuntimeBootstrapFailure(
@@ -886,7 +894,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     scheduleRunningProbe()
 
     startupPhaseQueue.asyncAfter(deadline: .now() + runtimeBootstrapTimeout) { [weak self] in
-      guard let self else { return }
+      guard let self, self.isCurrentStartup(identity) else { return }
       _ = finish {
         let phase = MihomoCoreFFI.startupPhase()
         let reason = MihomoCoreFFI.lastStartupError()
@@ -983,31 +991,80 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     return MihomoPacketFlowBridge.isAttached
   }
 
+  private func startRuntimeHealthMonitor() {
+    stopRuntimeHealthMonitor()
+    startupIdentityLock.lock()
+    let identity = startupIdentity
+    startupIdentityLock.unlock()
+    guard let identity else { return }
+    let monitorIdentity = UUID()
+    let timer = DispatchSource.makeTimerSource(queue: startupPhaseQueue)
+    timer.schedule(deadline: .now() + .seconds(1), repeating: .seconds(1), leeway: .milliseconds(200))
+    timer.setEventHandler { [weak self] in
+      guard let self, self.isCurrentStartup(identity), self.isCurrentRuntimeHealthMonitor(monitorIdentity), !MihomoCoreFFI.isRunning() else { return }
+      guard self.stopRuntimeHealthMonitor(if: monitorIdentity) else { return }
+      self.runtimeBootstrapQueue.async { [weak self] in
+        guard let self, self.isCurrentStartup(identity) else { return }
+        let reason = MihomoCoreFFI.lastStartupError() ?? "The embedded core stopped unexpectedly; captured traffic remains blocked until you stop and reconnect the VPN."
+        self.handleRuntimeBootstrapFailure(PacketTunnelError.startupTimedOut(phase: "runtimeStopped", reason: reason), phase: "runtimeStopped", reason: reason)
+      }
+    }
+    runtimeHealthLock.lock()
+    runtimeHealthIdentity = monitorIdentity
+    runtimeHealthTimer = timer
+    timer.resume()
+    runtimeHealthLock.unlock()
+  }
+
+  private func isCurrentRuntimeHealthMonitor(_ identity: UUID) -> Bool {
+    runtimeHealthLock.lock()
+    defer { runtimeHealthLock.unlock() }
+    return runtimeHealthIdentity == identity
+  }
+
+  @discardableResult
+  private func stopRuntimeHealthMonitor(if identity: UUID? = nil) -> Bool {
+    runtimeHealthLock.lock()
+    if let identity, runtimeHealthIdentity != identity { runtimeHealthLock.unlock(); return false }
+    let timer = runtimeHealthTimer
+    runtimeHealthIdentity = nil
+    runtimeHealthTimer = nil
+    runtimeHealthLock.unlock()
+    timer?.cancel()
+    return true
+  }
+
   private func handleRuntimeBootstrapFailure(
     _ error: Error,
     phase: String,
     reason: String,
     cancelTunnel: Bool = true
   ) {
-    recordProviderHealth(event: "bootstrapFailed", phase: phase, stopReason: reason, finish: true)
     stopStartupPhaseTimer()
+    stopRuntimeHealthMonitor()
     stopNetworkPathMonitoring()
-    appendLog(level: "info", message: "Packet flow counters at stop: \(MihomoPacketFlowBridge.queueStatistics)")
+    // Once iOS accepted the tunnel, a runtime failure must not voluntarily
+    // release the installed routes/DNS. Latch a packet drop policy before core
+    // cleanup, retain the session, and let an explicit user stop release it.
+    let retainedProtection = cancelTunnel && activeNetworkSettings != nil
+      && retainedPacketFlow.map { MihomoPacketFlowBridge.blockAllTraffic(for: $0) } == true
+    recordProviderHealth(event: retainedProtection ? "trafficBlocked" : "bootstrapFailed", phase: phase, stopReason: reason, finish: !retainedProtection)
+    appendLog(level: "info", message: "Packet flow counters at failure: \(MihomoPacketFlowBridge.queueStatistics)")
     try? runtime.stop()
-    MihomoPacketFlowBridge.clear()
-    retainedPacketFlow = nil
+    if !retainedProtection {
+      MihomoPacketFlowBridge.clear()
+      retainedPacketFlow = nil
+    }
     updateRuntimeState(
       .failed,
-      startupPhase: "failed",
-      startupMessage: "Embedded runtime failed during tunnel startup.",
+      startupPhase: retainedProtection ? "trafficBlocked" : "failed",
+      startupMessage: retainedProtection ? "VPN protection is retained; stop and reconnect to restore forwarding." : "Embedded runtime failed during tunnel startup.",
       lastFailureReason: reason,
       lastFailurePhase: phase,
       clearLastStopReason: true
     )
-    appendLog(level: "error", message: "Embedded runtime failed during \(phase): \(reason)")
-    if cancelTunnel {
-      cancelTunnelWithError(error)
-    }
+    appendLog(level: "error", message: "Embedded runtime failed during \(phase): \(reason). Captured traffic protection retained=\(retainedProtection).")
+    if cancelTunnel && !retainedProtection { cancelTunnelWithError(error) }
   }
 
   private func stopReasonDescription(_ reason: NEProviderStopReason) -> String {

@@ -28,6 +28,7 @@ import { DEFAULT_CONTROL_DNS, DEFAULT_CONTROL_SNIFF } from '../../shared/appConf
 import { atomicWriteFile } from '../utils/safeFile'
 import { compileSimpleRuntime } from '../simple/service'
 import { prepareSystemDNSListener } from './systemDNSRuntime'
+import { applyNetworkProtectionPolicy } from './networkProtectionPolicy'
 import { evaluateDnsOverrideGuard, type DnsOverrideGuardResult } from './dnsOverrideGuard'
 
 const factoryLogger = createLogger('Factory')
@@ -144,6 +145,13 @@ export async function generateProfile(
     if (result.errors.length > 0) {
       throw new Error(`简易模式配置无效：\n${result.errors.join('\n')}`)
     }
+    if (selectedAppConfig.networkProtection) {
+      const protectedProfile = parse(result.yaml) as IMihomoConfig
+      applyNetworkProtectionPolicy(protectedProfile, selectedAppConfig)
+      prepareSystemDNSListener(protectedProfile, selectedAppConfig)
+      result.yaml = stringify(protectedProfile)
+      await atomicWriteFile(options.outputPath ?? mihomoWorkConfigPath('work'), result.yaml)
+    }
     if (options.updateRuntimeConfig !== false) {
       runtimeConfigStr = result.yaml
       runtimeConfig = parse(result.yaml) as IMihomoConfig
@@ -210,6 +218,7 @@ export async function generateProfile(
   }
 
   const profile = deepMerge(currentProfile, controledMihomoConfig)
+  applyNetworkProtectionPolicy(profile, appConfig)
   prepareSystemDNSListener(profile, appConfig)
   // 关闭 DNS 覆写时，如果最终配置没有启用的 DNS 配置，清空 dns-hijack 避免请求被劫持但无法处理
   if (!controlDns && profile.tun && !profile.dns?.enable) {

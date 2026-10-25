@@ -18,6 +18,8 @@ import {
   restartCore,
   getCurrentCorePID,
   prepareSystemDNSReload,
+  prepareNetworkProtectionReload,
+  commitNetworkProtectionReload,
   commitSystemDNSReload
 } from './manager'
 import { patchSystemDNSRuntime } from './dns'
@@ -219,7 +221,33 @@ export const patchMihomoConfig = async (patch: Partial<IMihomoConfig>): Promise<
   const patchConfig = async (): Promise<void> => {
     const instance = await getAxios()
     const corePid = getCurrentCorePID()
-    await instance.patch('/configs', patch)
+    const settings = await getAppConfig()
+    let appliedPatch = patch
+    if (settings.networkProtection) {
+      if (patch.mode && patch.mode !== 'rule')
+        throw new Error('Disable network protection before changing away from rule mode')
+      if (patch.dns || patch.rules || patch['proxy-groups'] || patch.proxies) {
+        await mihomoHotReloadConfig()
+        return
+      }
+      if (patch.tun) {
+        const snapshot = await getRuntimeConfig()
+        const candidate = {
+          ...snapshot,
+          tun: { ...snapshot.tun, ...patch.tun }
+        } as IMihomoConfig
+        await prepareNetworkProtectionReload(candidate)
+        appliedPatch = { ...patch, tun: candidate.tun }
+      }
+    }
+    await instance.patch('/configs', appliedPatch)
+    if (settings.networkProtection && patch.tun) {
+      const actual = await instance.get<never, IMihomoConfig>('/configs')
+      await commitNetworkProtectionReload(
+        { ...(await getRuntimeConfig()), tun: actual.tun } as IMihomoConfig,
+        corePid
+      )
+    }
     if (patch.tun && process.platform === 'darwin') {
       try {
         const applied = await instance.get<never, IMihomoConfig>('/configs')
@@ -277,6 +305,10 @@ export const mihomoRules = async (): Promise<IMihomoRulesInfo> => {
 }
 
 export const mihomoRulesDisable = async (rules: Record<string, boolean>): Promise<void> => {
+  if ((await getAppConfig()).networkProtection)
+    throw new Error(
+      'Protected runtime rules cannot be temporarily disabled; edit the source profile and reload with validation'
+    )
   const instance = await getAxios()
   return await instance.patch('/rules/disable', rules)
 }
@@ -477,6 +509,7 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
   const instance = await getAxios()
   const corePid = getCurrentCorePID()
   prepareSystemDNSReload(appliedCandidate, corePid)
+  if (appConfig.networkProtection) await prepareNetworkProtectionReload(appliedCandidate)
   try {
     await instance.put('/configs?force=true', { path: configPath })
   } catch (error) {
@@ -485,6 +518,7 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
     await restartCore()
     return
   }
+  if (appConfig.networkProtection) await commitNetworkProtectionReload(appliedCandidate, corePid)
   commitSystemDNSReload(appliedCandidate, corePid)
   mihomoApiLogger.info('hot reload config completed')
   try {

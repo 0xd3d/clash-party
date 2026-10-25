@@ -46,8 +46,8 @@ struct EncryptedBootstrapResolver {
     if let port = parts.port, !(1...65_535).contains(port) { return nil }
     if let rawFragment = parts.percentEncodedFragment {
       guard let fragment = rawFragment.removingPercentEncoding else { return nil }
-      let adapter = fragment.split(separator: "&").last(where: { !$0.contains("=") }).map(String.init)
-      if let adapter, !adapter.isEmpty, adapter.uppercased() != "DIRECT" { return nil }
+      let adapters = fragment.split(separator: "&").filter { !$0.contains("=") }
+      guard adapters.allSatisfy({ $0 == "DIRECT" }) else { return nil }
     }
     parts.fragment = nil
     return parts.url

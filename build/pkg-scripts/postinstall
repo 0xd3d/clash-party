@@ -40,31 +40,8 @@ mkdir -p "/Library/PrivilegedHelperTools"
 chmod 755 "/Library/PrivilegedHelperTools"
 chown root:wheel "/Library/PrivilegedHelperTools"
 
-# 设置核心文件权限
-log "Setting core file permissions..."
-if [ -f "$APP_PATH/Contents/Resources/sidecar/mihomo" ]; then
-    chown root:admin "$APP_PATH/Contents/Resources/sidecar/mihomo"
-    chmod +s "$APP_PATH/Contents/Resources/sidecar/mihomo"
-    log "Set permissions for mihomo"
-else
-    log "Warning: mihomo binary not found at $APP_PATH/Contents/Resources/sidecar/mihomo"
-fi
-
-if [ -f "$APP_PATH/Contents/Resources/sidecar/mihomo-alpha" ]; then
-    chown root:admin "$APP_PATH/Contents/Resources/sidecar/mihomo-alpha"
-    chmod +s "$APP_PATH/Contents/Resources/sidecar/mihomo-alpha"
-    log "Set permissions for mihomo-alpha"
-else
-    log "Warning: mihomo-alpha binary not found at $APP_PATH/Contents/Resources/sidecar/mihomo-alpha"
-fi
-
-if [ -f "$APP_PATH/Contents/Resources/sidecar/mihomo-smart" ]; then
-    chown root:admin "$APP_PATH/Contents/Resources/sidecar/mihomo-smart"
-    chmod +s "$APP_PATH/Contents/Resources/sidecar/mihomo-smart"
-    log "Set permissions for mihomo-smart"
-else
-    log "Warning: mihomo-smart binary not found at $APP_PATH/Contents/Resources/sidecar/mihomo-smart"
-fi
+# Core setuid/setgid metadata is installed transactionally by the fixed-purpose
+# native identity operation after all other installer checks succeed.
 
 # 复制 helper 工具
 log "Installing helper tool..."
@@ -86,6 +63,35 @@ if [ ! -f "$DNS_GUARD_SOURCE" ]; then
     exit 1
 fi
 /usr/bin/codesign --verify --strict "$DNS_GUARD_SOURCE"
+DNS_GUARD_BACKUP=""
+DNS_GUARD_REPLACED=0
+DNS_GUARD_COMMITTED=0
+rollback_guard_install() {
+    result=$?
+    trap - EXIT
+    if [[ "$result" -ne 0 && "$DNS_GUARD_REPLACED" -eq 1 && "$DNS_GUARD_COMMITTED" -eq 0 ]]; then
+        if [[ -n "$DNS_GUARD_BACKUP" && -f "$DNS_GUARD_BACKUP" ]]; then
+            if ! /bin/mv -f "$DNS_GUARD_BACKUP" "$DNS_GUARD_PATH"; then
+                log "Native helper rollback failed; backup retained at $DNS_GUARD_BACKUP; administrator review required"
+                exit "$result"
+            fi
+        else
+            /bin/rm -f "$DNS_GUARD_PATH"
+        fi
+    fi
+    if [[ -n "$DNS_GUARD_BACKUP" ]]; then /bin/rm -f "$DNS_GUARD_BACKUP"; fi
+    exit "$result"
+}
+trap rollback_guard_install EXIT
+if [[ -L "$DNS_GUARD_PATH" ]] || { [[ -e "$DNS_GUARD_PATH" ]] && [[ ! -f "$DNS_GUARD_PATH" || "$(stat -f '%u:%l' "$DNS_GUARD_PATH")" != '0:1' ]]; }; then
+    log "Error: Existing native helper is not a trusted unique root-owned file"
+    exit 1
+fi
+if [[ -f "$DNS_GUARD_PATH" ]]; then
+    DNS_GUARD_BACKUP="$(/usr/bin/mktemp /Library/PrivilegedHelperTools/.party.mihomo.dns-guard-backup.XXXXXX)"
+    /bin/cp -p "$DNS_GUARD_PATH" "$DNS_GUARD_BACKUP"
+fi
+DNS_GUARD_REPLACED=1
 /usr/bin/install -o root -g wheel -m 4755 "$DNS_GUARD_SOURCE" "$DNS_GUARD_PATH"
 log "Installed fixed-purpose DNS guard; existing PF policy and recovery state preserved"
 
@@ -164,8 +170,6 @@ else
     log "Warning: Service may not be running properly"
 fi
 
-log "Installation completed successfully"
-
 # Fix user data directory permissions
 log "Fixing user data directory permissions..."
 for user_home in /Users/*; do
@@ -183,5 +187,13 @@ for user_home in /Users/*; do
         fi
     fi
 done
+
+# This fixed root-only operation creates no user membership, never edits PF or
+# DNS, and rolls back its own group/core-metadata transaction on ordinary errors.
+# Reinstallation reuses only the recorded GeneratedUID; it never adopts another
+# pre-existing group or removes active protection/recovery records.
+"$DNS_GUARD_PATH" install-identity
+DNS_GUARD_COMMITTED=1
+log "Installation completed successfully; isolated core identity verified"
 
 exit 0

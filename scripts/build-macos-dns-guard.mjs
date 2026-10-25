@@ -20,6 +20,8 @@ execFileSync(
     `${arch === 'x64' ? 'x86_64' : 'arm64'}-apple-macos12.0`,
     '-framework',
     'Security',
+    '-framework',
+    'OpenDirectory',
     'integrations/macos-dns-guard-native/main.swift',
     '-o',
     output

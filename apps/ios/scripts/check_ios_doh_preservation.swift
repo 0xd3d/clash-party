@@ -141,7 +141,7 @@ struct IOSDoHPreservationChecks {
     input.controlledConfigYaml = controlled.replacingOccurrences(of: "223.5.5.5", with: "9.9.9.9")
     let customPlaintext = service.sanitizedMobileInput(input)
     precondition(customPlaintext.controlledConfigYaml == input.controlledConfigYaml)
-    precondition(!service.parseDnsSummary(from: service.buildRuntimeConfig(from: input)).nameservers.contains { $0.hasPrefix("https://") })
+    precondition(service.parseDnsSummary(from: service.buildRuntimeConfig(from: input)).nameservers.allSatisfy { $0.hasPrefix("https://") && $0.hasSuffix("#OpenAI") })
     let absentUpstreams = input.controlledConfigYaml
       .replacingOccurrences(of: "  nameserver:\n    - 9.9.9.9\n    - 119.29.29.29\n", with: "")
       .replacingOccurrences(of: "  proxy-server-nameserver:\n    - 9.9.9.9\n    - 119.29.29.29\n", with: "")
@@ -150,6 +150,6 @@ struct IOSDoHPreservationChecks {
     if CommandLine.arguments.count == 2 {
       try runtime.write(toFile: CommandLine.arguments[1], atomically: true, encoding: .utf8)
     }
-    print("PASS: legacy DNS defaults migrate to imported DoH; custom upstreams, fallback, proxy fragments and overlay precedence survive; IPv6/MTU/Fake-IP/nodes unchanged; speed-test core keeps DoH.")
+    print("PASS: legacy DNS defaults migrate to imported DoH; custom encrypted endpoints, fallback and overlay precedence survive with mandatory proxy binding; IPv6/MTU/Fake-IP/nodes unchanged; speed-test core keeps DoH.")
   }
 }

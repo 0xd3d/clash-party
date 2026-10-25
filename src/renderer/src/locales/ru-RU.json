@@ -973,5 +973,15 @@
   "privacy.finding.windowsDnsMode.warning": "Перехват DNS Windows настроен не полностью: проверьте dns-mode, auto-route и strict-route.",
   "privacy.finding.windowsDnsMode.error": "Перехват системного DNS Windows отключён; одних правил порта 53 недостаточно.",
   "privacy.finding.macDNSGuard.pass": "Правила PF для DNS текущего ядра активны. Это не результат проверки утечек.",
-  "privacy.finding.macDNSGuard.warning": "Защита DNS от обхода не подтверждена. Установите системный помощник этого форка и проверьте статус."
+  "privacy.finding.macDNSGuard.warning": "Защита DNS от обхода не подтверждена. Установите системный помощник этого форка и проверьте статус.",
+  "tun.protection.title": "Block public traffic after a tunnel failure",
+  "tun.protection.hint": "Requires an installed native guard and a proxy-only target. Public traffic remains blocked after a core failure; LAN stays available. Enabling interrupts existing public and old plaintext DNS connections. Enabling or releasing reconnects the core.",
+  "tun.protection.target": "Protected proxy target",
+  "tun.protection.autoTarget": "Use the MATCH proxy target",
+  "tun.protection.publicUDP": "Proxy all public UDP",
+  "tun.protection.udpHint": "Includes STUN on arbitrary ports. Domestic TCP still follows your rules; disabling this option cannot protect every application’s STUN traffic. QQ Music DNS exceptions are retained.",
+  "tun.protection.recover": "Release retained protection and reconnect",
+  "privacy.finding.networkGuard.pass": "Independent native guard confirms this core; system fault scenarios still require testing.",
+  "privacy.finding.networkGuard.warning": "Independent traffic protection is unconfirmed.",
+  "privacy.finding.publicUDPProtection.warning": "Public UDP is not forced through the proxy; unknown STUN may expose a direct egress."
 }

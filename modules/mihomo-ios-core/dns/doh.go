@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Dreamacro/clash/component/resolver"
 	tlsC "github.com/Dreamacro/clash/component/tls"
 	C "github.com/Dreamacro/clash/constant"
 	"github.com/Dreamacro/clash/log"
@@ -231,14 +232,14 @@ func (doh *dnsOverHTTPS) exchangeHTTPSClient(
 	defer httpResp.Body.Close()
 
 	var reader io.Reader = httpResp.Body
-	if doh.independentProxyBootstrap {
+	if doh.independentProxyBootstrap || resolver.RequireEncryptedProxyServerDNS {
 		reader = io.LimitReader(httpResp.Body, 65536)
 		if !strings.EqualFold(strings.TrimSpace(strings.Split(httpResp.Header.Get("Content-Type"), ";")[0]), "application/dns-message") {
 			return nil, errors.New("encrypted proxy DNS returned an invalid content type")
 		}
 	}
 	body, err := io.ReadAll(reader)
-	if doh.independentProxyBootstrap && len(body) > 65535 {
+	if (doh.independentProxyBootstrap || resolver.RequireEncryptedProxyServerDNS) && len(body) > 65535 {
 		return nil, errors.New("encrypted proxy DNS response exceeds the DNS message limit")
 	}
 	if err != nil {
@@ -266,7 +267,7 @@ func (doh *dnsOverHTTPS) exchangeHTTPSClient(
 		)
 	}
 
-	if doh.independentProxyBootstrap && (!resp.Response || resp.Truncated || resp.Id != req.Id || resp.Opcode != req.Opcode || len(resp.Question) != 1 || len(req.Question) != 1 || !strings.EqualFold(resp.Question[0].Name, req.Question[0].Name) || resp.Question[0].Qtype != req.Question[0].Qtype || resp.Question[0].Qclass != req.Question[0].Qclass) {
+	if (doh.independentProxyBootstrap || resolver.RequireEncryptedProxyServerDNS) && (!resp.Response || resp.Truncated || resp.Id != req.Id || resp.Opcode != req.Opcode || len(resp.Question) != 1 || len(req.Question) != 1 || !strings.EqualFold(resp.Question[0].Name, req.Question[0].Name) || resp.Question[0].Qtype != req.Question[0].Qtype || resp.Question[0].Qclass != req.Question[0].Qclass) {
 		return nil, errors.New("encrypted proxy DNS returned a mismatched question")
 	}
 	if resp.Id != req.Id {
@@ -384,7 +385,7 @@ func (doh *dnsOverHTTPS) createClient(ctx context.Context) (*http.Client, error)
 		Timeout:   DefaultTimeout,
 		Jar:       nil,
 	}
-	if doh.independentProxyBootstrap {
+	if doh.independentProxyBootstrap || resolver.RequireEncryptedProxyServerDNS {
 		client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	}
 

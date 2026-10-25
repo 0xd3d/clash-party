@@ -141,6 +141,10 @@ public struct CompatibilityService {
     }
 
     let generated = buildIOSRuntimeConfig(from: input)
+    let routed = (try? RoutingPolicyService.rewrite(generated, policy: RoutingPolicyService.preference(in: input.appConfigJson))) ?? generated
+    if protectedDNSProxyTarget(in: routed) == nil {
+      report.blockingErrors.append("Encrypted application DNS requires a proxy-only group or supported proxy node.")
+    }
     let rawMTU = firstValue(forAnyOf: ["mtu"], in: section(named: "tun", in: generated)) ?? "1500"
     if Int(rawMTU).map({ (1280...9000).contains($0) }) != true {
       report.blockingErrors.append(L10n.string("validation.tun.mtu", "TUN MTU must be between 1280 and 9000 bytes."))
@@ -515,34 +519,176 @@ public struct CompatibilityService {
     ["https://doh.pub/dns-query"]
   ]
 
-  // Only migrate known generated defaults. Custom upstreams/fragments remain
-  // explicit. Run after routing adds its groups, so DNS uses an existing adapter.
+  /// A DNS adapter must remain proxied for every selectable member. Binding to
+  /// a group that contains DIRECT would otherwise turn a later selection into
+  /// a provider-originated DNS bypass, outside includeAllNetworks capture.
+  public func protectedDNSProxyTarget(in yaml: String) -> String? {
+    let nodes = Set(extractProxyNodes(from: yaml).filter { !["direct", "reject", "pass"].contains($0.type.lowercased()) }.map(\.name))
+    let groups = extractProxyGroups(from: yaml)
+    let dynamicGroups = dynamicProxyGroupNames(in: yaml)
+    func protected(_ name: String, visiting: Set<String> = []) -> Bool {
+      // The legacy core rebuilds GLOBAL with DIRECT included, even when an
+      // imported profile declares a same-named proxy/group.
+      guard !["DIRECT", "REJECT", "PASS", "COMPATIBLE", "GLOBAL"].contains(name.uppercased()),
+            !name.contains("&"), !name.contains("="), !name.contains("#"),
+            !name.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains),
+            !visiting.contains(name) else { return false }
+      if nodes.contains(name) { return true }
+      guard !dynamicGroups.contains(name),
+            let group = groups.first(where: { $0.name == name }), !group.all.isEmpty else { return false }
+      return group.all.allSatisfy { $0 == "REJECT" || protected($0, visiting: visiting.union([name])) }
+    }
+    if let last = RoutingPolicyService.ruleStrings(in: yaml).last {
+      let fields = last.split(separator: ",").map(String.init)
+      if fields.count == 2, fields[0] == "MATCH", protected(fields[1]) { return fields[1] }
+    }
+    let preferred = groups.sorted { lhs, rhs in
+      func rank(_ name: String) -> Int {
+        if name.hasPrefix(RoutingPolicyService.managedGroupName) { return 0 }
+        if name == "OpenAI" { return 1 }
+        if name == "GLOBAL" { return 2 }
+        return 3
+      }
+      return rank(lhs.name) < rank(rhs.name)
+    }
+    return preferred.first(where: { protected($0.name) })?.name ?? extractProxyNodes(from: yaml).first(where: { protected($0.name) })?.name
+  }
+
+  // Remote provider membership can change after validation. A group with
+  // both static proxies and `use` is not proved proxy-only by its static list.
+  // Keep it in the profile, but bind protected DNS to a verifiable static leaf
+  // or group instead. No remote YAML or regex is evaluated by this check.
+  private func dynamicProxyGroupNames(in yaml: String) -> Set<String> {
+    var names: Set<String> = []
+    var currentName: String?
+    var dynamic = false
+    func flush() {
+      if dynamic, let currentName { names.insert(currentName) }
+    }
+    for rawLine in section(named: "proxy-groups", in: yaml).components(separatedBy: .newlines) {
+      let line = rawLine.trimmingCharacters(in: .whitespaces)
+      let indent = leadingSpaceCount(in: rawLine)
+      guard !line.isEmpty, !line.hasPrefix("#") else { continue }
+      if indent == 2, line.hasPrefix("- ") {
+        flush()
+        currentName = nil
+        dynamic = false
+        let entry = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+        if entry.hasPrefix("{"), entry.hasSuffix("}") {
+          let fields = inlineObjectValues(in: entry)
+          currentName = fields["name"]
+          dynamic = fields["use"] != nil || ["include-all", "include-all-proxies", "include-all-providers"].contains { fields[$0]?.lowercased() == "true" }
+        } else if let (key, value) = keyValue(from: entry), key == "name" {
+          currentName = value
+        }
+        continue
+      }
+      guard let (key, value) = keyValue(from: line) else { continue }
+      if key == "name" { currentName = value }
+      if key == "use" || (["include-all", "include-all-proxies", "include-all-providers"].contains(key) && value.lowercased() == "true") { dynamic = true }
+    }
+    flush()
+    return names
+  }
+
+  // Only the proxy's own literal-IP encrypted bootstrap and exact QQ Music /
+  // local-name policies may bypass the business DNS proxy. Upstream failure
+  // never introduces a cleartext resolver or a DIRECT fallback.
   private func securingDefaultDNSUpstreams(in yaml: String) -> String {
     var result = yaml
-    let groups = extractProxyGroups(from: yaml)
-    let usable = groups.filter { $0.all.contains { !["DIRECT", "REJECT"].contains($0) } }
-    let preferred = usable.first { $0.name == "iOS 外网" }
-      ?? usable.first { $0.name == "OpenAI" }
-      ?? usable.first { $0.name == "GLOBAL" }
-      ?? usable.first
-    let fragment = preferred?.name.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed)
-    let main = dnsChildBlock("nameserver", in: result)
-    let values = listValue(for: "nameserver", in: main.joined(separator: "\n"))
-    if values.isEmpty || Self.legacyDNSDefaults.contains(values) || values == Self.defaultEncryptedNameservers {
-      let upstreams = Self.defaultEncryptedNameservers.map { $0 + (fragment.map { "#" + $0 } ?? "") }
-      result = replacingDNSChild("nameserver", with: ["  nameserver:"] + upstreams.map { "    - \($0)" }, in: result)
+    let target = protectedDNSProxyTarget(in: yaml) ?? "REJECT"
+    for key in ["nameserver", "fallback"] {
+      let block = dnsChildBlock(key, in: result)
+      guard key == "nameserver" || !block.isEmpty else { continue }
+      let existing = listValue(for: key, in: block.joined(separator: "\n")).map(normalizedListValue)
+      let values = existing.isEmpty || Self.legacyDNSDefaults.contains(existing) ? Self.defaultEncryptedNameservers : existing
+      let encrypted = values.compactMap { protectedEncryptedDNSUpstream($0, target: target) }
+      let secured = encrypted.isEmpty ? Self.defaultEncryptedNameservers.compactMap { protectedEncryptedDNSUpstream($0, target: target) } : encrypted
+      result = replacingDNSChild(key, with: ["  \(key):"] + secured.map { "    - " + quotedYAMLScalar($0) }, in: result)
     }
-    let proxy = listValue(for: "proxy-server-nameserver", in: dnsChildBlock("proxy-server-nameserver", in: result).joined(separator: "\n"))
-    if proxy.isEmpty || Self.legacyDNSDefaults.contains(proxy) {
-      // This resolver bootstraps the proxy itself: it must not depend on that
-      // same proxy. Its IP endpoint needs no initial cleartext DNS query.
-      result = replacingDNSChild("proxy-server-nameserver", with: ["  proxy-server-nameserver:", "    - https://223.5.5.5/dns-query"], in: result)
+    let policy = dnsChildBlock("nameserver-policy", in: result)
+    if !policy.isEmpty {
+      var rewritten = ["  nameserver-policy:"]
+      var index = 1
+      let entryIndent = policy.dropFirst().filter { let text = $0.trimmingCharacters(in: .whitespaces); return !text.isEmpty && !text.hasPrefix("#") }.map(leadingSpaceCount(in:)).min() ?? 4
+      while index < policy.count {
+        let line = policy[index]
+        guard !line.trimmingCharacters(in: .whitespaces).hasPrefix("#"), leadingSpaceCount(in: line) == entryIndent,
+              let separator = dnsPolicySeparator(in: line) else { index += 1; continue }
+        let key = normalizedListValue(String(line[..<separator]).trimmingCharacters(in: .whitespaces))
+        var end = index + 1
+        while end < policy.count && (policy[end].trimmingCharacters(in: .whitespaces).isEmpty || leadingSpaceCount(in: policy[end]) > entryIndent || policy[end].trimmingCharacters(in: .whitespaces).hasPrefix("- ")) { end += 1 }
+        let value = String(line[line.index(after: separator)...]).trimmingCharacters(in: .whitespaces)
+        let inline = inlineListValues(from: value)
+        let upstreams = !inline.isEmpty ? inline : (!value.isEmpty ? [normalizedListValue(value)] : policy[(index + 1)..<end].compactMap { raw -> String? in
+          let text = raw.trimmingCharacters(in: .whitespaces)
+          return text.hasPrefix("- ") ? normalizedListValue(String(text.dropFirst(2))) : nil
+        })
+        let local = key.split(separator: ",").allSatisfy { ["lan", "+.lan", "*.lan", "local", "+.local", "*.local"].contains(String($0)) }
+        let qq = key.split(separator: ",").allSatisfy { ["aqqmusic.tc.qq.com", "+.stream.qqmusic.qq.com"].contains(String($0)) }
+        let secured: [String]
+        if local { secured = upstreams }
+        else {
+          secured = upstreams.compactMap { upstream in
+            protectedEncryptedDNSUpstream(upstream, target: target, allowQQDirect: qq)
+          }
+        }
+        rewritten.append("    " + quotedYAMLScalar(key) + ":")
+        rewritten += (secured.isEmpty ? Self.defaultEncryptedNameservers.compactMap { protectedEncryptedDNSUpstream($0, target: target) } : secured).map { "      - " + quotedYAMLScalar($0) }
+        index = end
+      }
+      result = replacingDNSChild("nameserver-policy", with: rewritten, in: result)
     }
-    let bootstrap = listValue(for: "default-nameserver", in: dnsChildBlock("default-nameserver", in: result).joined(separator: "\n"))
-    if bootstrap.isEmpty || bootstrap == Self.legacyDNSDefaults[0] {
-      result = replacingDNSChild("default-nameserver", with: ["  default-nameserver:", "    - https://223.5.5.5/dns-query"], in: result)
+    for key in ["proxy-server-nameserver", "default-nameserver"] {
+      let existing = listValue(for: key, in: dnsChildBlock(key, in: result).joined(separator: "\n")).map(normalizedListValue)
+      let independent = existing.filter { raw in
+        guard let url = URLComponents(string: raw), url.scheme?.lowercased() == "https",
+              let host = url.host, normalizedBootstrapDNSIPAddress(host) != nil,
+              url.user == nil, url.password == nil else { return false }
+        let adapters = (url.fragment ?? "").split(separator: "&").filter { !$0.contains("=") }
+        return adapters.isEmpty || adapters == ["DIRECT"]
+      }
+      let secured = independent.isEmpty ? ["https://223.5.5.5/dns-query"] : independent
+      result = replacingDNSChild(key, with: ["  \(key):"] + secured.map { "    - " + quotedYAMLScalar($0) }, in: result)
     }
     return result
+  }
+
+  private func protectedEncryptedDNSUpstream(_ raw: String, target: String, allowQQDirect: Bool = false) -> String? {
+    guard var url = URLComponents(string: normalizedListValue(raw)),
+          let scheme = url.scheme?.lowercased(), ["https", "tls", "quic"].contains(scheme),
+          let host = url.host?.lowercased(), !host.isEmpty,
+          url.user == nil, url.password == nil else { return nil }
+    let options = (url.fragment ?? "").split(separator: "&").map(String.init)
+    let tencent = host == "doh.pub" && (url.port == nil || url.port == 443) && url.path == "/dns-query" && url.query == nil
+    let adapter = allowQQDirect && scheme == "https" && tencent ? "DIRECT" : target
+    let parameters = scheme == "https" ? options.filter { $0.contains("=") } : []
+    // URLComponents.fragment is decoded exactly once, just like Go net/url.
+    // Drop all imported bare adapter tokens and put our verified adapter last;
+    // percent escapes in parameter values are re-escaped by URLComponents.
+    url.fragment = (parameters + [adapter]).joined(separator: "&")
+    return url.string
+  }
+
+  private func quotedYAMLScalar(_ value: String) -> String {
+    "'" + value.replacingOccurrences(of: "'", with: "''") + "'"
+  }
+
+  private func dnsPolicySeparator(in line: String) -> String.Index? {
+    var quote: Character?
+    var escaped = false
+    for index in line.indices {
+      let char = line[index]
+      if escaped { escaped = false; continue }
+      if char == "\\" && quote == "\"" { escaped = true; continue }
+      if let active = quote { if char == active { quote = nil }; continue }
+      if char == "'" || char == "\"" { quote = char; continue }
+      if char == ":" {
+        let next = line.index(after: index)
+        if next == line.endIndex || line[next].isWhitespace { return index }
+      }
+    }
+    return nil
   }
 
   private func restoringImportedEncryptedDNS(profileYaml: String, controlledYaml: String) -> String {
@@ -1292,7 +1438,7 @@ public struct CompatibilityService {
       }
 
       if line.hasPrefix("- ") {
-        let item = line.replacingOccurrences(of: "- ", with: "").trimmingCharacters(in: .whitespaces)
+        let item = normalizedListValue(String(line.dropFirst(2)))
         switch sectionStack.last {
         case "fake-ip-filter":
           summary.fakeIPFilter.append(item)
@@ -1310,7 +1456,7 @@ public struct CompatibilityService {
       }
 
       if sectionStack.last == "nameserver-policy", indent == 4, !line.hasPrefix("- "), line.contains(":") {
-        let key = line.components(separatedBy: ":").first?.trimmingCharacters(in: CharacterSet(charactersIn: "\" ")) ?? ""
+        let key = dnsPolicySeparator(in: line).map { normalizedListValue(String(line[..<$0]).trimmingCharacters(in: .whitespaces)) } ?? ""
         if !key.isEmpty && key != "nameserver-policy" {
           summary.nameserverPolicyKeys.append(key)
         }
@@ -1703,7 +1849,7 @@ public struct CompatibilityService {
   }
 
   private func inlineListValues(from value: String) -> [String] {
-    let trimmed = value.trimmingCharacters(in: .whitespaces)
+    let trimmed = uncommentedYAMLScalar(value).trimmingCharacters(in: .whitespaces)
     guard !trimmed.isEmpty else { return [] }
     guard trimmed.hasPrefix("["),
           trimmed.hasSuffix("]") else {
@@ -1712,14 +1858,46 @@ public struct CompatibilityService {
     }
 
     let content = String(trimmed.dropFirst().dropLast())
-    return content
-      .split(separator: ",")
-      .map { normalizedListValue(String($0)) }
-      .filter { !$0.isEmpty }
+    var values: [String] = [], token = ""
+    var quote: Character?
+    var escaped = false
+    for char in content {
+      if escaped { token.append(char); escaped = false; continue }
+      if char == "\\" && quote == "\"" { token.append(char); escaped = true; continue }
+      if let active = quote {
+        token.append(char)
+        if char == active { quote = nil }
+        continue
+      }
+      if char == "'" || char == "\"" { quote = char; token.append(char) }
+      else if char == "," { values.append(normalizedListValue(token)); token = "" }
+      else { token.append(char) }
+    }
+    guard quote == nil && !escaped else { return [] }
+    values.append(normalizedListValue(token))
+    return values.filter { !$0.isEmpty }
   }
 
   private func normalizedListValue(_ value: String) -> String {
-    value.trimmingCharacters(in: CharacterSet(charactersIn: "\"' "))
+    let trimmed = uncommentedYAMLScalar(value).trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.hasPrefix("\""), let decoded = try? JSONDecoder().decode(String.self, from: Data(trimmed.utf8)) { return decoded }
+    if trimmed.hasPrefix("'"), trimmed.hasSuffix("'"), trimmed.count >= 2 {
+      return String(trimmed.dropFirst().dropLast()).replacingOccurrences(of: "''", with: "'")
+    }
+    return trimmed
+  }
+
+  private func uncommentedYAMLScalar(_ value: String) -> String {
+    var quote: Character?, escaped = false
+    for index in value.indices {
+      let char = value[index]
+      if escaped { escaped = false; continue }
+      if char == "\\" && quote == "\"" { escaped = true; continue }
+      if let active = quote { if char == active { quote = nil }; continue }
+      if char == "'" || char == "\"" { quote = char; continue }
+      if char == "#", index == value.startIndex || value[value.index(before: index)].isWhitespace { return String(value[..<index]) }
+    }
+    return value
   }
 
   private func normalizedProxyServerHost(_ value: String) -> String? {
@@ -1799,12 +1977,8 @@ public struct CompatibilityService {
     if let hash = host.firstIndex(of: "#") {
       let fragment = String(host[host.index(after: hash)...]).removingPercentEncoding
         ?? String(host[host.index(after: hash)...])
-      let route = fragment.split(separator: "&")
-        .last(where: { !$0.contains("=") })
-        .map(String.init) ?? ""
-      if !route.isEmpty && route.uppercased() != "DIRECT" {
-        return nil
-      }
+      let routes = fragment.split(separator: "&").filter { !$0.contains("=") }
+      if !routes.allSatisfy({ $0 == "DIRECT" }) { return nil }
       host = String(host[..<hash])
     }
 
@@ -1949,7 +2123,7 @@ public struct CompatibilityService {
       }
 
       if collecting, line.hasPrefix("- ") {
-        values.append(line.replacingOccurrences(of: "- ", with: "").trimmingCharacters(in: .whitespaces))
+        values.append(normalizedListValue(String(line.dropFirst(2))))
       }
     }
 

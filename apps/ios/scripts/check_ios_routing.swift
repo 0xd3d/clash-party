@@ -14,7 +14,7 @@ struct RoutingChecks {
     let service = CompatibilityService()
     check(RoutingPolicyService.effectivePolicy(for: .automatic, runtimeConfig: profile) == .general, "Former GPT-only profile must migrate automatically")
     let unchanged = try RoutingPolicyService.rewrite(profile, policy: .profile)
-    check(unchanged == profile, "Explicit profile policy must preserve all bytes")
+    check(Array(RoutingPolicyService.ruleStrings(in: unchanged).suffix(3)) == RoutingPolicyService.ruleStrings(in: profile), "Original profile business rules must survive below the privacy prefix")
     let custom = profile.replacingOccurrences(of: "MATCH,DIRECT", with: "DOMAIN-SUFFIX,example.com,DIRECT\n  - MATCH,DIRECT")
     check(RoutingPolicyService.effectivePolicy(for: .automatic, runtimeConfig: custom) == .profile, "Custom rules must survive automatic policy")
     let general = try RoutingPolicyService.rewrite(profile, policy: .automatic)
@@ -50,7 +50,7 @@ struct RoutingChecks {
     let snapshot = RoutingPolicyService.loadDesktopSnapshot(resourceRoot: resources)!
     check(snapshot.rules.count < 100 && snapshot.skippedProcessRuleCount == 0, "Bundled snapshot must be a public format example, not a personal desktop export")
     let desktop = try RoutingPolicyService.rewrite(profile, policy: .desktopSnapshot, snapshot: snapshot)
-    check(service.extractRules(from: desktop).count == snapshot.rules.count, "All compatible snapshot rules must appear in the final runtime")
+    check(service.extractRules(from: desktop).count > snapshot.rules.count, "Snapshot rules must remain below a mandatory privacy prefix")
     check(!desktop.contains(RoutingPolicyService.proxyPlaceholder), "Desktop policy placeholders must resolve")
     check(service.extractProxyNodes(from: desktop) == beforeNodes, "Desktop import must retain iOS nodes")
     var invalid = snapshot

@@ -990,5 +990,15 @@
   "privacy.finding.windowsDnsMode.warning": "Windows DNS 拦截配置不完整，请检查 dns-mode、自动路由和严格路由。",
   "privacy.finding.windowsDnsMode.error": "Windows 系统 DNS 拦截已禁用；仅有 53 端口规则不能保护其他网卡。",
   "privacy.finding.macDNSGuard.pass": "当前内核的原生 PF DNS 防旁路规则已确认生效；这不等同于网络泄漏实测通过。",
-  "privacy.finding.macDNSGuard.warning": "尚未确认原生 DNS 防旁路生效，请安装本 Fork 的原生辅助工具并检查状态。"
+  "privacy.finding.macDNSGuard.warning": "尚未确认原生 DNS 防旁路生效，请安装本 Fork 的原生辅助工具并检查状态。",
+  "tun.protection.title": "隧道异常后的公网断网保护",
+  "tun.protection.hint": "需安装专用防护组件并使用无直连回退的代理出口。内核异常后保持公网阻断，局域网仍可用。开启会中断已有公网及旧明文 DNS 连接；启用或解除会重新连接内核。",
+  "tun.protection.target": "保护使用的代理出口",
+  "tun.protection.autoTarget": "自动使用 MATCH 的代理出口",
+  "tun.protection.publicUDP": "所有公网 UDP 经代理",
+  "tun.protection.udpHint": "覆盖任意端口的 STUN；国内 TCP 仍按原规则直连。关闭后无法保护所有 App 的 STUN。保留 QQ 音乐精确 DNS 例外。",
+  "tun.protection.recover": "解除遗留保护并重新连接",
+  "privacy.finding.networkGuard.pass": "已核对独立原生防护与当前内核。系统故障场景仍需实测。",
+  "privacy.finding.networkGuard.warning": "独立断网保护尚未确认，不能视为已防旁路。",
+  "privacy.finding.publicUDPProtection.warning": "未强制公网 UDP 经代理，未知 STUN 仍可能显示直连出口。"
 }

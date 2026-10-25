@@ -22,6 +22,11 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 
 // IPC API 类型定义
 interface IpcApi {
+  configureNetworkProtection: (settings: {
+    enabled: boolean
+    proxyGroup?: string
+    protectPublicUDP?: boolean
+  }) => Promise<void>
   inspectPrivacyProtection: () => Promise<PrivacyProtectionReport>
   exportWebRTCGuard: () => Promise<string | null>
   // Mihomo API
@@ -286,6 +291,7 @@ const ipc = new Proxy({} as IpcApi, {
 // 导出所有 IPC 方法
 export const {
   inspectPrivacyProtection,
+  configureNetworkProtection,
   exportWebRTCGuard,
   // Mihomo API
   mihomoVersion,

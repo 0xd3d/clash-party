@@ -11,6 +11,7 @@ import { app, dialog, ipcMain } from 'electron'
 import { mainWindow } from '../window'
 import {
   getAppConfig,
+  patchAppConfig,
   getControledMihomoConfig,
   getProfileItem,
   patchControledMihomoConfig,
@@ -73,6 +74,8 @@ import { SystemDNSListenerProof } from './systemDNSRuntime'
 import { activateWindowsCoreProxy } from './startupProxy'
 import { shutdownProtectedCore } from './protectedShutdown'
 import { releaseMacDNSGuard } from './macDNSGuard'
+import { armNetworkGuard, bindNetworkGuard, releaseNetworkGuard } from './networkGuard'
+import { applyNetworkProtectionPolicy } from './networkProtectionPolicy'
 
 // 重新导出权限相关函数
 export {
@@ -480,6 +483,7 @@ interface CoreConfig {
   logLevel: LogLevel
   tunEnabled: boolean
   autoSetDNS: boolean
+  networkProtection: boolean
   cpuPriority: string
   ageSecretKey?: string
   detached: boolean
@@ -527,7 +531,8 @@ async function prepareCore(
     autoSetDNS = true,
     mihomoCpuPriority = 'PRIORITY_NORMAL',
     coreStartupMode = 'log',
-    testProfileOnStart = true
+    testProfileOnStart = true,
+    networkProtection = false
   } = appConfig
   if (appConfig.operationMode === 'simple') diffWorkDir = false
 
@@ -544,6 +549,7 @@ async function prepareCore(
     tun = simpleRuntime.tun
   }
   await requireWindowsTunPrivileges(runtimeConfig)
+  if (networkProtection) await armNetworkGuard(runtimeConfig, mihomoCorePath(core))
   // Only stop an existing bundled core after the next protected configuration is eligible.
   await stopPidFileCore()
   const ageSecretKey = (await getProfileItem(current))?.ageSecretKey || ''
@@ -575,6 +581,7 @@ async function prepareCore(
     logLevel,
     tunEnabled: tun?.enable ?? false,
     autoSetDNS,
+    networkProtection,
     cpuPriority: mihomoCpuPriority,
     ageSecretKey,
     detached,
@@ -686,6 +693,11 @@ function setupCoreListeners(
 
   const startMihomoApiStreams = async (): Promise<void> => {
     await waitForCoreReady()
+    if (config.networkProtection && proc.pid !== undefined) {
+      await bindNetworkGuard(config.runtimeConfig, config.corePath, proc.pid)
+      if (child !== proc || protectedTunFailed)
+        throw new Error('Core changed during network protection activation')
+    }
     const instance = await getAxios(true)
     await activateWindowsCoreProxy(
       process.platform,
@@ -767,7 +779,7 @@ function setupCoreListeners(
     // TUN 权限错误
     if (str.includes('configure tun interface: operation not permitted')) {
       lastTunFailureAt = Date.now()
-      if (process.platform === 'win32') {
+      if (process.platform === 'win32' || config.networkProtection) {
         failProtectedWindowsTun(i18next.t('tun.error.tunPermissionDenied'))
         void dialog
           .showMessageBox({
@@ -794,7 +806,7 @@ function setupCoreListeners(
       lastTunFailureAt = Date.now()
       managerLogger.error('TUN listening error detected:', tunListenErrorLine.trim())
       try {
-        if (process.platform === 'win32') {
+        if (process.platform === 'win32' || config.networkProtection) {
           failProtectedWindowsTun(tunListenErrorLine.trim())
         } else {
           await patchControledMihomoConfig({ tun: { enable: false } })
@@ -869,7 +881,7 @@ function setupCoreListeners(
         observeProvider(str)
       })
       try {
-        if (process.platform === 'win32') {
+        if (process.platform === 'win32' || config.networkProtection) {
           await startMihomoApiStreams()
           resolveStartup([providerReady])
         } else {
@@ -877,7 +889,8 @@ function setupCoreListeners(
           await startMihomoApiStreams()
         }
       } catch (error) {
-        if (process.platform === 'win32') failProtectedWindowsTun(String(error))
+        if (process.platform === 'win32' || config.networkProtection)
+          failProtectedWindowsTun(String(error))
         else rejectStartup(error)
       }
     }
@@ -911,6 +924,8 @@ async function startCoreInternal(
   forceStop = false
 ): Promise<CoreStartAttempt> {
   ensureNotShuttingDown()
+  if (detached && (await getAppConfig()).networkProtection)
+    throw new Error('Release network protection before switching to an unmonitored detached core')
   const config = await prepareCore(detached, skipStop, forceStop)
   ensureNotShuttingDown()
   const hookWaiter = config.startupHook ? createCoreHookWaiter(config.startupHook) : undefined
@@ -1030,6 +1045,7 @@ async function stopCoreInternal(
   }
 
   await cleanupStoppedCoreResources()
+  if (releaseGuard) await releaseNetworkGuard()
 }
 
 function stopCoreProcessAndStreams(
@@ -1100,9 +1116,54 @@ export async function stopCoreForExit(): Promise<void> {
     },
     releaseGuard: async () => {
       if (process.platform === 'darwin') await releaseMacDNSGuard()
+      await releaseNetworkGuard()
     },
     onError: (message, error) => managerLogger.error(message, error)
   })
+}
+
+/** User action only: enabling may restart this future build; disabling explicitly releases its lease. */
+export async function configureNetworkProtection(change: {
+  enabled: boolean
+  proxyGroup?: string
+  protectPublicUDP?: boolean
+}): Promise<void> {
+  if (
+    typeof change?.enabled !== 'boolean' ||
+    (change.proxyGroup !== undefined &&
+      (typeof change.proxyGroup !== 'string' || change.proxyGroup.length > 256)) ||
+    (change.protectPublicUDP !== undefined && typeof change.protectPublicUDP !== 'boolean')
+  )
+    throw new Error('Invalid network protection settings')
+  if (!change.enabled) {
+    await stopCore()
+    // Also recovers a retained orphan lease after an earlier application crash.
+    if (['darwin', 'win32'].includes(process.platform)) await releaseNetworkGuard(true)
+  }
+  await patchAppConfig({
+    networkProtection: change.enabled,
+    networkProtectionProxyGroup: change.proxyGroup?.trim() ?? '',
+    networkProtectionPublicUDP: change.protectPublicUDP !== false
+  })
+  await restartCore()
+}
+
+export async function prepareNetworkProtectionReload(runtime: IMihomoConfig): Promise<void> {
+  const config = await getAppConfig()
+  if (!config.networkProtection) return
+  applyNetworkProtectionPolicy(runtime, config)
+  if (!child?.pid) throw new Error('No protected core is available for reload')
+  await armNetworkGuard(runtime, mihomoCorePath(config.core))
+}
+
+export async function commitNetworkProtectionReload(
+  runtime: IMihomoConfig,
+  corePid: number | undefined
+): Promise<void> {
+  const config = await getAppConfig()
+  if (!config.networkProtection) return
+  if (!corePid || child?.pid !== corePid) throw new Error('Core changed during protected reload')
+  await bindNetworkGuard(runtime, mihomoCorePath(config.core), corePid)
 }
 
 setStopCoreBeforeAdminRestart(stopCore)

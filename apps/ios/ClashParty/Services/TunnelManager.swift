@@ -374,7 +374,7 @@ final class TunnelManager {
       mappedState = .starting
       vpnConnected = false
     case .connected:
-      mappedState = .running
+      mappedState = fallback.state == .failed && fallback.startupPhase == "trafficBlocked" ? .failed : .running
       vpnConnected = true
     case .disconnecting:
       mappedState = .stopping

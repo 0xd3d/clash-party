@@ -763,6 +763,9 @@ func match(metadata *C.Metadata) (C.Proxy, C.Rule, error) {
 		if matched, ada := rule.Match(metadata); matched {
 			adapter, ok := proxies[ada]
 			if !ok {
+				if tunnelGOOS == "ios" {
+					return nil, rule, fmt.Errorf("matched proxy %s is unavailable; refusing rule fallthrough", ada)
+				}
 				continue
 			}
 
@@ -772,6 +775,9 @@ func match(metadata *C.Metadata) (C.Proxy, C.Rule, error) {
 			}
 
 			if metadata.NetWork == C.UDP && !adapter.SupportUDP() {
+				if tunnelGOOS == "ios" {
+					return nil, rule, fmt.Errorf("matched proxy %s does not support UDP; refusing direct fallback", adapter.Name())
+				}
 				log.Debugln("%s UDP is not supported", adapter.Name())
 				continue
 			}
@@ -780,6 +786,9 @@ func match(metadata *C.Metadata) (C.Proxy, C.Rule, error) {
 		}
 	}
 
+	if tunnelGOOS == "ios" && metadata.NetWork == C.UDP {
+		return nil, nil, fmt.Errorf("UDP has no explicit supported route; refusing implicit direct fallback")
+	}
 	return proxies["DIRECT"], nil, nil
 }
 

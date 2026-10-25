@@ -113,7 +113,9 @@ public enum RoutingPolicyService {
     snapshot: DesktopRoutingSnapshot? = nil
   ) throws -> String {
     let policy = effectivePolicy(for: requested, runtimeConfig: runtimeConfig)
-    guard policy != .profile else { return runtimeConfig }
+    guard policy != .profile else {
+      return applyingPrivacyGuards(to: runtimeConfig, target: CompatibilityService().protectedDNSProxyTarget(in: runtimeConfig) ?? "REJECT")
+    }
     let normalizedConfig = normalizingProxyGroups(in: runtimeConfig)
     let compatibility = CompatibilityService()
     let supported = Set(["ss", "ssr", "socks5", "http", "vmess", "vless", "snell", "trojan", "hysteria", "wireguard", "tuic"])
@@ -169,7 +171,38 @@ public enum RoutingPolicyService {
     }
     result = replacingSection("rules", in: result, with: "rules:\n" + rules.map { "  - " + yamlString($0) }.joined(separator: "\n"))
     result = replacingSection("mode", in: result, with: "mode: rule")
-    return result
+    return applyingPrivacyGuards(to: result, target: groupName)
+  }
+
+  /// Only public resolver endpoints and well-known encrypted DNS / STUN ports
+  /// are special-cased. DNS protection precedes local DIRECT so a hardcoded
+  /// router resolver cannot escape through provider sockets. Other local
+  /// services remain direct. An arbitrary DoH server
+  /// sharing TCP443 with domestic web content cannot be identified without TLS
+  /// inspection, which this app deliberately does not perform.
+  private static func applyingPrivacyGuards(to yaml: String, target: String) -> String {
+    let local = ["IP-CIDR,127.0.0.0/8,DIRECT,no-resolve", "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+      "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve", "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+      "IP-CIDR,100.64.0.0/10,DIRECT,no-resolve", "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+      "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve", "IP-CIDR6,::1/128,DIRECT,no-resolve",
+      "IP-CIDR6,fc00::/7,DIRECT,no-resolve", "IP-CIDR6,fe80::/10,DIRECT,no-resolve", "IP-CIDR6,ff00::/8,DIRECT,no-resolve",
+      "DOMAIN-SUFFIX,lan,DIRECT", "DOMAIN-SUFFIX,local,DIRECT"]
+    let resolvers = ["dns.google", "cloudflare-dns.com", "one.one.one.one", "dns.quad9.net", "doh.opendns.com",
+      "dns.adguard-dns.com", "dns.nextdns.io", "doh.cleanbrowsing.org", "dns0.eu", "doh.mullvad.net",
+      "dns.sb", "doh.sb", "doh.pub", "dns.alidns.com", "doh.360.cn", "dns.twnic.tw"]
+    let ipv4 = ["1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "149.112.112.112",
+      "223.5.5.5", "223.6.6.6", "119.29.29.29", "1.12.12.12", "120.53.53.53", "180.76.76.76",
+      "114.114.114.114", "114.114.115.115"]
+    let ipv6 = ["2606:4700:4700::1111", "2606:4700:4700::1001", "2001:4860:4860::8888", "2001:4860:4860::8844",
+      "2620:fe::fe", "2620:fe::9", "2400:3200::1", "2400:3200:baba::1"]
+    let dns = resolvers.map { "DOMAIN-SUFFIX,\($0),\(target)" }
+      + ipv4.map { "IP-CIDR,\($0)/32,\(target),no-resolve" }
+      + ipv6.map { "IP-CIDR6,\($0)/128,\(target),no-resolve" }
+      + ["DST-PORT,53/853,\(target)"]
+    let publicTraffic = ["DST-PORT,3478-3481/5349/19302-19309,\(target)", "NETWORK,udp,\(target)", "NETWORK,udp,REJECT"]
+    let original = ruleStrings(in: yaml)
+    let prefix = dns + local + publicTraffic
+    return replacingSection("rules", in: yaml, with: "rules:\n" + (prefix + original.filter { !prefix.contains($0) }).map { "  - " + yamlString($0) }.joined(separator: "\n"))
   }
 
   public static func ruleStrings(in yaml: String) -> [String] {

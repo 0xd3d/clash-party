@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Dreamacro/clash/adapter"
 	"github.com/Dreamacro/clash/adapter/outbound"
 	C "github.com/Dreamacro/clash/constant"
 	"github.com/Dreamacro/clash/constant/provider"
@@ -18,6 +19,9 @@ import (
 	"github.com/dlclark/regexp2"
 	"go.uber.org/atomic"
 )
+
+// Independent of the global proxy registry, which can still be warming up.
+var iosEmptyGroupFallback = adapter.NewProxy(outbound.NewReject())
 
 type GroupBase struct {
 	*outbound.Base
@@ -132,6 +136,9 @@ func (gb *GroupBase) GetProxies(touch bool) []C.Proxy {
 	}
 
 	if len(proxies) == 0 {
+		if outboundGroupGOOS == "ios" {
+			return []C.Proxy{iosEmptyGroupFallback}
+		}
 		return append(proxies, tunnel.Proxies()["COMPATIBLE"])
 	}
 
@@ -190,6 +197,12 @@ func (gb *GroupBase) GetProxies(touch bool) []C.Proxy {
 		proxies = newProxies
 	}
 
+	// An empty candidate set must not turn a proxy-only group into the
+	// implicit Direct/COMPATIBLE adapter (or panic in Selector) on iOS.
+	// Repeat after filtering: a nonempty provider may be filtered to zero.
+	if len(proxies) == 0 && outboundGroupGOOS == "ios" {
+		return []C.Proxy{iosEmptyGroupFallback}
+	}
 	return proxies
 }
 

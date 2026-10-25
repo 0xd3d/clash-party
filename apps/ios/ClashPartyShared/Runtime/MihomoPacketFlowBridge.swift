@@ -18,6 +18,11 @@ enum MihomoPacketFlowBridge {
     MihomoPacketFlowObjCBridge.setDropIPv6(enabled, forPacketFlow: flow)
   }
 
+  @discardableResult
+  static func blockAllTraffic(for flow: NEPacketTunnelFlow) -> Bool {
+    MihomoPacketFlowObjCBridge.blockAllTraffic(for: flow)
+  }
+
   static func clear() {
     appendDiagnostic("Swift bridge clear called. Clearing packet flow attachment state.")
     MihomoPacketFlowObjCBridge.clearAttachment()

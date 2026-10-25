@@ -156,6 +156,9 @@ func getDialHandler(r *Resolver, proxyAdapter string, opts ...dialer.Option) dia
 			}
 			adapter, ok := tunnel.Proxies()[proxyAdapter]
 			if !ok {
+				if resolver.RequireEncryptedProxyServerDNS {
+					return nil, fmt.Errorf("DNS proxy adapter [%s] is unavailable; refusing a direct/interface fallback", proxyAdapter)
+				}
 				opts = append(opts, dialer.WithInterface(proxyAdapter))
 			}
 			if strings.Contains(network, "tcp") {
@@ -208,6 +211,9 @@ func listenPacket(ctx context.Context, proxyAdapter string, network string, addr
 	}
 	adapter, ok := tunnel.Proxies()[proxyAdapter]
 	if !ok && len(proxyAdapter) != 0 {
+		if resolver.RequireEncryptedProxyServerDNS {
+			return nil, fmt.Errorf("DNS proxy adapter [%s] is unavailable; refusing a direct/interface fallback", proxyAdapter)
+		}
 		opts = append(opts, dialer.WithInterface(proxyAdapter))
 	}
 

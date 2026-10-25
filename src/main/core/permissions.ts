@@ -10,6 +10,7 @@ import { managerLogger } from '../utils/logger'
 import { checkAutoRun, enableAutoRun } from '../sys/autoRun'
 import i18next from '../../shared/i18n'
 import { checkAdminPrivileges } from './admin'
+import { repairMacTrafficCores } from './macDNSGuard'
 
 const execPromise = promisify(exec)
 const execFilePromise = promisify(execFile)
@@ -235,6 +236,10 @@ async function checkHighPrivilegeMihomoProcess(): Promise<boolean> {
 }
 
 export async function grantTunPermissions(): Promise<void> {
+  if (process.platform === 'darwin' && (await getAppConfig()).networkProtection) {
+    await repairMacTrafficCores()
+    return
+  }
   const { core = 'mihomo' } = await getAppConfig()
 
   if (!isValidCoreName(core)) {
@@ -367,6 +372,11 @@ export async function validateTunPermissionsOnStartup(
     throw new Error(i18next.t('tun.error.tunPermissionDenied'))
   }
 
+  if (!hasPermissions && (await getAppConfig()).networkProtection) {
+    throw new Error(
+      'Protected TUN permissions are missing; repair the installed core before connecting'
+    )
+  }
   if (!hasPermissions) {
     // 启动时没有权限，静默禁用 TUN，不弹窗打扰用户
     managerLogger.warn(

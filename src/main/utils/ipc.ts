@@ -66,6 +66,7 @@ import {
 } from '../resolve/server'
 import {
   quitWithoutCore,
+  configureNetworkProtection,
   restartCore,
   checkTunPermissions,
   grantTunPermissions,
@@ -263,6 +264,7 @@ async function setTitleBarOverlay(overlay: Electron.TitleBarOverlayOptions): Pro
 
 const asyncHandlers: Record<string, AsyncFn> = {
   inspectPrivacyProtection,
+  configureNetworkProtection,
   exportWebRTCGuard,
   // Mihomo API
   mihomoVersion,

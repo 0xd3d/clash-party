@@ -21,7 +21,7 @@ struct OverviewPage: View {
         primaryIcon: primaryHeroActionIcon,
         primaryDisabled: presentation.state.tunnelControlsDisabled
       ) {
-        if presentation.state.runtimeState == .running {
+        if presentation.state.vpnConnected || presentation.state.runtimeState == .running {
           viewModel.stopTunnel()
         } else if !presentation.state.hasProxyNodes {
           onOpenProfiles?()
@@ -290,7 +290,7 @@ struct OverviewPage: View {
   }
 
   private var primaryHeroActionTitle: String {
-    if presentation.state.runtimeState == .running {
+    if presentation.state.vpnConnected || presentation.state.runtimeState == .running {
       return L10n.string("action.disconnect", "Disconnect")
     }
     if !presentation.state.hasProxyNodes {
@@ -300,7 +300,7 @@ struct OverviewPage: View {
   }
 
   private var primaryHeroActionIcon: String {
-    if presentation.state.runtimeState == .running {
+    if presentation.state.vpnConnected || presentation.state.runtimeState == .running {
       return "stop.fill"
     }
     if !presentation.state.hasProxyNodes {

@@ -75,14 +75,28 @@ func TestIOSPortablePolicy(t *testing.T) {
 				network                 C.NetWork
 				target                  string
 			}{
-				{"public UDP to CN", "", "223.5.5.5", C.UDP, "iOS 外网"},
+				{"public UDP to CN", "", "101.226.4.6", C.UDP, "iOS 外网"},
 				{"public UDP STUN", "stun.l.google.com", "74.125.250.129", C.UDP, "iOS 外网"},
 				{"public IPv6 UDP", "", "2001:4860:4860::8888", C.UDP, "iOS 外网"},
 				{"private IPv4 UDP", "", "192.168.1.9", C.UDP, "DIRECT"},
 				{"private IPv6 UDP", "", "fd12::9", C.UDP, "DIRECT"},
-				{"Claude before CN IP", "claude.ai", "223.5.5.5", C.TCP, "iOS 外网"},
-				{"QQ domestic TCP", "aqqmusic.tc.qq.com", "223.5.5.5", C.TCP, "DIRECT"},
-				{"unknown overseas TCP", "unlisted-public-routing-check.org", "1.1.1.1", C.TCP, "iOS 外网"},
+				{"LAN router UDP DNS", "", "192.168.1.1", C.UDP, "iOS 外网"},
+				{"LAN router TCP DNS", "", "192.168.1.1", C.TCP, "iOS 外网"},
+				{"LAN named router DNS", "router.local", "192.168.1.1", C.UDP, "iOS 外网"},
+				{"LAN DoT", "", "192.168.1.1", C.TCP, "iOS 外网"},
+				{"LAN DoQ", "", "192.168.1.1", C.UDP, "iOS 外网"},
+				{"IPv6 ULA UDP DNS", "", "fd12::9", C.UDP, "iOS 外网"},
+				{"IPv6 ULA DoT", "router.local", "fd12::9", C.TCP, "iOS 外网"},
+				{"known resolver on LAN", "dns.alidns.com", "192.168.1.1", C.TCP, "iOS 外网"},
+				{"LAN SMB", "nas.local", "192.168.1.9", C.TCP, "DIRECT"},
+				{"LAN local UDP STUN", "", "192.168.1.9", C.UDP, "DIRECT"},
+				{"Claude before CN IP", "claude.ai", "101.226.4.6", C.TCP, "iOS 外网"},
+				{"known Chinese resolver TCP443", "dns.alidns.com", "223.5.5.5", C.TCP, "iOS 外网"},
+				{"literal Chinese resolver TCP443", "", "119.29.29.29", C.TCP, "iOS 外网"},
+				{"unknown DoT to CN", "unknown-domestic.cn", "101.226.4.6", C.TCP, "iOS 外网"},
+				{"TCP TURN to CN", "unknown-domestic.cn", "101.226.4.6", C.TCP, "iOS 外网"},
+				{"QQ domestic TCP", "aqqmusic.tc.qq.com", "101.226.4.6", C.TCP, "DIRECT"},
+				{"unknown overseas TCP", "unlisted-public-routing-check.org", "93.184.215.14", C.TCP, "iOS 外网"},
 			}
 			if name == "general-runtime.yaml" {
 				cases = append(cases,
@@ -90,32 +104,32 @@ func TestIOSPortablePolicy(t *testing.T) {
 						name, host, destination string
 						network                 C.NetWork
 						target                  string
-					}{"unknown named host before CN IP", "unlisted-public-routing-check.org", "223.5.5.5", C.TCP, "iOS 外网"},
+					}{"unknown named host before CN IP", "unlisted-public-routing-check.org", "101.226.4.6", C.TCP, "iOS 外网"},
 					struct {
 						name, host, destination string
 						network                 C.NetWork
 						target                  string
-					}{"single-label public host before CN IP", "unlisted-public-routing-host", "223.5.5.5", C.TCP, "iOS 外网"},
+					}{"single-label public host before CN IP", "unlisted-public-routing-host", "101.226.4.6", C.TCP, "iOS 外网"},
 					struct {
 						name, host, destination string
 						network                 C.NetWork
 						target                  string
-					}{"IP-only domestic CDN", "", "223.5.5.5", C.TCP, "DIRECT"},
+					}{"IP-only domestic CDN", "", "101.226.4.6", C.TCP, "DIRECT"},
 					struct {
 						name, host, destination string
 						network                 C.NetWork
 						target                  string
-					}{"CN domain before overseas CDN IP", "iqiyi.com", "1.1.1.1", C.TCP, "DIRECT"},
+					}{"CN domain before overseas CDN IP", "iqiyi.com", "93.184.215.14", C.TCP, "DIRECT"},
 					struct {
 						name, host, destination string
 						network                 C.NetWork
 						target                  string
-					}{"public YAML provider before CN", "1password.drift.click", "223.5.5.5", C.TCP, "iOS 外网"},
+					}{"public YAML provider before CN", "1password.drift.click", "101.226.4.6", C.TCP, "iOS 外网"},
 					struct {
 						name, host, destination string
 						network                 C.NetWork
 						target                  string
-					}{"user service selection", "chatgpt.com", "223.5.5.5", C.TCP, "OpenAI"},
+					}{"user service selection", "chatgpt.com", "101.226.4.6", C.TCP, "OpenAI"},
 					struct {
 						name, host, destination string
 						network                 C.NetWork
@@ -125,7 +139,23 @@ func TestIOSPortablePolicy(t *testing.T) {
 			for _, scenario := range cases {
 				t.Run(scenario.name, func(t *testing.T) {
 					metadata := &C.Metadata{Host: scenario.host, DstIP: netip.MustParseAddr(scenario.destination), NetWork: scenario.network, DstPort: "443", Type: C.TUN}
+					if scenario.name == "unknown DoT to CN" {
+						metadata.DstPort = "853"
+					}
+					if scenario.name == "TCP TURN to CN" {
+						metadata.DstPort = "5349"
+					}
 					if scenario.name == "public UDP STUN" {
+						metadata.DstPort = "3478"
+					}
+					switch scenario.name {
+					case "LAN router UDP DNS", "LAN router TCP DNS", "LAN named router DNS", "IPv6 ULA UDP DNS":
+						metadata.DstPort = "53"
+					case "LAN DoT", "LAN DoQ", "IPv6 ULA DoT":
+						metadata.DstPort = "853"
+					case "LAN SMB":
+						metadata.DstPort = "445"
+					case "LAN local UDP STUN":
 						metadata.DstPort = "3478"
 					}
 					matched, matchedRule := "", ""

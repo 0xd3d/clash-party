@@ -30,6 +30,7 @@ int MihomoIOSReadPacketForReader(void * _Nullable buffer, int maxLen, uint64_t r
 
 + (void)attachPacketFlow:(NEPacketTunnelFlow * _Nullable)flow;
 + (void)attachPacketFlow:(NEPacketTunnelFlow * _Nullable)flow dropIPv6:(BOOL)dropIPv6;
++ (BOOL)blockAllTrafficForPacketFlow:(NEPacketTunnelFlow * _Nonnull)flow NS_SWIFT_NAME(blockAllTraffic(for:));
 + (BOOL)setDropIPv6:(BOOL)dropIPv6 forPacketFlow:(NEPacketTunnelFlow * _Nonnull)flow;
 + (void)clearAttachment;
 + (BOOL)isAttached;

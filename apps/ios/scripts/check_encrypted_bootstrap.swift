@@ -84,7 +84,11 @@ struct EncryptedBootstrapChecks {
     precondition(endpoint.absoluteString == "https://192.0.2.1:4443/custom/dns-query?version=1")
     for invalid in ["223.5.5.5", "udp://192.0.2.1:53", "http://192.0.2.1/dns-query",
                     "https://dns.example/dns-query", "https://u:p@192.0.2.1/dns-query",
-                    "https://192.0.2.1/dns-query#TestProxy", "https://192.0.2.1:70000/dns-query"] {
+                    "https://192.0.2.1/dns-query#TestProxy", "https://192.0.2.1:70000/dns-query",
+                    "https://192.0.2.1/dns-query#TestProxy&DIRECT",
+                    "https://192.0.2.1/dns-query#h3=true%26TestProxy&DIRECT",
+                    "https://192.0.2.1/dns-query#DIRECT&%54estProxy",
+                    "https://192.0.2.1/dns-query#direct"] {
       precondition(EncryptedBootstrapResolver.endpoint(invalid) == nil)
     }
     precondition(EncryptedBootstrapResolver.endpoint("https://[2001:db8::1]/dns-query") != nil)

@@ -76,10 +76,35 @@ int main(void) {
     reader = MihomoIOSPacketFlowNewReader();
     [second enqueue:@[packet(6), packet(4)]];
     NSCAssert(MihomoIOSReadPacketForReader(buffer, sizeof(buffer), reader) == 20, @"Replacement starts with its own disabled policy");
+    // A core failure latches the active flow closed before shutdown. Already
+    // queued traffic and late writes are consumed, never forwarded or leaked.
+    [second enqueue:@[packet(4), packet(6)]];
+    usleep(20 * 1000);
+    NSCAssert([MihomoPacketFlowObjCBridge blockAllTrafficForPacketFlow:replacement], @"The active flow may retain failure protection");
+    NSCAssert([MihomoPacketFlowObjCBridge isAttached], @"Failure must retain the OS flow rather than detach it");
+    NSCAssert([MihomoPacketFlowObjCBridge queueStatistics][@"packets"].unsignedLongLongValue == 0, @"Failure clears pending packet storage");
+    NSCAssert(MihomoIOSReadPacketForReader(buffer, sizeof(buffer), reader) == -1, @"Failure expires the core reader");
+    [second enqueue:@[packet(4), packet(6)]];
+    usleep(20 * 1000);
+    NSUInteger writesBeforeFailure = second.writes;
+    NSData *v4 = packet(4);
+    NSCAssert(MihomoIOSWritePacket(v4.bytes, (int)v4.length) == 20 && MihomoIOSWritePacket(v6.bytes, (int)v6.length) == 40, @"Failure consumes both address families");
+    NSCAssert(second.writes == writesBeforeFailure, @"Failure must never write to the system flow");
+    NSCAssert([MihomoPacketFlowObjCBridge queueStatistics][@"blocked"].boolValue, @"Failure protection is observable");
+    NSCAssert([MihomoPacketFlowObjCBridge setDropIPv6:NO forPacketFlow:replacement], @"An IPv6 reload is distinct from failure protection");
+    NSCAssert([MihomoPacketFlowObjCBridge queueStatistics][@"blocked"].boolValue, @"A late family update cannot clear failure protection");
+    NSCAssert(![MihomoPacketFlowObjCBridge blockAllTrafficForPacketFlow:flow], @"An old session cannot block its replacement");
+    PacketPolicyFakeFlow *third = [PacketPolicyFakeFlow new];
+    NEPacketTunnelFlow *restarted = (NEPacketTunnelFlow *)(id)third;
+    [MihomoPacketFlowObjCBridge attachPacketFlow:restarted dropIPv6:YES];
+    NSCAssert(![MihomoPacketFlowObjCBridge blockAllTrafficForPacketFlow:replacement], @"A stale failure cannot poison the explicit new session");
+    reader = MihomoIOSPacketFlowNewReader();
+    [third enqueue:@[packet(4)]];
+    NSCAssert(MihomoIOSReadPacketForReader(buffer, sizeof(buffer), reader) == 20, @"An explicit new session can restore IPv4 forwarding");
     [MihomoPacketFlowObjCBridge clearAttachment];
     NSCAssert(![MihomoPacketFlowObjCBridge setDropIPv6:NO forPacketFlow:replacement], @"A stopped session cannot change policy");
     NSCAssert(MihomoIOSReadPacketForReader(buffer, sizeof(buffer), reader) == -1, @"Stopped readers terminate");
-    puts("PASS: IPv6 ingress/egress dropping, IPv4 preservation, hot-disable queue purge, replacement and stop isolation.");
+    puts("PASS: IPv6 ingress/egress dropping, IPv4 preservation, hot-disable queue purge, runtime-failure latch/queue purge/late writes, explicit restart and session isolation.");
   }
   return 0;
 }

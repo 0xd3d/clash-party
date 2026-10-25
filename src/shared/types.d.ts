@@ -353,6 +353,9 @@ interface IAppConfig {
   coreStartupMode?: 'log' | 'post-up'
   customSubStoreUrl?: string
   diffWorkDir?: boolean
+  networkProtection?: boolean
+  networkProtectionProxyGroup?: string
+  networkProtectionPublicUDP?: boolean
   autoSetDNS?: boolean
   systemDNSAddress?: string
   systemDNSRestoreMode?: 'original' | 'automatic'

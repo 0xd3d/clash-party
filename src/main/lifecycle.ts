@@ -124,7 +124,7 @@ export function setupAppLifecycle(): void {
       // a slow privileged operation must not leave an orphan core after app.exit().
       await withTimeout(
         Promise.allSettled(cleanupTasks).then(() => {}),
-        12000
+        20000
       )
     })()
 

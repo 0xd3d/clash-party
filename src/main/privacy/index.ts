@@ -5,6 +5,7 @@ import { getAppConfig } from '../config'
 import { getAppliedCoreConfig, getAppliedCoreRevision, getCurrentCorePID } from '../core/manager'
 import { getAxios } from '../core/mihomoApi'
 import { inspectMacDNSGuard } from '../core/macDNSGuard'
+import { inspectNetworkGuard } from '../core/networkGuard'
 import { auditPrivacyConfig, type PrivacyProtectionReport } from '../../shared/privacyAudit'
 
 /** Covers this application's own pages, not external browser processes. */
@@ -47,6 +48,25 @@ export async function inspectPrivacyProtection(): Promise<PrivacyProtectionRepor
       } catch {
         findings.push({ id: 'macDNSGuard', level: 'warning' })
       }
+    }
+    if (config.networkProtection && ['darwin', 'win32'].includes(process.platform)) {
+      try {
+        const guard = await inspectNetworkGuard()
+        findings.push({
+          id: 'networkGuard',
+          level:
+            guard.active &&
+            guard.corePid === corePid &&
+            guard.coreAlive !== false &&
+            guard.trafficLease !== false
+              ? 'pass'
+              : 'warning'
+        })
+      } catch {
+        findings.push({ id: 'networkGuard', level: 'warning' })
+      }
+      if (config.networkProtectionPublicUDP === false)
+        findings.push({ id: 'publicUDPProtection', level: 'warning' })
     }
     // Native status is asynchronous too; reject reports crossing a restart or hot reload.
     if (getCurrentCorePID() !== corePid || getAppliedCoreRevision() !== revision)

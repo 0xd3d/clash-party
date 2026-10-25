@@ -116,6 +116,12 @@ jobs:
           pnpm install --frozen-lockfile
       - name: Run platform regression tests
         run: pnpm test
+      - name: Verify DNS and UDP containment in each prepared core
+        shell: bash
+        run: |
+          for core in mihomo mihomo-alpha mihomo-smart; do
+            pnpm exec tsx scripts/check-desktop-protection.ts --core "$core"
+          done
       - name: Build Windows packages
         if: matrix.platform == 'win32'
         run: pnpm run build:win --${{ matrix.arch }}
