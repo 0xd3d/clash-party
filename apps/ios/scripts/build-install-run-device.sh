@@ -8,7 +8,7 @@ SCHEME="${SCHEME:-ClashParty}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-/tmp/clash-party-ios-derived-data-device}"
 APP_NAME="${APP_NAME:-ClashParty}"
-BUNDLE_IDENTIFIER="${BUNDLE_IDENTIFIER:-org.clashparty.ios}"
+BUNDLE_IDENTIFIER="${BUNDLE_IDENTIFIER:-}"
 SKIP_MIHOMO_BUILD="${SKIP_MIHOMO_BUILD:-0}"
 DEVICE_ID="${DEVICE_ID:-}"
 ALLOW_PROVISIONING_UPDATES="${ALLOW_PROVISIONING_UPDATES:-1}"
@@ -104,6 +104,17 @@ if [[ ! -d "$APP_PATH" ]]; then
   echo "Built app bundle was not found at: $APP_PATH" >&2
   exit 1
 fi
+
+built_bundle_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")"
+if [[ -z "$built_bundle_identifier" || "$built_bundle_identifier" == *'$('* ]]; then
+  echo "The built bundle identifier is missing or unresolved; nothing installed." >&2
+  exit 1
+fi
+if [[ -n "$BUNDLE_IDENTIFIER" && "$BUNDLE_IDENTIFIER" != "$built_bundle_identifier" ]]; then
+  echo "BUNDLE_IDENTIFIER does not match the signed build; nothing installed." >&2
+  exit 1
+fi
+BUNDLE_IDENTIFIER="$built_bundle_identifier"
 
 echo "Installing app onto device..."
 xcrun devicectl device install app --device "$DEVICE_ID" "$APP_PATH"
