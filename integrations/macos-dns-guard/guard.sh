@@ -16,8 +16,13 @@ owner=$(/bin/ps -p "$app_pid" -o uid= | /usr/bin/tr -d ' ')
 # Do not silently delete corporate/admin resolver files or enable a guard that would break them.
 for resolver in /etc/resolver/*; do
   [ -f "$resolver" ] || continue
-  if /usr/bin/awk '$1 == "nameserver" && $2 !~ /^127[.]/ && $2 != "::1" { bad=1 } END { exit !bad }' "$resolver"; then
-    echo "Conflicting domain-specific DNS override: $resolver" >&2
+  if ! /usr/bin/awk '
+    $1 == "nameserver" {
+      sub(/\r$/, "", $2)
+      if ($2 !~ /^127[.]/ && $2 !~ /^[0:]+:0*1([.][0-9]+)?$/) exit 1
+    }
+  ' "$resolver"; then
+    echo "Conflicting or unreadable domain-specific DNS override: $resolver" >&2
     echo 'Review and back up this override before enabling the DNS guard. No PF rules changed.' >&2
     exit 1
   fi
