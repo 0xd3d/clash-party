@@ -6,10 +6,41 @@ import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import {
   parseDeveloperEnvironment,
+  windowsDeveloperInvocation,
   windowsGuardCompilerArguments
 } from './build-windows-network-guard.mjs'
 
 describe('Windows guard native build and boundary', () => {
+  it('passes the spaced VS command verbatim to the cmd parser on both native architectures', () => {
+    const script = String.raw`C:\Program Files\Microsoft Visual Studio\18\Enterprise\Common7\Tools\VsDevCmd.bat`
+    for (const arch of ['x64', 'arm64']) {
+      const invocation = windowsDeveloperInvocation(script, arch)
+      expect(invocation.options).toEqual({ windowsVerbatimArguments: true })
+      expect(invocation.args).toEqual([
+        '/d',
+        '/v:off',
+        '/s',
+        '/c',
+        `""${script}" -no_logo -arch=${arch} -host_arch=${arch} >nul && set"`
+      ])
+    }
+  })
+
+  it('rejects variable expansion and cmd metacharacters before allowing verbatim arguments', () => {
+    for (const script of [
+      String.raw`C:\%TEMP%\VsDevCmd.bat`,
+      String.raw`C:\Tools!\VsDevCmd.bat`,
+      String.raw`C:\Tools" & calc\VsDevCmd.bat`,
+      String.raw`C:\Tools&Build\VsDevCmd.bat`,
+      'C:\\Tools\n\\VsDevCmd.bat'
+    ])
+      expect(() => windowsDeveloperInvocation(script, 'x64')).toThrow('installation path')
+    expect(() => windowsDeveloperInvocation('relative.bat', 'x64')).toThrow('installation path')
+    expect(() =>
+      windowsDeveloperInvocation(String.raw`C:\Tools\VsDevCmd.bat`, 'x64 & calc')
+    ).toThrow('architecture')
+  })
+
   it('builds the native target with SDK libraries and no kernel driver or persistent installer', () => {
     for (const arch of ['x64', 'arm64']) {
       const args = windowsGuardCompilerArguments(arch, path.join('build', 'native guard.exe'))

@@ -15,6 +15,24 @@ export function parseDeveloperEnvironment(text) {
   return env
 }
 
+export function windowsDeveloperInvocation(developerCommand, arch) {
+  if (!['x64', 'arm64'].includes(arch)) throw new Error('Unsupported Windows guard architecture')
+  if (!/^[A-Za-z]:\\/.test(developerCommand) || /[%!"\r\n&|<>^]/.test(developerCommand))
+    throw new Error('Unsupported Visual Studio installation path')
+  return {
+    args: [
+      '/d',
+      '/v:off',
+      '/s',
+      '/c',
+      `""${developerCommand}" -no_logo -arch=${arch} -host_arch=${arch} >nul && set"`
+    ],
+    // cmd.exe parses the /c command itself. Node's default argv quoting would escape these
+    // quotes for a C runtime parser and turn a path with spaces into a different command.
+    options: { windowsVerbatimArguments: true }
+  }
+}
+
 export function windowsGuardCompilerArguments(arch, output) {
   if (!['x64', 'arm64'].includes(arch)) throw new Error('Unsupported Windows guard architecture')
   return [
@@ -74,18 +92,11 @@ export function buildWindowsNetworkGuard(arch = process.env.npm_config_arch || p
   const developerCommand = path.join(installation, 'Common7', 'Tools', 'VsDevCmd.bat')
   // Only the trusted tool installation path enters cmd.exe. Repository/source paths are passed
   // directly to cl.exe as an argv array, including when the checkout path contains spaces.
-  if (/[%!"\r\n]/.test(developerCommand))
-    throw new Error('Unsupported Visual Studio installation path')
-  const msvcArch = arch === 'x64' ? 'x64' : 'arm64'
+  const invocation = windowsDeveloperInvocation(developerCommand, arch)
   const text = execFileSync(
     process.env.ComSpec || process.env.COMSPEC || 'cmd.exe',
-    [
-      '/d',
-      '/s',
-      '/c',
-      `""${developerCommand}" -no_logo -arch=${msvcArch} -host_arch=${msvcArch} >nul && set"`
-    ],
-    { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 }
+    invocation.args,
+    { ...invocation.options, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 }
   )
   const env = parseDeveloperEnvironment(text)
   const output = path.resolve('build/native/windows', arch, 'party.mihomo.network-guard.exe')
