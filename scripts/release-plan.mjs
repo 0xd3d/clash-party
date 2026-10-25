@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
+import { reserveReleaseTag } from './release-tag.mjs'
 
 export function createReleasePlan(baseVersion, env) {
   if (!/^\d+\.\d+\.\d+$/.test(baseVersion)) throw new Error('Expected a numeric base version')
@@ -27,6 +28,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n')
   } else {
     const plan = createReleasePlan(pkg.version, process.env)
+    if (process.argv.includes('--reserve')) {
+      if (!process.env.GH_REPO || process.env.GH_REPO !== process.env.GITHUB_REPOSITORY)
+        throw new Error('Tag reservation must target this fork')
+      reserveReleaseTag(process.env.GH_REPO, plan)
+    }
     mkdirSync('release-metadata', { recursive: true })
     writeFileSync('release-metadata/release-plan.json', JSON.stringify(plan, null, 2) + '\n')
     const notes = `Source: ${plan.commit}\n\nNative Windows x64/ARM64 and macOS Intel/Apple Silicon builds.\n\nChecks: review, unit tests, packaged architecture, resources and Electron native module loading. This is not Windows hardware network/leak certification.\n\nWindows installers are unsigned. macOS app signatures are ad-hoc; PKGs are unsigned and not notarized.\n\nPrivate node credentials and operating policies are not embedded.\n\n${plan.prerelease ? 'Automatic preview build. Existing stable updates are not replaced.' : 'Stable tagged build.'}\n`

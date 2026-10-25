@@ -51,9 +51,17 @@ describe('immutable fork releases', () => {
     expect(workflow.on.push.branches).toContain('smart_core')
     expect(workflow.on).not.toHaveProperty('pull_request')
     expect(workflow.permissions).toEqual({ contents: 'read' })
+    expect(workflow.jobs.plan.permissions).toEqual({ contents: 'write' })
     expect(workflow.jobs.publish.permissions).toEqual({ contents: 'write' })
-    expect(workflow.jobs.publish.needs).toEqual(['checks', 'packages'])
+    expect(workflow.jobs.publish.needs).toEqual(['plan', 'checks', 'packages'])
+    expect(workflow.jobs.checks.needs).toBe('plan')
     expect(workflow.jobs.packages.needs).toBe('checks')
+    expect(workflow.jobs.plan.needs).toBeUndefined()
+    expect(
+      workflow.jobs.plan.steps.map((step: { run?: string }) => step.run).filter(Boolean)
+    ).toEqual(['node scripts/release-plan.mjs --reserve'])
+    expect(workflow.jobs.checks.permissions).toBeUndefined()
+    expect(workflow.jobs.packages.permissions).toBeUndefined()
     expect(
       workflow.jobs.packages.strategy.matrix.include.map((v: { runner: string }) => v.runner)
     ).toEqual(['windows-latest', 'windows-11-arm', 'macos-15-intel', 'macos-latest'])
@@ -62,6 +70,7 @@ describe('immutable fork releases', () => {
     )
     expect(source).not.toMatch(/write-all|Delete Dev|telegram|AUR|winget|CSC_LINK/)
     expect(workflow.jobs.publish.env.GH_REPO).toBe('${{ github.repository }}')
+    expect(workflow.jobs.plan.env.GH_REPO).toBe('${{ github.repository }}')
   })
 })
 describe('binary architecture gates', () => {
