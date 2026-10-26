@@ -63,6 +63,19 @@ struct IOSDNSRouteProtectionChecks {
     precondition(runtime.contains("DST-PORT,3478-3481/5349/19302-19309,OpenAI"))
     precondition(runtime.contains("DOMAIN-SUFFIX,dns.alidns.com,OpenAI"))
     precondition(runtime.contains("IP-CIDR6,2400:3200::1/128,OpenAI,no-resolve"))
+    var noFallbackInput = input
+    noFallbackInput.controlledConfigYaml = controlled.replacingOccurrences(
+      of: "fallback: ['https://1.1.1.1/dns-query#Unsafe']",
+      with: "fallback: []"
+    ).replacingOccurrences(
+      of: "'+.untrusted.org': [192.0.2.53]",
+      with: "'+.untrusted.org': ['https://1.1.1.1/dns-query#OpenAI']"
+    )
+    let noFallbackRuntime = service.buildRuntimeConfig(from: noFallbackInput)
+    precondition(service.parseDnsSummary(from: noFallbackRuntime).fallbackServers.isEmpty,
+      "An explicit empty fallback must remain disabled, not restore Google/default upstreams")
+    precondition(!noFallbackRuntime.contains("https://8.8.8.8/dns-query"), "Disabled fallback must not add another DNS provider")
+    precondition(service.buildRuntimeConfig(from: noFallbackInput) == noFallbackRuntime)
     let dynamicProfile = profile.replacingOccurrences(of: "proxies: [Node]", with: "proxies: [Node]\n    use: [Remote]")
     precondition(service.protectedDNSProxyTarget(in: dynamicProfile) == "Node", "Unknown provider members are not a verified proxy-only group")
     for fragment in ["h3=true%26DIRECT", "h3=true%2526DIRECT", "%44IRECT&h3=false", "h3=true&DIRECT&Unsafe", "h3=%252526DIRECT"] {

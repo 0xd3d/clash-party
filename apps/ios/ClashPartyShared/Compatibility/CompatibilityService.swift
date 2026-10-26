@@ -603,6 +603,11 @@ public struct CompatibilityService {
       let block = dnsChildBlock(key, in: result)
       guard key == "nameserver" || !block.isEmpty else { continue }
       let existing = listValue(for: key, in: block.joined(separator: "\n")).map(normalizedListValue)
+      // An explicitly empty fallback disables it. Do not resurrect provider defaults.
+      if key == "fallback" && existing.isEmpty {
+        result = replacingDNSChild(key, with: ["  fallback: []"], in: result)
+        continue
+      }
       let values = existing.isEmpty || Self.legacyDNSDefaults.contains(existing) ? Self.defaultEncryptedNameservers : existing
       let encrypted = values.compactMap { protectedEncryptedDNSUpstream($0, target: target) }
       let secured = encrypted.isEmpty ? Self.defaultEncryptedNameservers.compactMap { protectedEncryptedDNSUpstream($0, target: target) } : encrypted
