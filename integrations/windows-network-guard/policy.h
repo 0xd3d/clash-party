@@ -181,7 +181,7 @@ inline unsigned selfTest() {
   try { (void)prepareTunIdentity(Operation::Acquire, [] { return std::optional<unsigned>{}; }); }
   catch (const std::runtime_error&) { rejected = true; }
   check(rejected, "Acquisition accepted a missing adapter");
-  check(prepareTunIdentity(Operation::Acquire, [] { return std::optional<unsigned>{73}; }) == 73,
+  check(prepareTunIdentity(Operation::Acquire, [] { return std::optional<unsigned>{73}; }) == 73u,
         "Acquisition lost the verified adapter identity");
   check(!prepareTunIdentity(Operation::Arm, [] { return std::optional<unsigned>{73}; }),
         "Arm selected an existing adapter without a verified core");
