@@ -141,6 +141,20 @@ jobs:
           pnpm run build:mac --${{ matrix.arch }} -c.mac.identity=-
       - name: Verify packaged architecture, privacy resources and native module loading
         run: node scripts/verify-package.mjs ${{ matrix.platform }} ${{ matrix.arch }}
+      - name: Verify the PKG installation on the disposable macOS runner
+        if: matrix.platform == 'darwin'
+        shell: bash
+        run: |
+          # Installs helpers and the private core identity, but never launches the
+          # GUI, TUN, DNS takeover or PF protection on the build runner.
+          for package in dist/*.pkg; do
+            if ! sudo /usr/sbin/installer -pkg "$package" -target /; then
+              sudo /usr/bin/tail -n 120 /private/var/log/ClashParty-install.log
+              exit 1
+            fi
+          done
+          sudo /Library/PrivilegedHelperTools/party.mihomo.dns-guard install-identity
+          /usr/bin/codesign --verify --deep --strict '/Applications/Clash Party.app'
       - name: Generate checksums
         run: pnpm run checksum .pkg setup.exe portable.7z
       - uses: actions/upload-artifact@v6

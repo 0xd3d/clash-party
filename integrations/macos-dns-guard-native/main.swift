@@ -134,8 +134,23 @@ private func rejectMutableACLEntries(_ acl: acl_t) throws {
     try require(tag != ACL_EXTENDED_ALLOW || (permissions & writeMask) == 0, "Installed path grants mutable ACL access")
   }
 }
+private func absentExtendedACL(_ error: Int32, existingMode: mode_t?) -> Bool {
+  guard error == ENOENT, let existingMode else { return false }
+  let kind = existingMode & S_IFMT
+  return kind == S_IFREG || kind == S_IFDIR
+}
 private func rejectWritableACL(_ path: String) throws {
-  guard let acl = acl_get_file(path, ACL_TYPE_EXTENDED) else { throw GuardError("Cannot inspect installed path ACL") }
+  errno = 0
+  guard let acl = acl_get_file(path, ACL_TYPE_EXTENDED) else {
+    let failure = errno
+    var info = stat()
+    let mode: mode_t? = lstat(path, &info) == 0 ? info.st_mode : nil
+    // Darwin also uses ENOENT for an absent extended ACL on an existing object.
+    // Confirm the object still exists and is not a link; callers independently
+    // enforce root ownership, POSIX modes, ancestry and code identity.
+    if absentExtendedACL(failure, existingMode: mode) { return }
+    throw GuardError("Cannot inspect installed path ACL: \(path) (errno \(failure))")
+  }
   defer { acl_free(UnsafeMutableRawPointer(acl)) }
   try rejectMutableACLEntries(acl)
 }
@@ -1137,6 +1152,13 @@ private func selfTest() throws {
   try require(try parseUID("501") == 501 && (try parsePID("1234")) == 1234, "Numeric ownership fixture")
   for value in ["", "../1", "501;id", "-1", "99999999999999999999"] {
     do { _ = try parseUID(value); throw GuardError("UID fixture accepted") } catch let error as GuardError { try require(error.description != "UID fixture accepted", "UID rejection") }
+  }
+  try require(absentExtendedACL(ENOENT, existingMode: S_IFREG | 0o644), "Existing file without an extended ACL")
+  try require(absentExtendedACL(ENOENT, existingMode: S_IFDIR | 0o755), "Existing directory without an extended ACL")
+  try require(!absentExtendedACL(ENOENT, existingMode: nil), "Missing path cannot prove absent ACL")
+  try require(!absentExtendedACL(ENOENT, existingMode: S_IFLNK | 0o777), "Symlink cannot prove absent ACL")
+  for error in [EACCES, EPERM, EINVAL, EOPNOTSUPP, Int32(0)] {
+    try require(!absentExtendedACL(error, existingMode: S_IFREG | 0o644), "ACL errors must fail closed")
   }
   var testACL = acl_init(1)
   guard testACL != nil else { throw GuardError("Cannot create in-memory ACL fixture") }
