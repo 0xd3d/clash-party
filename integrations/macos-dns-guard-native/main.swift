@@ -982,6 +982,17 @@ private func recordValues(_ details: [AnyHashable: Any], _ key: String) -> [Stri
   guard let strings = raw as? [String] else { return ["<invalid-directory-value>"] }
   return strings.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }
+// OpenDirectory uses signed decimal strings for system IDs such as nobody (-2),
+// while gid_t is UInt32. Compare normalized numeric IDs, never raw spellings.
+private func directoryGID(_ value: String) -> UInt32? {
+  if let unsigned = UInt32(value) { return unsigned }
+  if let signed = Int32(value), signed < 0 { return UInt32(bitPattern: signed) }
+  return nil
+}
+private func isolatedPrimaryGroup(_ values: [String], privateGID: UInt32) -> Bool {
+  guard values.count == 1, let gid = directoryGID(values[0]) else { return false }
+  return gid != privateGID
+}
 private func validateGroupDetails(_ details: [AnyHashable: Any], identity: InstalledIdentity) throws {
   try require(identity.version == 1 && identity.groupName == coreGroupName && identity.gid > 100_000 && identity.gid < 2_000_000_000 && UUID(uuidString: identity.generatedUID) != nil, "Invalid installed core group identity")
   try require(recordValues(details, kODAttributeTypeRecordName) == [coreGroupName] && recordValues(details, kODAttributeTypePrimaryGroupID) == [String(identity.gid)], "Installed core group identity does not match the local directory")
@@ -998,7 +1009,7 @@ private func directoryGroup(_ node: ODNode, identity: InstalledIdentity) throws 
   for user in try localRecords(node, type: kODRecordTypeUsers) {
     let details = try user.recordDetails(forAttributes: [kODAttributeTypePrimaryGroupID])
     let groups = recordValues(details, kODAttributeTypePrimaryGroupID)
-    try require(groups.count == 1 && UInt32(groups[0]) != nil && groups[0] != String(identity.gid), "A user has the private core group, or primary-group evidence is incomplete")
+    try require(isolatedPrimaryGroup(groups, privateGID: identity.gid), "A user has the private core group, or primary-group evidence is incomplete")
   }
   return record
 }
@@ -1089,7 +1100,7 @@ private func installIdentity(_ store: Store) throws {
   for type in [kODRecordTypeGroups, kODRecordTypeUsers] {
     for record in try localRecords(node, type: type) {
       for value in recordValues(try record.recordDetails(forAttributes: [kODAttributeTypePrimaryGroupID]), kODAttributeTypePrimaryGroupID) {
-        if let gid = UInt32(value) { occupied.insert(gid) }
+        if let gid = directoryGID(value) { occupied.insert(gid) }
       }
     }
   }
@@ -1159,6 +1170,11 @@ private func selfTest() throws {
   try require(!absentExtendedACL(ENOENT, existingMode: S_IFLNK | 0o777), "Symlink cannot prove absent ACL")
   for error in [EACCES, EPERM, EINVAL, EOPNOTSUPP, Int32(0)] {
     try require(!absentExtendedACL(error, existingMode: S_IFREG | 0o644), "ACL errors must fail closed")
+  }
+  try require(directoryGID("-2") == UInt32(bitPattern: -2) && directoryGID("4294967294") == UInt32(bitPattern: -2), "Signed directory group ID normalization")
+  try require(isolatedPrimaryGroup(["-2"], privateGID: 100001), "System nobody group remains distinct from the private group")
+  for values in [[String](), ["-2", "20"], ["invalid"], ["4294967296"], ["-2147483649"], ["100001"], ["0100001"]] {
+    try require(!isolatedPrimaryGroup(values, privateGID: 100001), "Missing, malformed or numerically matching primary groups must be rejected")
   }
   var testACL = acl_init(1)
   guard testACL != nil else { throw GuardError("Cannot create in-memory ACL fixture") }
