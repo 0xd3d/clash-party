@@ -141,6 +141,16 @@ export function buildWindowsNetworkGuard(arch = process.env.npm_config_arch || p
     return arg
   })
   execFileSync('cl.exe', brokerArgs, { env, stdio: 'inherit' })
+  const adapterFixture = path.join(path.dirname(output), 'adapter-selftest.exe')
+  const adapterArgs = windowsGuardCompilerArguments(arch, adapterFixture).map((arg) => {
+    if (arg === path.resolve('integrations/windows-network-guard/main.cpp'))
+      return path.resolve('integrations/windows-network-guard/adapter-selftest.cpp')
+    if (arg.startsWith('/Fo:'))
+      return `/Fo:${path.join(path.dirname(output), 'adapter-selftest.obj')}`
+    return arg
+  })
+  // Compiled here but executed only by the explicit isolated-runner Wintun integration step.
+  execFileSync('cl.exe', adapterArgs, { env, stdio: 'inherit' })
   console.log(
     `Built Windows ${arch} guard; ${result.cases} policy and ${launchResult.cases} process/job checks passed.`
   )

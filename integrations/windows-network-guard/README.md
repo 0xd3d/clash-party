@@ -43,7 +43,7 @@ The helper derives its local message-pipe name from its SID and Windows session.
 
 Core exceptions are restricted to `resources/sidecar/mihomo.exe`, `mihomo-alpha.exe` or `mihomo-smart.exe` beside this helper's own `resources/files` directory. Canonical paths and a held file handle prevent replacing the whitelisted file during a guard session. Core updates therefore require explicit guard release first. Acquisition also checks the process image, user, elevation and live process handle. A reused numeric PID cannot silently replace that held process identity.
 
-TUN lookup uses the configured alias, obtains its actual LUID/index, requires `IF_TYPE_PROP_VIRTUAL`, rejects hardware/connector interfaces, and matches the adapter GUID to the `Wintun` device service. A profile cannot substitute a Wi-Fi/Ethernet alias. No physical interface name or index is hardcoded.
+TUN lookup uses the configured alias, obtains its actual LUID/index, requires `IF_TYPE_PROP_VIRTUAL`, rejects hardware/connector interfaces, and matches the adapter GUID to the `Wintun` device service. A profile cannot substitute a Wi-Fi/Ethernet alias. No physical interface name or index is hardcoded. A rejected identity reports its observed interface type, hardware/connector flags and matched driver service at the failure point; credentials and traffic are not recorded.
 
 ## Desktop fallback for restrictive parent Jobs
 
@@ -72,6 +72,8 @@ node scripts/build-windows-network-guard.mjs --x64
 ```
 
 Use `--arm64` on ARM64. The script discovers MSVC, compiles with warnings as errors, checks the PE architecture, and runs `--self-test` plus a separate unprivileged process-launch fixture. The fixture verifies escape from explicit/silent synthetic app jobs, survival after those jobs close, rejection when breakaway is prohibited, startup error preservation and the production all-ancestor check. Hosted CI can retain a restrictive root job: the fixture records `restricted-parent-job` and verifies rejection before execution rather than claiming the runner has certified an independent production guard. It cannot open WFP or start the real guard. The result is generated under `build/native/windows/<arch>/`; electron-builder copies it only into Windows resources as `files/party.mihomo.network-guard.exe`.
+
+The isolated Windows CI adapter fixture downloads the SHA-256-pinned, signed official Wintun 0.14.1 DLL, creates one uniquely named adapter, runs the production alias/GUID/driver verification, rejects physical adapters, and closes only its own adapter. It does not assign routes, IPs or DNS, or install WFP filters. This fixture is separate from the packaged helper and normal builds do not execute it.
 
 Portable policy fixtures also compile with a C++17 compiler on macOS/Linux. Source checks, successful compilation and self-tests establish neither WFP filter acceptance nor real traffic containment. Privileged Windows VM validation still needs startup/arm, core crash, app crash, adapter replacement, arbitrary-port UDP, IPv6, DNS, LAN, domestic direct/QQ Music and explicit recovery tests. Do not perform those tests on a machine whose active app/network must remain untouched.
 

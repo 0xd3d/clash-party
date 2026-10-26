@@ -23,6 +23,11 @@ struct Request {
   std::u16string tunName;
 };
 
+// Windows IF_TYPE_PROP_VIRTUAL is 53. OS driver identity must also match the interface GUID.
+inline bool verifiedTunAdapter(std::uint32_t type, bool hardware, bool connector, bool wintunDriver) {
+  return type == 53 && !hardware && !connector && wintunDriver;
+}
+
 inline bool allowTun(std::uint32_t corePid, bool verifiedProcess, bool verifiedTun) {
   return corePid != 0 && verifiedProcess && verifiedTun;
 }
@@ -143,6 +148,12 @@ inline unsigned selfTest() {
   check(!allowTun(123, false, true), "Unverified process opened TUN egress");
   check(!allowTun(123, true, false), "Unverified adapter opened TUN egress");
   check(allowTun(123, true, true), "Verified acquisition cannot use its TUN");
+  check(verifiedTunAdapter(53, false, false, true), "Actual Wintun identity rejected");
+  check(!verifiedTunAdapter(6, false, false, true), "Ethernet type accepted as Wintun");
+  check(!verifiedTunAdapter(131, false, false, true), "Other tunnel type accepted as Wintun");
+  check(!verifiedTunAdapter(53, true, false, true), "Hardware adapter accepted as Wintun");
+  check(!verifiedTunAdapter(53, false, true, true), "Physical connector accepted as Wintun");
+  check(!verifiedTunAdapter(53, false, false, false), "Unverified driver accepted as Wintun");
   return cases;
 }
 }  // namespace network_guard

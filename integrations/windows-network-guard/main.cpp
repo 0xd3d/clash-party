@@ -21,6 +21,7 @@
 #include <utility>
 #include "policy.h"
 #include "process-launch.h"
+#include "adapter-identity.h"
 
 namespace fs = std::filesystem;
 namespace ng = network_guard;
@@ -241,60 +242,8 @@ void writeMessage(HANDLE pipe, const std::string& message) {
   io(pipe, true, bytes);
 }
 
-// IF_TYPE_PROP_VIRTUAL alone is insufficient: match the adapter's actual driver service as well.
-bool wintunService(const GUID& interfaceGuid) {
-  wchar_t guidText[40]{};
-  ng::require(StringFromGUID2(interfaceGuid, guidText, 40) > 0, "Cannot format interface GUID");
-  HDEVINFO devices = SetupDiGetClassDevsW(&GUID_DEVCLASS_NET, nullptr, nullptr, DIGCF_PRESENT);
-  if (devices == INVALID_HANDLE_VALUE) winCheck(GetLastError(), "Enumerate network devices");
-  bool matches = false;
-  try {
-    SP_DEVINFO_DATA device{};
-    device.cbSize = sizeof(device);
-    for (DWORD index = 0; SetupDiEnumDeviceInfo(devices, index, &device); index++) {
-      wchar_t service[256]{};
-      DWORD type = 0;
-      DWORD serviceLength = 0;
-      if (!SetupDiGetDeviceRegistryPropertyW(devices, &device, SPDRP_SERVICE, &type,
-                                              reinterpret_cast<PBYTE>(service), sizeof(service), &serviceLength) ||
-          type != REG_SZ || serviceLength < sizeof(wchar_t) || serviceLength > sizeof(service) ||
-          serviceLength % sizeof(wchar_t) != 0 || service[serviceLength / sizeof(wchar_t) - 1] != L'\0' ||
-          _wcsicmp(service, L"Wintun") != 0) continue;
-      HKEY key = SetupDiOpenDevRegKey(devices, &device, DICS_FLAG_GLOBAL, 0, DIREG_DRV, KEY_READ);
-      if (key == INVALID_HANDLE_VALUE) continue;
-      wchar_t instance[256]{};
-      DWORD length = sizeof(instance);
-      const auto result = RegQueryValueExW(key, L"NetCfgInstanceId", nullptr, &type,
-                                         reinterpret_cast<LPBYTE>(instance), &length);
-      RegCloseKey(key);
-      if (result == ERROR_SUCCESS && type == REG_SZ && length >= sizeof(wchar_t) &&
-          length <= sizeof(instance) && length % sizeof(wchar_t) == 0 && instance[(length / sizeof(wchar_t)) - 1] == L'\0' &&
-          _wcsicmp(instance, guidText) == 0) { matches = true; break; }
-    }
-  } catch (...) { SetupDiDestroyDeviceInfoList(devices); throw; }
-  SetupDiDestroyDeviceInfoList(devices);
-  return matches;
-}
-struct TunIdentity { NET_LUID luid{}; NET_IFINDEX index = 0; };
-std::optional<TunIdentity> resolveTun(const std::wstring& name) {
-  PMIB_IF_TABLE2 raw = nullptr;
-  winCheck(GetIfTable2(&raw), "Enumerate interface aliases");
-  std::unique_ptr<MIB_IF_TABLE2, decltype(&FreeMibTable)> table(raw, &FreeMibTable);
-  std::optional<NET_LUID> luid;
-  for (ULONG index = 0; index < table->NumEntries; index++) {
-    if (_wcsicmp(table->Table[index].Alias, name.c_str()) != 0) continue;
-    ng::require(!luid.has_value(), "Ambiguous TUN alias");
-    luid = table->Table[index].InterfaceLuid;
-  }
-  if (!luid) return std::nullopt;
-  MIB_IF_ROW2 row{};
-  row.InterfaceLuid = *luid;
-  winCheck(GetIfEntry2(&row), "Inspect TUN interface");
-  ng::require(row.Type == IF_TYPE_PROP_VIRTUAL && !row.InterfaceAndOperStatusFlags.HardwareInterface &&
-                  !row.InterfaceAndOperStatusFlags.ConnectorPresent && wintunService(row.InterfaceGuid),
-              "The configured TUN alias is not a Wintun virtual interface");
-  return TunIdentity{row.InterfaceLuid, row.InterfaceIndex};
-}
+using ng::TunIdentity;
+using ng::resolveTun;
 
 struct Candidate {
   std::wstring corePath;
