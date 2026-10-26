@@ -1,14 +1,13 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import path from 'node:path'
-import { randomUUID } from 'node:crypto'
 import { app } from 'electron'
 import { managerLogger } from '../utils/logger'
 import {
-  windowsGuardTaskCommand,
-  parseWindowsGuardTaskResult,
+  windowsGuardBrokerCommand,
+  parseWindowsGuardBrokerResult,
   isWindowsGuardJobFailure
-} from './windowsGuardTask'
+} from './windowsGuardBroker'
 import { macDNSGuardPath } from './macDNSGuard'
 
 const execute = promisify(execFile)
@@ -116,10 +115,9 @@ async function invoke(args: string[]): Promise<NetworkGuardStatus> {
   }
 }
 
-async function launchWindowsGuardTask(): Promise<void> {
-  const command = windowsGuardTaskCommand(
+async function launchWindowsGuardBroker(): Promise<number> {
+  const command = windowsGuardBrokerCommand(
     windowsHelperPath(),
-    randomUUID(),
     process.env.SystemRoot || 'C:\\Windows'
   )
   try {
@@ -129,7 +127,7 @@ async function launchWindowsGuardTask(): Promise<void> {
       encoding: 'utf8',
       windowsHide: true
     })
-    parseWindowsGuardTaskResult(stdout)
+    return parseWindowsGuardBrokerResult(stdout)
   } catch (error) {
     if (
       error &&
@@ -138,7 +136,7 @@ async function launchWindowsGuardTask(): Promise<void> {
       typeof error.stdout === 'string'
     ) {
       try {
-        parseWindowsGuardTaskResult(error.stdout)
+        parseWindowsGuardBrokerResult(error.stdout)
       } catch (parsed) {
         if (parsed instanceof Error && parsed.message.startsWith('Windows guard launch: '))
           throw parsed
@@ -148,7 +146,7 @@ async function launchWindowsGuardTask(): Promise<void> {
     const detail =
       error && typeof error === 'object' && 'code' in error ? String(error.code) : 'unconfirmed'
     throw new Error(
-      `Windows guard launch task could not be confirmed (${detail}); existing protection was preserved`
+      `Windows guard launch broker could not be confirmed (${detail}); existing protection was preserved`
     )
   }
 }
@@ -157,7 +155,7 @@ export async function armWindowsNetworkGuard(
   corePath: string,
   device: string,
   call: (args: string[]) => Promise<NetworkGuardStatus> = invoke,
-  schedule: () => Promise<void> = launchWindowsGuardTask
+  broker: () => Promise<number> = launchWindowsGuardBroker
 ): Promise<NetworkGuardStatus> {
   const status = await call(['status'])
   if (status.guardPid === null) {
@@ -169,14 +167,16 @@ export async function armWindowsNetworkGuard(
     } catch (error) {
       if (!isWindowsGuardJobFailure(error)) throw error
       await managerLogger.info(
-        'Parent Job blocked direct guard launch; using a temporary same-user Task Scheduler launcher'
+        'Parent Job blocked direct guard launch; using the local same-user WMI broker'
       )
-      await schedule()
-      // Task completion alone is not readiness. Native status authenticates the exact helper,
+      const expectedPid = await broker()
+      // Broker completion alone is not readiness. Native status authenticates the exact helper,
       // elevated user and session; the unchanged native launcher still requires no inherited Job.
       started = await call(['status'])
+      if (started.guardPid !== expectedPid)
+        throw new Error('Network protection: brokered guard identity changed before arming')
       await managerLogger.info(
-        `Scheduled independent guard confirmed: pid=${started.guardPid ?? 'absent'}`
+        `Brokered independent guard confirmed: pid=${started.guardPid ?? 'absent'}`
       )
     }
     if (!started.guardPid) throw new Error('Network protection: guard startup was not confirmed')

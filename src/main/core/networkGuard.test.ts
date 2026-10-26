@@ -194,7 +194,7 @@ describe('Windows independent helper startup', () => {
     )
     expect(call.mock.calls.map(([args]) => args[0])).toEqual(['status', 'start'])
   })
-  it('uses the scheduler only for a confirmed inherited-job failure then authenticates the guard', async () => {
+  it('uses the broker only for a confirmed inherited-job failure then authenticates the guard', async () => {
     const call = vi
       .fn()
       .mockResolvedValueOnce(absent)
@@ -205,13 +205,13 @@ describe('Windows independent helper startup', () => {
       )
       .mockResolvedValueOnce(ready)
       .mockResolvedValueOnce(armed)
-    const schedule = vi.fn().mockResolvedValue(undefined)
-    await expect(armWindowsNetworkGuard('/core', 'virtual', call, schedule)).resolves.toEqual(armed)
-    expect(schedule).toHaveBeenCalledOnce()
+    const broker = vi.fn().mockResolvedValue(101)
+    await expect(armWindowsNetworkGuard('/core', 'virtual', call, broker)).resolves.toEqual(armed)
+    expect(broker).toHaveBeenCalledOnce()
     expect(call.mock.calls.map(([args]) => args[0])).toEqual(['status', 'start', 'status', 'arm'])
   })
-  it('does not arm after scheduler failure or a missing authenticated guard', async () => {
-    for (const taskFails of [true, false]) {
+  it('does not arm after broker failure or a missing authenticated guard', async () => {
+    for (const brokerFails of [true, false]) {
       const call = vi
         .fn()
         .mockResolvedValueOnce(absent)
@@ -221,16 +221,31 @@ describe('Windows independent helper startup', () => {
           )
         )
         .mockResolvedValue(absent)
-      const schedule = taskFails
-        ? vi.fn().mockRejectedValue(new Error('Task Scheduler unavailable'))
-        : vi.fn().mockResolvedValue(undefined)
-      await expect(armWindowsNetworkGuard('/core', 'virtual', call, schedule)).rejects.toThrow(
-        taskFails ? 'Task Scheduler unavailable' : 'startup was not confirmed'
+      const broker = brokerFails
+        ? vi.fn().mockRejectedValue(new Error('Local WMI unavailable'))
+        : vi.fn().mockResolvedValue(101)
+      await expect(armWindowsNetworkGuard('/core', 'virtual', call, broker)).rejects.toThrow(
+        brokerFails ? 'Local WMI unavailable' : 'identity changed before arming'
       )
       expect(call.mock.calls.some(([args]) => args[0] === 'arm' || args[0] === 'release')).toBe(
         false
       )
     }
+  })
+  it('rejects a different authenticated helper after broker launch without releasing it', async () => {
+    const call = vi
+      .fn()
+      .mockResolvedValueOnce(absent)
+      .mockRejectedValueOnce(
+        new Error(
+          'Network protection: Windows retained the guard in a parent job; protection was not started'
+        )
+      )
+      .mockResolvedValueOnce({ ...ready, guardPid: 202 })
+    await expect(armWindowsNetworkGuard('/core', 'virtual', call, async () => 101)).rejects.toThrow(
+      'identity changed before arming'
+    )
+    expect(call.mock.calls.map(([args]) => args[0])).toEqual(['status', 'start', 'status'])
   })
   it('rejects unconfirmed startup without arming or disabling protection', async () => {
     const call = vi.fn().mockResolvedValue(absent)

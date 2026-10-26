@@ -7,8 +7,8 @@ on:
       - 'integrations/windows-network-guard/**'
       - 'scripts/build-windows-network-guard.mjs'
       - 'scripts/check-windows-token-elevation.ts'
-      - 'scripts/check-windows-guard-task.ts'
-      - 'src/main/core/windowsGuardTask.ts'
+      - 'scripts/check-windows-guard-broker.ts'
+      - 'src/main/core/windowsGuardBroker.ts'
       - 'src/main/core/windowsTokenElevation.ts'
       - '.github/workflows/windows-network-guard.yml'
   pull_request:
@@ -16,8 +16,8 @@ on:
       - 'integrations/windows-network-guard/**'
       - 'scripts/build-windows-network-guard.mjs'
       - 'scripts/check-windows-token-elevation.ts'
-      - 'scripts/check-windows-guard-task.ts'
-      - 'src/main/core/windowsGuardTask.ts'
+      - 'scripts/check-windows-guard-broker.ts'
+      - 'src/main/core/windowsGuardBroker.ts'
       - 'src/main/core/windowsTokenElevation.ts'
       - '.github/workflows/windows-network-guard.yml'
   workflow_dispatch:
@@ -52,8 +52,8 @@ jobs:
         run: node scripts/build-windows-network-guard.mjs
       - name: Read actual process token and verify error classification
         run: node --experimental-transform-types scripts/check-windows-token-elevation.ts
-      - name: Verify independent unarmed guard through temporary Task Scheduler launch
-        run: node --experimental-transform-types scripts/check-windows-guard-task.ts
+      - name: Verify independent unarmed guard through local WMI broker
+        run: node --experimental-transform-types scripts/check-windows-guard-broker.ts
       - uses: actions/upload-artifact@v6
         with:
           name: windows-network-guard-${{ matrix.arch }}-${{ github.sha }}
