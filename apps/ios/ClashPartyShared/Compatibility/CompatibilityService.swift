@@ -1,6 +1,18 @@
 import Darwin
 import Foundation
 
+public struct PreparedCompatibilityConfiguration: Sendable {
+  public let input: CompatibilityInput
+  public let report: CompatibilityValidationReport
+  public let runtimeConfig: String
+
+  fileprivate init(input: CompatibilityInput, report: CompatibilityValidationReport, runtimeConfig: String) {
+    self.input = input
+    self.report = report
+    self.runtimeConfig = runtimeConfig
+  }
+}
+
 public struct CompatibilityService {
   public static let defaultDelayTestURL = "https://www.gstatic.com/generate_204"
   public static let defaultDelayTestTimeoutMilliseconds = 5_000
@@ -129,19 +141,16 @@ public struct CompatibilityService {
       report.warnings.append(L10n.string("validation.dns.missing_fallback", "dns.fallback is missing."))
     }
 
-    if !input.profileYaml.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      do {
-        _ = try RoutingPolicyService.rewrite(
-          buildIOSRuntimeConfig(from: input),
-          policy: RoutingPolicyService.preference(in: input.appConfigJson)
-        )
-      } catch {
+    let generated = buildIOSRuntimeConfig(from: input)
+    let routed: String
+    do {
+      routed = try RoutingPolicyService.rewrite(generated, policy: RoutingPolicyService.preference(in: input.appConfigJson))
+    } catch {
+      routed = generated
+      if !input.profileYaml.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
         report.blockingErrors.append(error.localizedDescription)
       }
     }
-
-    let generated = buildIOSRuntimeConfig(from: input)
-    let routed = (try? RoutingPolicyService.rewrite(generated, policy: RoutingPolicyService.preference(in: input.appConfigJson))) ?? generated
     if protectedDNSProxyTarget(in: routed) == nil {
       report.blockingErrors.append("Encrypted application DNS requires a proxy-only group or supported proxy node.")
     }
@@ -152,15 +161,26 @@ public struct CompatibilityService {
     return report
   }
 
-  @discardableResult
-  public func persist(_ input: CompatibilityInput) throws -> CompatibilityValidationReport {
+  /// Expensive projection and validation may run off the main actor. This step
+  /// does not publish anything; the caller must still check that its input is current.
+  public func prepareConfiguration(_ input: CompatibilityInput) -> PreparedCompatibilityConfiguration {
     let input = sanitizedMobileInput(input)
     let report = validate(input)
-    guard report.isValid else {
-      return report
-    }
+    return PreparedCompatibilityConfiguration(
+      input: input, report: report,
+      runtimeConfig: report.isValid ? buildRuntimeConfig(from: input) : ""
+    )
+  }
 
-    let runtimeConfig = buildRuntimeConfig(from: input)
+  @discardableResult
+  public func persist(_ input: CompatibilityInput) throws -> CompatibilityValidationReport {
+    try commitPreparedConfiguration(prepareConfiguration(input))
+  }
+
+  @discardableResult
+  public func commitPreparedConfiguration(_ prepared: PreparedCompatibilityConfiguration) throws -> CompatibilityValidationReport {
+    let input = prepared.input, report = prepared.report, runtimeConfig = prepared.runtimeConfig
+    guard report.isValid else { return report }
     let previousStatus = SharedStore.readRuntimeStatus()
     let dnsSummary = parseDnsSummary(from: input.controlledConfigYaml)
     try SharedStore.publishConfigurationBundle(input: input, runtimeConfig: runtimeConfig)
@@ -522,21 +542,30 @@ public struct CompatibilityService {
   /// A DNS adapter must remain proxied for every selectable member. Binding to
   /// a group that contains DIRECT would otherwise turn a later selection into
   /// a provider-originated DNS bypass, outside includeAllNetworks capture.
+  public static let supportedProxyTransports: Set<String> = ["ss", "ssr", "socks5", "http", "vmess", "vless", "snell", "trojan", "hysteria", "wireguard", "tuic"]
+
   public func protectedDNSProxyTarget(in yaml: String) -> String? {
-    let nodes = Set(extractProxyNodes(from: yaml).filter { !["direct", "reject", "pass"].contains($0.type.lowercased()) }.map(\.name))
+    let records = extractProxyNodes(from: yaml)
+    let nodes = Set(records.filter { Self.supportedProxyTransports.contains($0.type.lowercased()) }.map(\.name))
     let groups = extractProxyGroups(from: yaml)
     let dynamicGroups = dynamicProxyGroupNames(in: yaml)
+    let counts = (records.map(\.name) + groups.map(\.name)).reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
+    var memo: [String: Bool] = [:]
     func protected(_ name: String, visiting: Set<String> = []) -> Bool {
       // The legacy core rebuilds GLOBAL with DIRECT included, even when an
       // imported profile declares a same-named proxy/group.
       guard !["DIRECT", "REJECT", "PASS", "COMPATIBLE", "GLOBAL"].contains(name.uppercased()),
-            !name.contains("&"), !name.contains("="), !name.contains("#"),
-            !name.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains),
-            !visiting.contains(name) else { return false }
-      if nodes.contains(name) { return true }
+            !name.contains("&"), !name.contains("="), !name.contains("#"), !name.contains(","),
+            !name.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
+            !visiting.contains(name), counts[name] == 1 else { return false }
+      if let cached = memo[name] { return cached }
+      if nodes.contains(name) { memo[name] = true; return true }
       guard !dynamicGroups.contains(name),
-            let group = groups.first(where: { $0.name == name }), !group.all.isEmpty else { return false }
-      return group.all.allSatisfy { $0 == "REJECT" || protected($0, visiting: visiting.union([name])) }
+            let group = groups.first(where: { $0.name == name }), !group.all.isEmpty,
+            ["select", "url-test", "fallback", "load-balance", "relay"].contains(group.type?.lowercased() ?? "") else { return false }
+      let safe = group.all.allSatisfy { $0 == "REJECT" || protected($0, visiting: visiting.union([name])) }
+      memo[name] = safe
+      return safe
     }
     if let last = RoutingPolicyService.ruleStrings(in: yaml).last {
       let fields = last.split(separator: ",").map(String.init)
@@ -559,36 +588,9 @@ public struct CompatibilityService {
   // Keep it in the profile, but bind protected DNS to a verifiable static leaf
   // or group instead. No remote YAML or regex is evaluated by this check.
   private func dynamicProxyGroupNames(in yaml: String) -> Set<String> {
-    var names: Set<String> = []
-    var currentName: String?
-    var dynamic = false
-    func flush() {
-      if dynamic, let currentName { names.insert(currentName) }
-    }
-    for rawLine in section(named: "proxy-groups", in: yaml).components(separatedBy: .newlines) {
-      let line = rawLine.trimmingCharacters(in: .whitespaces)
-      let indent = leadingSpaceCount(in: rawLine)
-      guard !line.isEmpty, !line.hasPrefix("#") else { continue }
-      if indent == 2, line.hasPrefix("- ") {
-        flush()
-        currentName = nil
-        dynamic = false
-        let entry = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-        if entry.hasPrefix("{"), entry.hasSuffix("}") {
-          let fields = inlineObjectValues(in: entry)
-          currentName = fields["name"]
-          dynamic = fields["use"] != nil || ["include-all", "include-all-proxies", "include-all-providers"].contains { fields[$0]?.lowercased() == "true" }
-        } else if let (key, value) = keyValue(from: entry), key == "name" {
-          currentName = value
-        }
-        continue
-      }
-      guard let (key, value) = keyValue(from: line) else { continue }
-      if key == "name" { currentName = value }
-      if key == "use" || (["include-all", "include-all-proxies", "include-all-providers"].contains(key) && value.lowercased() == "true") { dynamic = true }
-    }
-    flush()
-    return names
+    Set(proxyYAMLRecords("proxy-groups", in: yaml).filter { record in
+      record.fields["use"] != nil || ["include-all", "include-all-proxies", "include-all-providers"].contains { record.fields[$0]?.lowercased() == "true" }
+    }.compactMap { $0.fields["name"] })
   }
 
   // Only the proxy's own literal-IP encrypted bootstrap and exact QQ Music /
@@ -952,77 +954,15 @@ public struct CompatibilityService {
   }
 
   private func extractProxyServerHosts(from yaml: String) -> [String] {
-    var hosts: [String] = []
-    var insideProxies = false
-
-    for rawLine in yaml.components(separatedBy: .newlines) {
-      let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
-      let indent = leadingSpaceCount(in: rawLine)
-
-      if trimmed == "proxies:", indent == 0 {
-        insideProxies = true
-        continue
-      }
-
-      if insideProxies, isTopLevelMappingLine(rawLine), trimmed != "proxies:" {
-        insideProxies = false
-      }
-
-      guard insideProxies else { continue }
-
-      if let server = value(for: "server", in: trimmed),
-         let host = normalizedProxyServerHost(server) {
-        hosts.append(host)
-      }
-
-      let inlineObject = trimmed.hasPrefix("- ")
-        ? String(trimmed.dropFirst(2))
-        : trimmed
-      if inlineObject.contains("{"),
-         let server = inlineObjectValue(for: "server", in: inlineObject),
-         let host = normalizedProxyServerHost(server) {
-        hosts.append(host)
-      }
-    }
-
-    return uniquePreservingOrder(hosts)
+    uniquePreservingOrder(proxyYAMLRecords("proxies", in: yaml).compactMap { record in
+      record.fields["server"].flatMap(normalizedProxyServerHost)
+    })
   }
 
   public func extractProxyServerEndpointHosts(from yaml: String) -> [String] {
-    var hosts: [String] = []
-    var insideProxies = false
-
-    for rawLine in yaml.components(separatedBy: .newlines) {
-      let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
-      let indent = leadingSpaceCount(in: rawLine)
-
-      if trimmed == "proxies:", indent == 0 {
-        insideProxies = true
-        continue
-      }
-
-      if insideProxies, isTopLevelMappingLine(rawLine), trimmed != "proxies:" {
-        insideProxies = false
-      }
-
-      guard insideProxies else { continue }
-
-      if let server = value(for: "server", in: trimmed),
-         let host = normalizedProxyServerEndpointHost(server) {
-        hosts.append(host)
-      }
-
-      let inlineObject = trimmed.hasPrefix("- ")
-        ? String(trimmed.dropFirst(2))
-        : trimmed
-      if inlineObject.contains("{"),
-         let server = inlineObjectValue(for: "server", in: inlineObject),
-         let host = normalizedProxyServerEndpointHost(server) {
-        hosts.append(host)
-      }
-    }
-
-    return uniquePreservingOrder(hosts)
+    uniquePreservingOrder(proxyYAMLRecords("proxies", in: yaml).compactMap { record in
+      record.fields["server"].flatMap(normalizedProxyServerEndpointHost)
+    })
   }
 
   public func extractBootstrapDNSEndpointHosts(from yaml: String) -> [String] {
@@ -1091,312 +1031,172 @@ public struct CompatibilityService {
     return uniquePreservingOrder(values)
   }
 
+  private struct ProxyYAMLRecord {
+    var fields: [String: String] = [:]
+    var lists: [String: [String]] = [:]
+  }
+
+  /// Split flow collections only at their own depth; quoted commas, nested
+  /// transport options and comments are not record separators.
+  private func yamlFlowParts(_ text: String, separator: Character) -> [String]? {
+    var result: [String] = [], token = ""
+    var quote: Character?, escaped = false, square = 0, curly = 0
+    var scalarBoundary = true
+    for char in text {
+      if escaped { token.append(char); escaped = false; continue }
+      if char == "\\", quote == "\"" { token.append(char); escaped = true; continue }
+      if let active = quote {
+        token.append(char)
+        if char == active { quote = nil }
+        continue
+      }
+      if scalarBoundary, char == "'" || char == "\"" {
+        quote = char; scalarBoundary = false; token.append(char); continue
+      }
+      if char == "[" { square += 1 }
+      if char == "]" { square -= 1 }
+      if char == "{" { curly += 1 }
+      if char == "}" { curly -= 1 }
+      guard square >= 0, curly >= 0 else { return nil }
+      if char == separator, square == 0, curly == 0 {
+        result.append(token.trimmingCharacters(in: .whitespacesAndNewlines)); token = ""
+      } else { token.append(char) }
+      if "[{,:".contains(char) { scalarBoundary = true }
+      else if !char.isWhitespace { scalarBoundary = false }
+    }
+    guard quote == nil, !escaped, square == 0, curly == 0 else { return nil }
+    let last = token.trimmingCharacters(in: .whitespacesAndNewlines)
+    // YAML flow collections allow one trailing comma, never empty middle items.
+    if !last.isEmpty || result.isEmpty { result.append(last) }
+    return result
+  }
+
+  private func yamlFlowSequence(_ value: String) -> [String]? {
+    let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard text.hasPrefix("["), text.hasSuffix("]") else { return nil }
+    let content = String(text.dropFirst().dropLast())
+    if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return [] }
+    return yamlFlowParts(content, separator: ",")
+  }
+
+  /// Reads a root sequence, never a same-named nested group/transport field.
+  /// Nil means an unsupported representation; callers must not erase it.
+  private func rootSequenceItems(_ name: String, in yaml: String) -> [String]? {
+    let lines = yaml.components(separatedBy: .newlines)
+    let headers = lines.indices.filter { index in
+      leadingSpaceCount(in: lines[index]) == 0 && !lines[index].trimmingCharacters(in: .whitespaces).hasPrefix("#") && mappingKey(in: lines[index]) == name
+    }
+    guard let start = headers.last else { return [] }
+    var end = start + 1
+    while end < lines.count {
+      if isTopLevelMappingLine(lines[end]) { break }
+      end += 1
+    }
+    let header = uncommentedYAMLScalar(value(afterMappingKeyIn: lines[start])).trimmingCharacters(in: .whitespacesAndNewlines)
+    if !header.isEmpty {
+      let value = ([header] + lines[(start + 1)..<end].map(uncommentedYAMLScalar)).joined(separator: "\n")
+      return yamlFlowSequence(value)
+    }
+    let body = lines[(start + 1)..<end].filter { !uncommentedYAMLScalar($0).trimmingCharacters(in: .whitespaces).isEmpty }
+    guard let first = body.first else { return [] }
+    let itemIndent = leadingSpaceCount(in: first)
+    var items: [String] = [], item: [String] = []
+    var contentIndent: Int?
+    for raw in body {
+      let text = uncommentedYAMLScalar(raw).trimmingCharacters(in: .whitespaces)
+      let indent = leadingSpaceCount(in: raw)
+      if indent == itemIndent, text == "-" || text.hasPrefix("- ") {
+        if !item.isEmpty { items.append(item.joined(separator: "\n")) }
+        let tail = String(text.dropFirst())
+        let gap = tail.prefix { $0.isWhitespace }.count
+        let content = tail.trimmingCharacters(in: .whitespaces)
+        contentIndent = content.isEmpty ? nil : itemIndent + 1 + gap
+        item = [content]
+      } else {
+        guard !item.isEmpty, indent > itemIndent else { return nil }
+        if contentIndent == nil { contentIndent = indent }
+        guard indent >= contentIndent! else { return nil }
+        item.append(String(raw.dropFirst(contentIndent!)))
+      }
+    }
+    if !item.isEmpty { items.append(item.joined(separator: "\n")) }
+    return items
+  }
+
+  private func proxyYAMLRecords(_ name: String, in yaml: String) -> [ProxyYAMLRecord] {
+    guard let items = rootSequenceItems(name, in: yaml) else { return [] }
+    return items.compactMap { item in
+      let trimmed = item.trimmingCharacters(in: .whitespacesAndNewlines)
+      var record = ProxyYAMLRecord()
+      if trimmed.hasPrefix("{") {
+        guard trimmed.hasSuffix("}"), let pairs = yamlFlowParts(String(trimmed.dropFirst().dropLast()), separator: ",") else { return nil }
+        for pair in pairs {
+          guard let (key, value) = keyValue(from: pair) else { return nil }
+          record.fields[key] = value
+          if let colon = pair.firstIndex(of: ":"), let list = yamlFlowSequence(String(pair[pair.index(after: colon)...])) {
+            record.lists[key] = list.map(normalizedListValue)
+          }
+        }
+      } else {
+        let lines = item.components(separatedBy: .newlines)
+        var listKey: String?
+        for raw in lines {
+          let text = uncommentedYAMLScalar(raw).trimmingCharacters(in: .whitespaces)
+          guard !text.isEmpty else { continue }
+          let indent = leadingSpaceCount(in: raw)
+          if let key = listKey, text.hasPrefix("- ") {
+            record.lists[key, default: []].append(normalizedListValue(String(text.dropFirst(2))))
+            continue
+          }
+          guard indent == 0, let (key, value) = keyValue(from: text) else { continue }
+          listKey = nil
+          record.fields[key] = value
+          if let colon = text.firstIndex(of: ":"), let list = yamlFlowSequence(String(text[text.index(after: colon)...])) {
+            record.lists[key] = list.map(normalizedListValue)
+          } else if value.isEmpty, key == "proxies" || key == "use" {
+            record.lists[key] = []; listKey = key
+          }
+        }
+      }
+      return record.fields["name"]?.isEmpty == false ? record : nil
+    }
+  }
+
+  public func parsedRuleStrings(from yaml: String) -> [String]? {
+    guard let items = rootSequenceItems("rules", in: yaml) else { return nil }
+    var rules: [String] = []
+    for item in items {
+      let text = item.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !text.isEmpty, !text.hasPrefix("["), !text.hasPrefix("{"), !text.hasPrefix("*"), !text.hasPrefix("&"), !text.contains("\n") else { return nil }
+      rules.append(normalizedListValue(text))
+    }
+    return rules
+  }
+
   public func extractProxyGroups(from profileYaml: String) -> [ProxyGroupSnapshot] {
-    var groups: [ProxyGroupSnapshot] = []
-    var insideProxyGroups = false
-    var currentGroupStarted = false
-    var currentName = ""
-    var currentSelected: String?
-    var currentOptions: [String] = []
-    var currentType: String?
-    var currentTestURL: String?
-    var collectingMembers = false
-    var membersIndent = 0
-
-    func flushCurrentGroup() {
-      guard currentGroupStarted else {
-        currentSelected = nil
-        currentOptions = []
-        currentType = nil
-        currentTestURL = nil
-        collectingMembers = false
-        membersIndent = 0
-        return
-      }
-      guard !currentName.isEmpty else {
-        currentGroupStarted = false
-        currentSelected = nil
-        currentOptions = []
-        currentType = nil
-        currentTestURL = nil
-        collectingMembers = false
-        membersIndent = 0
-        return
-      }
-
-      let options = uniquePreservingOrder(
-        currentOptions
-          .map(normalizedListValue)
-          .filter { !$0.isEmpty }
-      )
-      groups.append(
-        ProxyGroupSnapshot(
-          name: currentName,
-          selected: currentSelected ?? options.first,
-          all: options,
-          type: currentType,
-          testURL: currentTestURL
-        )
-      )
-      currentGroupStarted = false
-      currentName = ""
-      currentSelected = nil
-      currentOptions = []
-      currentType = nil
-      currentTestURL = nil
-      collectingMembers = false
-      membersIndent = 0
+    let groups = proxyYAMLRecords("proxy-groups", in: profileYaml).map { record in
+      let options = uniquePreservingOrder(record.lists["proxies"] ?? [])
+      return ProxyGroupSnapshot(name: record.fields["name"] ?? "", selected: record.fields["now"] ?? record.fields["selected"] ?? options.first, all: options, type: record.fields["type"], testURL: record.fields["url"] ?? record.fields["test-url"] ?? record.fields["testUrl"])
     }
-
-    func applyGroupField(key: String, value: String, indent: Int) {
-      switch key {
-      case "name":
-        if currentName.isEmpty {
-          currentName = value
-        }
-      case "type":
-        currentType = value
-      case "url", "test-url", "testUrl":
-        let testURL = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        currentTestURL = testURL.isEmpty ? currentTestURL : testURL
-      case "now", "selected":
-        let selected = normalizedListValue(value)
-        currentSelected = selected.isEmpty ? currentSelected : selected
-      case "proxies":
-        if value.isEmpty {
-          collectingMembers = true
-          membersIndent = indent
-        } else {
-          currentOptions.append(contentsOf: inlineListValues(from: value))
-          collectingMembers = false
-          membersIndent = 0
-        }
-      default:
-        return
-      }
-    }
-
-    profileYaml.enumerateLines { rawLine, _ in
-      let indent = leadingSpaceCount(in: rawLine)
-      let line = rawLine.trimmingCharacters(in: .whitespaces)
-
-      if line == "proxy-groups:" {
-        flushCurrentGroup()
-        insideProxyGroups = true
-        return
-      }
-
-      if insideProxyGroups, !line.isEmpty, indent == 0 {
-        flushCurrentGroup()
-        insideProxyGroups = false
-      }
-
-      guard insideProxyGroups else { return }
-
-      if indent == 2, line.hasPrefix("- ") {
-        flushCurrentGroup()
-        currentGroupStarted = true
-        let entry = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-        if let (key, value) = keyValue(from: entry), key == "name" {
-          currentName = value
-        } else if entry.hasPrefix("{"), entry.hasSuffix("}") {
-          let values = inlineObjectValues(in: entry)
-          currentName = values["name"] ?? ""
-          currentSelected = values["now"].map(normalizedListValue)
-          currentType = values["type"]
-          currentTestURL = values["url"] ?? values["test-url"] ?? values["testUrl"]
-        } else if let (key, value) = keyValue(from: entry) {
-          applyGroupField(key: key, value: value, indent: indent)
-        }
-        return
-      }
-
-      guard currentGroupStarted else { return }
-
-      if collectingMembers, !line.isEmpty, indent <= membersIndent {
-        collectingMembers = false
-        membersIndent = 0
-      }
-
-      if collectingMembers, line.hasPrefix("- ") {
-        currentOptions.append(String(line.dropFirst(2)))
-        return
-      }
-
-      guard let (key, value) = keyValue(from: line) else { return }
-      applyGroupField(key: key, value: value, indent: indent)
-    }
-
-    flushCurrentGroup()
-
-    if groups.isEmpty {
-      let fallback = extractProxyNames(from: profileYaml)
-      return [
-        ProxyGroupSnapshot(
-          name: "GLOBAL",
-          selected: fallback.first,
-          all: fallback,
-          type: "select"
-        )
-      ]
-    }
-    return groups
+    if !groups.isEmpty { return groups }
+    let fallback = extractProxyNames(from: profileYaml)
+    return [ProxyGroupSnapshot(name: "GLOBAL", selected: fallback.first, all: fallback, type: "select")]
   }
 
   public func extractProxyNames(from profileYaml: String) -> [String] {
-    var insideProxies = false
-    var currentName: String?
-    var names: [String] = []
-
-    func flushCurrentName() {
-      guard let currentName, !currentName.isEmpty else {
-        return
-      }
-      names.append(currentName)
-    }
-
-    profileYaml.enumerateLines { rawLine, _ in
-      let line = rawLine.trimmingCharacters(in: .whitespaces)
-      if line == "proxies:" {
-        insideProxies = true
-        currentName = nil
-        return
-      }
-
-      if insideProxies, !line.isEmpty, !line.hasPrefix("-"), !rawLine.hasPrefix("  ") {
-        flushCurrentName()
-        insideProxies = false
-      }
-
-      guard insideProxies else { return }
-
-      if line.hasPrefix("- ") {
-        flushCurrentName()
-        currentName = nil
-
-        let firstEntry = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-        if firstEntry.hasPrefix("{"), firstEntry.hasSuffix("}") {
-          currentName = inlineObjectValue(for: "name", in: firstEntry)
-        } else if let (key, value) = keyValue(from: firstEntry), key == "name" {
-          currentName = value
-        }
-        return
-      }
-
-      guard currentName == nil, let (key, value) = keyValue(from: line), key == "name" else {
-        return
-      }
-      currentName = value
-    }
-
-    flushCurrentName()
-
-    if !names.contains("DIRECT") {
-      names.append("DIRECT")
-    }
-    return uniquePreservingOrder(names)
+    uniquePreservingOrder(proxyYAMLRecords("proxies", in: profileYaml).compactMap { $0.fields["name"] } + ["DIRECT"])
   }
 
   public func extractRuleCount(from profileYaml: String) -> Int {
-    let lines = profileYaml.components(separatedBy: .newlines)
-    var insideRules = false
-    var count = 0
-
-    for rawLine in lines {
-      let line = rawLine.trimmingCharacters(in: .whitespaces)
-      if line == "rules:" {
-        insideRules = true
-        continue
-      }
-
-      if insideRules, !line.hasPrefix("-"), !line.isEmpty {
-        insideRules = false
-      }
-
-      if insideRules, line.hasPrefix("- ") {
-        count += 1
-      }
-    }
-
-    return count
+    parsedRuleStrings(from: profileYaml)?.count ?? 0
   }
 
   public func extractProxyNodes(from profileYaml: String) -> [ProxyNodeRecord] {
-    var insideProxies = false
-    var currentProxy: [String: String] = [:]
-    var records: [ProxyNodeRecord] = []
-
-    func flushCurrentProxy() {
-      guard let name = currentProxy["name"], !name.isEmpty else {
-        currentProxy = [:]
-        return
-      }
-
-      let security = [currentProxy["cipher"], currentProxy["flow"], currentProxy["servername"], currentProxy["sni"]]
-        .compactMap { value -> String? in
-          guard let value, !value.isEmpty else { return nil }
-          return value
-        }
-        .joined(separator: " · ")
-
-      records.append(
-        ProxyNodeRecord(
-          id: "proxy-\(records.count)-\(name)",
-          name: name,
-          type: currentProxy["type"] ?? "",
-          server: currentProxy["server"] ?? "",
-          port: currentProxy["port"] ?? "",
-          network: currentProxy["network"] ?? "",
-          security: security,
-          udp: (currentProxy["udp"] ?? "").lowercased() == "true",
-          tls: (currentProxy["tls"] ?? "").lowercased() == "true"
-        )
-      )
-      currentProxy = [:]
+    proxyYAMLRecords("proxies", in: profileYaml).enumerated().map { index, record in
+      let fields = record.fields, name = fields["name"] ?? ""
+      let security = ["cipher", "flow", "servername", "sni"].compactMap { fields[$0] }.filter { !$0.isEmpty }.joined(separator: " · ")
+      return ProxyNodeRecord(id: "proxy-\(index)-\(name)", name: name, type: fields["type"] ?? "", server: fields["server"] ?? "", port: fields["port"] ?? "", network: fields["network"] ?? "", security: security, udp: fields["udp"]?.lowercased() == "true", tls: fields["tls"]?.lowercased() == "true")
     }
-
-    profileYaml.enumerateLines { rawLine, _ in
-      let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
-
-      if trimmed == "proxies:" {
-        insideProxies = true
-        currentProxy = [:]
-        return
-      }
-
-      if insideProxies, !trimmed.isEmpty, !trimmed.hasPrefix("-"), !rawLine.hasPrefix("  ") {
-        flushCurrentProxy()
-        insideProxies = false
-      }
-
-      guard insideProxies else { return }
-
-      if trimmed.hasPrefix("- ") {
-        flushCurrentProxy()
-
-        let firstEntry = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-        if firstEntry.hasPrefix("{"), firstEntry.hasSuffix("}") {
-          currentProxy.merge(inlineObjectValues(in: firstEntry), uniquingKeysWith: { _, new in new })
-        } else if let (key, value) = keyValue(from: firstEntry) {
-          currentProxy[key] = value
-        }
-        return
-      }
-
-      guard !currentProxy.isEmpty, let (key, value) = keyValue(from: trimmed) else { return }
-
-      switch key {
-      case "type", "server", "port", "network", "cipher", "flow", "udp", "tls", "servername", "sni":
-        currentProxy[key] = value
-      case "name":
-        currentProxy[key] = value
-      default:
-        return
-      }
-    }
-
-    flushCurrentProxy()
-    return records
   }
 
   public func parseDnsSummary(from yaml: String) -> DnsSummary {
@@ -1811,32 +1611,11 @@ public struct CompatibilityService {
 
   private func keyValue(from line: String) -> (String, String)? {
     guard let separatorIndex = line.firstIndex(of: ":") else { return nil }
-    let key = String(line[..<separatorIndex]).trimmingCharacters(in: .whitespaces)
+    let key = normalizedListValue(String(line[..<separatorIndex]))
     guard !key.isEmpty else { return nil }
     let valueStart = line.index(after: separatorIndex)
-    let value = String(line[valueStart...]).trimmingCharacters(in: CharacterSet(charactersIn: "\" "))
+    let value = normalizedListValue(String(line[valueStart...]))
     return (key, value)
-  }
-
-  private func inlineObjectValue(for key: String, in object: String) -> String? {
-    inlineObjectValues(in: object)[key]
-  }
-
-  private func inlineObjectValues(in object: String) -> [String: String] {
-    let trimmed = object
-      .trimmingCharacters(in: .whitespaces)
-      .trimmingCharacters(in: CharacterSet(charactersIn: "{}"))
-
-    guard !trimmed.isEmpty else { return [:] }
-
-    var values: [String: String] = [:]
-    for pair in trimmed.split(separator: ",") {
-      guard let (key, value) = keyValue(from: String(pair).trimmingCharacters(in: .whitespaces)) else {
-        continue
-      }
-      values[key] = value
-    }
-    return values
   }
 
   private func uniquePreservingOrder(_ values: [String]) -> [String] {
@@ -1888,14 +1667,16 @@ public struct CompatibilityService {
   }
 
   private func uncommentedYAMLScalar(_ value: String) -> String {
-    var quote: Character?, escaped = false
+    var quote: Character?, escaped = false, scalarBoundary = true
     for index in value.indices {
       let char = value[index]
       if escaped { escaped = false; continue }
       if char == "\\" && quote == "\"" { escaped = true; continue }
       if let active = quote { if char == active { quote = nil }; continue }
-      if char == "'" || char == "\"" { quote = char; continue }
+      if scalarBoundary, char == "'" || char == "\"" { quote = char; scalarBoundary = false; continue }
       if char == "#", index == value.startIndex || value[value.index(before: index)].isWhitespace { return String(value[..<index]) }
+      if "[{,:".contains(char) { scalarBoundary = true }
+      else if !char.isWhitespace { scalarBoundary = false }
     }
     return value
   }

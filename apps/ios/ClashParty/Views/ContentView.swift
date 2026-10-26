@@ -42,6 +42,14 @@ private struct ConsoleRootView: View {
     .task {
       #if DEBUG
       let arguments = CommandLine.arguments
+      if arguments.contains("--codex-export-restored-input") {
+        await viewModel.exportDebugRestoredInput()
+        return
+      }
+      if arguments.contains("--codex-export-active-input") {
+        viewModel.exportDebugActiveInput()
+        return
+      }
       if let index = arguments.firstIndex(of: "--codex-validation-profile"), index + 1 < arguments.count {
         guard await viewModel.prepareDebugValidationProfile(fileName: arguments[index + 1]) else { return }
         if arguments.contains("--codex-auto-start-tunnel") {
@@ -57,6 +65,9 @@ private struct ConsoleRootView: View {
       }
     }
     .onChange(of: scenePhase, initial: true) { _, phase in
+      #if DEBUG
+      if CommandLine.arguments.contains("--codex-export-active-input") || CommandLine.arguments.contains("--codex-export-restored-input") { return }
+      #endif
       viewModel.handleScenePhase(phase)
     }
     .fileImporter(

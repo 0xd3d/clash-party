@@ -76,6 +76,10 @@ import { shutdownProtectedCore } from './protectedShutdown'
 import { releaseMacDNSGuard } from './macDNSGuard'
 import { armNetworkGuard, bindNetworkGuard, releaseNetworkGuard } from './networkGuard'
 import { applyNetworkProtectionPolicy } from './networkProtectionPolicy'
+import {
+  transitionNetworkProtection,
+  type NetworkProtectionChange
+} from './networkProtectionTransition'
 
 // 重新导出权限相关函数
 export {
@@ -1123,29 +1127,17 @@ export async function stopCoreForExit(): Promise<void> {
 }
 
 /** User action only: enabling may restart this future build; disabling explicitly releases its lease. */
-export async function configureNetworkProtection(change: {
-  enabled: boolean
-  proxyGroup?: string
-  protectPublicUDP?: boolean
-}): Promise<void> {
-  if (
-    typeof change?.enabled !== 'boolean' ||
-    (change.proxyGroup !== undefined &&
-      (typeof change.proxyGroup !== 'string' || change.proxyGroup.length > 256)) ||
-    (change.protectPublicUDP !== undefined && typeof change.protectPublicUDP !== 'boolean')
-  )
-    throw new Error('Invalid network protection settings')
-  if (!change.enabled) {
-    await stopCore()
-    // Also recovers a retained orphan lease after an earlier application crash.
-    if (['darwin', 'win32'].includes(process.platform)) await releaseNetworkGuard(true)
-  }
-  await patchAppConfig({
-    networkProtection: change.enabled,
-    networkProtectionProxyGroup: change.proxyGroup?.trim() ?? '',
-    networkProtectionPublicUDP: change.protectPublicUDP !== false
+export async function configureNetworkProtection(change: NetworkProtectionChange): Promise<void> {
+  await transitionNetworkProtection(change, {
+    readSettings: getAppConfig,
+    readRuntime: getRuntimeConfig,
+    persist: patchAppConfig,
+    stop: stopCore,
+    recover: async () => {
+      if (['darwin', 'win32'].includes(process.platform)) await releaseNetworkGuard(true)
+    },
+    restart: restartCore
   })
-  await restartCore()
 }
 
 export async function prepareNetworkProtectionReload(runtime: IMihomoConfig): Promise<void> {

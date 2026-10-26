@@ -635,6 +635,58 @@ final class ConsoleViewModel: ObservableObject {
   }
 
   #if DEBUG
+  // Explicit developer launch only: export the active saved input locally without
+  // restoring editors, publishing a new bundle or starting the tunnel.
+  func exportDebugActiveInput() {
+    guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+    do {
+      let bundle = try SharedStore.readPublishedConfigurationBundle()
+      let encoder = JSONEncoder()
+      encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+      try encoder.encode(bundle.input).write(
+        to: documents.appendingPathComponent("clashparty-active-input-debug.json"),
+        options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+      )
+      try bundle.runtimeConfig.write(
+        to: documents.appendingPathComponent("clashparty-active-runtime-debug.yaml"),
+        atomically: true, encoding: .utf8
+      )
+    } catch {
+      lastError = "Could not export the current local workspace: \(error.localizedDescription)"
+    }
+  }
+
+  func exportDebugRestoredInput() async {
+    let workspace = await runtimeIO.loadStartupWorkspace(routeExplanationLimit: Self.routeExplanationConnectionLimit)
+    if let bundle = workspace.publishedBundle {
+      apply(bundle.input, resetPreferredProxySelections: false, clearPersistedProxyGroups: false)
+    }
+    validationReport = compatibilityService.validate(currentInput())
+    guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+    do {
+      let encoder = JSONEncoder()
+      encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+      let input = currentInput()
+      let runtime = compatibilityService.buildRuntimeConfig(from: input)
+      try encoder.encode(input).write(to: documents.appendingPathComponent("clashparty-restored-input-debug.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+      try runtime.write(to: documents.appendingPathComponent("clashparty-restored-runtime-debug.yaml"), atomically: true, encoding: .utf8)
+      let runtimeNodes = compatibilityService.extractProxyNodes(from: runtime)
+      let details: [String: Any] = [
+        "build": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "",
+        "validationValid": validationReport.isValid,
+        "blockingErrors": validationReport.blockingErrors,
+        "proxyCount": proxyCount,
+        "runtimeTarget": compatibilityService.protectedDNSProxyTarget(in: runtime) ?? "",
+        "profileTarget": compatibilityService.protectedDNSProxyTarget(in: input.profileYaml) ?? "",
+        "runtimeNodes": runtimeNodes.map { ["name": $0.name, "type": $0.type] },
+        "runtimeGroups": compatibilityService.extractProxyGroups(from: runtime).map { ["name": $0.name, "members": $0.all, "type": $0.type ?? ""] as [String: Any] },
+        "sameAsPublished": workspace.publishedBundle?.input == input,
+        "vpnStartRequested": false
+      ]
+      try JSONSerialization.data(withJSONObject: details, options: [.prettyPrinted, .sortedKeys]).write(to: documents.appendingPathComponent("clashparty-restored-validation-debug.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    } catch { lastError = error.localizedDescription }
+  }
+
   // Device-only validation uses an explicit launch argument and a local file.
   // Save the previous published workspace before selecting the test profile.
   func prepareDebugValidationProfile(fileName: String) async -> Bool {
@@ -740,12 +792,13 @@ final class ConsoleViewModel: ObservableObject {
   #endif
 
   private func restoreStartupWorkspaceAsync() {
+    let expectedInput = currentInput()
     Task { [weak self] in
       guard let self else { return }
       let workspace = await runtimeIO.loadStartupWorkspace(
         routeExplanationLimit: Self.routeExplanationConnectionLimit
       )
-      guard !Task.isCancelled else { return }
+      guard !Task.isCancelled, self.currentInput() == expectedInput else { return }
 
       self.performPresentationRefreshBatch {
         self.applyStartupWorkspace(workspace)
@@ -1576,7 +1629,7 @@ final class ConsoleViewModel: ObservableObject {
       guard !Task.isCancelled else { return }
 
       await MainActor.run {
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, DerivedStateInput(self.currentInput()) == input else { return }
         if self.proxyNodes != proxyPreviewNodes {
           self.proxyNodes = proxyPreviewNodes
         }
@@ -1607,7 +1660,7 @@ final class ConsoleViewModel: ObservableObject {
       guard !Task.isCancelled else { return }
 
       await MainActor.run {
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, DerivedStateInput(self.currentInput()) == input else { return }
         self.effectiveRoutingPolicy = routingPolicy
         let didDNSContextChange =
           self.dnsSummary.enabled != dnsSummary.enabled
@@ -3079,6 +3132,7 @@ final class ConsoleViewModel: ObservableObject {
     let input = compatibilityService.sanitizedMobileInput(currentInput())
     if input != currentInput() { apply(input, resetPreferredProxySelections: false, clearPersistedProxyGroups: false) }
     let compatibilityService = self.compatibilityService
+    let expectedInput = currentInput()
 
     defer {
       if showBusy {
@@ -3087,9 +3141,13 @@ final class ConsoleViewModel: ObservableObject {
     }
 
     do {
-      let report = try await Task.detached(priority: .userInitiated) {
-        try compatibilityService.persist(input)
+      let prepared = await Task.detached(priority: .userInitiated) {
+        compatibilityService.prepareConfiguration(input)
       }.value
+      guard !Task.isCancelled, currentInput() == expectedInput else { return nil }
+      // No suspension between the identity check and publication: a newer editor
+      // input cannot be overwritten by an older detached preparation task.
+      let report = try compatibilityService.commitPreparedConfiguration(prepared)
       validationReport = report
       lastError = report.isValid ? nil : report.blockingErrors.joined(separator: "\n")
       if report.isValid {
@@ -3101,6 +3159,7 @@ final class ConsoleViewModel: ObservableObject {
       }
       return report
     } catch {
+      guard currentInput() == expectedInput else { return nil }
       lastError = error.localizedDescription
       return nil
     }

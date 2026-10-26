@@ -62,13 +62,14 @@ public struct DesktopRoutingSnapshot: Codable, Equatable, Sendable {
 }
 
 public enum RoutingPolicyError: LocalizedError {
-  case invalidSnapshot, missingSnapshot, missingProxy, unsupportedGroupSyntax, invalidRulePayload
+  case invalidSnapshot, missingSnapshot, missingProxy, unsupportedGroupSyntax, unsupportedRulesSyntax, invalidRulePayload
   public var errorDescription: String? {
     switch self {
     case .invalidSnapshot: return L10n.string("routing.error.snapshot", "The rule set is invalid or contains unsupported policies.")
     case .missingSnapshot: return L10n.string("routing.error.missing_snapshot", "Import a rule set first.")
     case .missingProxy: return L10n.string("routing.error.proxy", "Import at least one supported proxy node before enabling general routing.")
     case .unsupportedGroupSyntax: return L10n.string("routing.error.groups", "The proxy-groups section must be a YAML sequence.")
+    case .unsupportedRulesSyntax: return L10n.string("routing.error.rules", "The rules section must be a supported YAML sequence.")
     case .invalidRulePayload: return L10n.string("routing.error.payload", "Downloaded rules are empty or invalid; the last valid cache was retained.")
     }
   }
@@ -112,13 +113,22 @@ public enum RoutingPolicyService {
     policy requested: IOSRoutingPolicy,
     snapshot: DesktopRoutingSnapshot? = nil
   ) throws -> String {
+    guard CompatibilityService().parsedRuleStrings(from: runtimeConfig) != nil else { throw RoutingPolicyError.unsupportedRulesSyntax }
     let policy = effectivePolicy(for: requested, runtimeConfig: runtimeConfig)
     guard policy != .profile else {
-      return applyingPrivacyGuards(to: runtimeConfig, target: CompatibilityService().protectedDNSProxyTarget(in: runtimeConfig) ?? "REJECT")
+      let target = CompatibilityService().protectedDNSProxyTarget(in: runtimeConfig) ?? "REJECT"
+      var rules = ruleStrings(in: runtimeConfig)
+      // An absent terminal rule otherwise uses the mobile core's implicit
+      // DIRECT fallback for TCP, bypassing the selected overseas exit.
+      if !rules.contains(where: { $0.hasPrefix("MATCH,") || $0.hasPrefix("FINAL,") }) {
+        rules.append("MATCH,\(target)")
+      }
+      let completed = replacingSection("rules", in: runtimeConfig, with: "rules:\n" + rules.map { "  - " + yamlString($0) }.joined(separator: "\n"))
+      return applyingPrivacyGuards(to: completed, target: target)
     }
     let normalizedConfig = normalizingProxyGroups(in: runtimeConfig)
     let compatibility = CompatibilityService()
-    let supported = Set(["ss", "ssr", "socks5", "http", "vmess", "vless", "snell", "trojan", "hysteria", "wireguard", "tuic"])
+    let supported = CompatibilityService.supportedProxyTransports
     let nodes = compatibility.extractProxyNodes(from: normalizedConfig).filter { supported.contains($0.type.lowercased()) }
     var choices = nodes.map(\.name)
     if choices.isEmpty {
@@ -206,17 +216,7 @@ public enum RoutingPolicyService {
   }
 
   public static func ruleStrings(in yaml: String) -> [String] {
-    let lines = yaml.components(separatedBy: .newlines)
-    guard let range = sectionRange("rules", lines: lines) else { return [] }
-    return lines[range].compactMap { line in
-      let value = line.trimmingCharacters(in: .whitespaces)
-      guard value.hasPrefix("- ") else { return nil }
-      let raw = String(value.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-      if raw.hasPrefix("'"), raw.hasSuffix("'") {
-        return String(raw.dropFirst().dropLast()).replacingOccurrences(of: "''", with: "'")
-      }
-      return (try? JSONDecoder().decode(String.self, from: Data(raw.utf8))) ?? raw
-    }
+    CompatibilityService().parsedRuleStrings(from: yaml) ?? []
   }
 
   public static func loadDesktopSnapshot(resourceRoot: URL? = nil) -> DesktopRoutingSnapshot? {
