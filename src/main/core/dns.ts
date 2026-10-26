@@ -242,20 +242,24 @@ export async function startSystemDNSMonitoring(
 /** Startup must not report protected readiness after a failed native guard or DNS takeover. */
 export async function assertSystemDNSProtection(
   runtime: Partial<IMihomoConfig>,
-  corePid: number
+  corePid: number,
+  timeoutMs = 0
 ): Promise<void> {
   if (process.platform !== 'darwin' || runtime.tun?.enable !== true) return
   const config = await getAppConfig()
   if (config.autoSetDNS === false) return
-  const current = session
-  if (
-    !current ||
-    current.corePid !== corePid ||
-    !current.isCurrent() ||
-    current.signature === null ||
-    current.lastError !== null
-  )
-    throw new Error('Native DNS bypass protection or system DNS takeover is not ready')
+  const deadline = Date.now() + Math.max(0, timeoutMs)
+  while (true) {
+    const current = session
+    if (!current || current.corePid !== corePid || !current.isCurrent())
+      throw new Error('Native DNS bypass protection or system DNS takeover is not ready')
+    if (current.signature !== null && current.lastError === null && current.readyNotified) return
+    if (Date.now() >= deadline)
+      throw new Error('Native DNS bypass protection or system DNS takeover is not ready')
+    // The existing monitor performs reconciliation. Only await its confirmation;
+    // never declare success early or retry privileged operations in a tight loop.
+    await new Promise<void>((resolve) => setTimeout(resolve, 100))
+  }
 }
 
 export async function recoverDNS(

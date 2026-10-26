@@ -971,7 +971,7 @@ async function startCoreInternal(
           mainWindow?.webContents.send('appConfigUpdated')
         }
       )
-      await assertSystemDNSProtection(config.runtimeConfig, corePid)
+      await assertSystemDNSProtection(config.runtimeConfig, corePid, 15_000)
     }
     // API 就绪后同步本次 DNS 保护结果。
     try {

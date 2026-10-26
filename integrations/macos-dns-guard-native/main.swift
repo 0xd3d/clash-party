@@ -30,11 +30,11 @@ private func deadlineHandler(_ signal: Int32) {
   _exit(1)
 }
 private func setDeadline(uid: UInt32, stopping: Bool, traffic: Bool = false, installing: Bool = false) {
-  let seconds = installing ? 29.4 : (traffic ? (stopping ? 5.4 : 7.9) : (stopping ? 1.4 : 3.4))
+  let seconds = installing ? 119.4 : (traffic ? (stopping ? 5.4 : 7.9) : (stopping ? 1.4 : 3.4))
   commandDeadline = ProcessInfo.processInfo.systemUptime + seconds
   emergencyJSON = strdup("{\"active\":false,\"ownerUid\":\(uid),\"corePid\":null,\"reason\":\"Native DNS guard operation timed out; verify actual protection state\"}\n")
   _ = signal(SIGALRM, deadlineHandler)
-  let hard = installing ? 30.0 : (traffic ? (stopping ? 5.5 : 8.0) : (stopping ? 1.5 : 3.5))
+  let hard = installing ? 120.0 : (traffic ? (stopping ? 5.5 : 8.0) : (stopping ? 1.5 : 3.5))
   var timer = itimerval(it_interval: timeval(tv_sec: 0, tv_usec: 0), it_value: timeval(tv_sec: Int(hard), tv_usec: Int32((hard - floor(hard)) * 1_000_000)))
   _ = setitimer(ITIMER_REAL, &timer, nil)
 }
