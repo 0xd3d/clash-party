@@ -2352,3 +2352,41 @@ private extension CompatibilityService {
   ]
 
 }
+
+@MainActor
+public protocol CompatibilityWorkspace: AnyObject {
+  var profileYaml: String { get set }
+  var controlledConfigYaml: String { get set }
+  var appConfigJson: String { get set }
+  var overrideYaml: String { get set }
+  var overrideJavaScript: String { get set }
+}
+
+public extension CompatibilityWorkspace {
+  var configurationInput: CompatibilityInput {
+    CompatibilityInput(profileYaml: profileYaml, controlledConfigYaml: controlledConfigYaml,
+      appConfigJson: appConfigJson, overrideYaml: overrideYaml, overrideJavaScript: overrideJavaScript)
+  }
+
+  /// Prepare and archive before committing all workspace fields, without suspension.
+  @discardableResult
+  func importUnifiedConfiguration(
+    _ text: String,
+    using service: CompatibilityService,
+    beforeCommit: (CompatibilityInput) throws -> Void = { _ in }
+  ) throws -> Bool {
+    let previous = configurationInput
+    guard let candidate = try service.prepareUnifiedImport(text, current: previous) else { return false }
+    try beforeCommit(previous)
+    applyConfiguration(candidate)
+    return true
+  }
+
+  func applyConfiguration(_ input: CompatibilityInput) {
+    profileYaml = input.profileYaml
+    controlledConfigYaml = input.controlledConfigYaml
+    appConfigJson = input.appConfigJson
+    overrideYaml = input.overrideYaml
+    overrideJavaScript = input.overrideJavaScript
+  }
+}

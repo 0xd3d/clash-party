@@ -1,12 +1,6 @@
 name: iOS source build
 
 on:
-  push:
-    branches: [smart_core]
-    paths:
-      - 'apps/ios/**'
-      - 'modules/mihomo-ios-core/**'
-      - '.github/workflows/ios.yml'
   pull_request:
     paths:
       - 'apps/ios/**'
@@ -14,13 +8,17 @@ on:
       - '.github/workflows/ios.yml'
   workflow_dispatch:
   workflow_call:
+    inputs:
+      release-build:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: ios-source-${{ github.ref }}
-  cancel-in-progress: true
+  group: ios-source-${{ inputs.release-build && github.run_id || github.ref }}
+  cancel-in-progress: ${{ !inputs.release-build }}
 
 jobs:
   unsigned-build:

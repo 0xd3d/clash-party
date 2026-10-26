@@ -12,9 +12,8 @@ import {
 } from '@heroui/react'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from '@renderer/components/base/toast'
-import { getProfileStr, setProfileStr } from '@renderer/utils/ipc'
+import { getProfile, setProfileTunnels } from '@renderer/utils/ipc'
 import { isValidListenAddressFull } from '@renderer/utils/validate'
-import { dump, load } from 'js-yaml'
 import { useTranslation } from 'react-i18next'
 import { IoMdCreate, IoMdTrash, IoMdUndo } from 'react-icons/io'
 
@@ -188,7 +187,6 @@ const toYamlTunnel = (tunnel: TunnelItem): Record<string, unknown> => {
 const EditTunnelsModal: React.FC<Props> = (props) => {
   const { id, onClose } = props
   const { t } = useTranslation()
-  const [profile, setProfile] = useState<ProfileYaml>({})
   const [tunnels, setTunnels] = useState<TunnelItem[]>([])
   const [proxyNames, setProxyNames] = useState<string[]>(builtInProxies)
   const [newTunnel, setNewTunnel] = useState<TunnelItem>(defaultTunnel)
@@ -215,15 +213,12 @@ const EditTunnelsModal: React.FC<Props> = (props) => {
       setIsLoading(true)
       setLoadFailed(false)
       try {
-        const content = await getProfileStr(id)
-        const parsed = load(content)
-        // 解析结果不是 YAML mapping 时（例如 age 密文、根数组或日期），
-        // 旧实现静默退化成 {} 且不提示，保存就会把整份订阅写没。
+        const parsed = await getProfile(id)
+        // 拒绝无效根结构，避免将读取失败误当成空配置。
         if (Object.prototype.toString.call(parsed) !== '[object Object]') {
           throw new Error('Profile is not a YAML mapping')
         }
-        const nextProfile = parsed as ProfileYaml
-        setProfile(nextProfile)
+        const nextProfile = parsed as unknown as ProfileYaml
         setTunnels(parseTunnels(nextProfile.tunnels))
         setProxyNames(collectProxyNames(nextProfile))
       } catch (e) {
@@ -292,18 +287,11 @@ const EditTunnelsModal: React.FC<Props> = (props) => {
   }
 
   const handleSave = async (): Promise<void> => {
-    // 原文没读到就直接拒绝写回，避免用空对象覆盖订阅
+    // 配置尚未读取成功时禁止保存，避免清空现有隧道
     if (isLoading || loadFailed) return
 
     try {
-      const nextProfile: ProfileYaml = { ...profile }
-      if (tunnels.length > 0) {
-        nextProfile.tunnels = tunnels.map(toYamlTunnel)
-      } else {
-        delete nextProfile.tunnels
-      }
-
-      await setProfileStr(id, dump(nextProfile))
+      await setProfileTunnels(id, tunnels.map(toYamlTunnel))
       onClose()
     } catch (e) {
       toast.error(

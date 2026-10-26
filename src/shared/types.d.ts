@@ -554,6 +554,7 @@ interface IMihomoConfig {
   proxies?: []
   'proxy-groups'?: []
   rules?: []
+  tunnels?: unknown[]
   hosts?: { [key: string]: string | string[] }
   'geodata-mode'?: boolean
   'geo-auto-update'?: boolean

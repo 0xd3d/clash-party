@@ -280,7 +280,7 @@ private struct DerivedStateInput: Equatable {
 }
 
 @MainActor
-final class ConsoleViewModel: ObservableObject {
+final class ConsoleViewModel: ObservableObject, CompatibilityWorkspace {
   private static let runtimeDiagnosticsWriteInterval: TimeInterval = 10
   private static let routeExplanationConnectionLimit = 80
   private static let proxyNodeDisplayLimit = 120
@@ -2955,13 +2955,7 @@ final class ConsoleViewModel: ObservableObject {
   }
 
   private func currentInput() -> CompatibilityInput {
-    CompatibilityInput(
-      profileYaml: profileYaml,
-      controlledConfigYaml: controlledConfigYaml,
-      appConfigJson: appConfigJson,
-      overrideYaml: overrideYaml,
-      overrideJavaScript: overrideJavaScript
-    )
+    configurationInput
   }
 
   private var currentWorkspaceCanAcceptRuntimeProxyGroups: Bool {
@@ -3014,11 +3008,7 @@ final class ConsoleViewModel: ObservableObject {
     )
     lastDerivedStateInput = nil
     let input = compatibilityService.sanitizedMobileInput(input)
-    profileYaml = input.profileYaml
-    controlledConfigYaml = input.controlledConfigYaml
-    appConfigJson = input.appConfigJson
-    overrideYaml = input.overrideYaml
-    overrideJavaScript = input.overrideJavaScript
+    applyConfiguration(input)
     resetProfileEditorExpansionIfNeeded(for: input.profileYaml)
     applyWorkspaceDerivedStateSynchronously(for: input)
   }
@@ -3092,11 +3082,11 @@ final class ConsoleViewModel: ObservableObject {
     var text = text
     if kind == .profileYAML {
       do {
-        if let candidate = try compatibilityService.prepareUnifiedImport(text, current: currentInput()) {
-          _ = try SharedStore.createBackupRecord(name: "Before unified profile import", input: currentInput(), runtimeStatus: runtimeStatus)
+        if try importUnifiedConfiguration(text, using: compatibilityService, beforeCommit: { previous in
+          _ = try SharedStore.createBackupRecord(name: "Before unified profile import", input: previous, runtimeStatus: runtimeStatus)
           try SharedStore.archiveUnifiedProfileSource(text)
-          text = candidate.profileYaml
-          appConfigJson = candidate.appConfigJson
+        }) {
+          text = profileYaml
         }
       } catch {
         lastError = error.localizedDescription

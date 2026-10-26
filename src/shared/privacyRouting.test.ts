@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { auditPrivacyConfig } from './privacyAudit'
-import { ipRange, isLocalDestination, sameHost, traceTunRoutes } from './privacyRouting'
+import {
+  ipRange,
+  isLocalDestination,
+  sameHost,
+  traceTunRoutes,
+  splitRuleFields
+} from './privacyRouting'
 const profile = (rules: string[] = []): Partial<IMihomoConfig> =>
   ({
     mode: 'rule',
@@ -180,5 +186,20 @@ describe('unknown and recursive fallback outlets', () => {
     expect(
       auditPrivacyConfig(config, 'win32').find((f) => f.id === 'routePublicExclusion')?.level
     ).toBe('warning')
+  })
+})
+
+describe('compound rules in profile editors', () => {
+  it('keeps nested conditions and the selected proxy as separate fields without changing the rule', () => {
+    for (const rule of [
+      'AND,((NETWORK,tcp),(OR,((DOMAIN,a.example),(DOMAIN,b.example)))),Overseas',
+      '12,AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT,no-resolve',
+      'MATCH,Overseas'
+    ]) {
+      const fields = splitRuleFields(rule)
+      expect(fields.join(',')).toBe(rule)
+      const typeOffset = rule.startsWith('12,') ? 1 : 0
+      if (fields[typeOffset] !== 'MATCH') expect(fields[typeOffset + 1]).toMatch(/^\(/)
+    }
   })
 })

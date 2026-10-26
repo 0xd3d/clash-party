@@ -25,7 +25,7 @@ import React, {
   useDeferredValue
 } from 'react'
 import {
-  getProfileStr,
+  getProfile,
   setRuleStr,
   getRuleStr,
   mihomoHotReloadConfig,
@@ -65,6 +65,7 @@ import {
   portRangeValidator,
   ipCIDRValidator
 } from '@renderer/utils/validate'
+import { splitRuleFields } from '../../../../shared/privacyRouting'
 
 interface Props {
   id: string
@@ -549,7 +550,6 @@ RuleListItem.displayName = 'RuleListItem'
 const EditRulesModal: React.FC<Props> = (props) => {
   const { id, onClose } = props
   const [rules, setRules] = useState<RuleItem[]>([])
-  const [, setProfileContent] = useState('')
   const [newRule, setNewRule] = useState<RuleItem>({
     type: 'DOMAIN',
     payload: '',
@@ -599,7 +599,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
 
   // 解析规则字符串
   const parseRuleString = useCallback((ruleStr: string): RuleItem => {
-    const parts = ruleStr.split(',')
+    const parts = splitRuleFields(ruleStr)
     const firstPartIsNumber =
       !isNaN(Number(parts[0])) && parts[0].trim() !== '' && parts.length >= 3
 
@@ -703,15 +703,12 @@ const EditRulesModal: React.FC<Props> = (props) => {
       setIsLoading(true)
       setLoadFailed(false)
       try {
-        const content = await getProfileStr(id)
-        setProfileContent(content)
-
-        const parsed = load(content, yamlLoadOptions) as Record<string, unknown> | undefined
+        const parsed = await getProfile(id)
         let initialRules: RuleItem[] = []
 
         if (parsed && parsed.rules && Array.isArray(parsed.rules)) {
           initialRules = parsed.rules.map((rule: string) => {
-            const parts = rule.split(',')
+            const parts = splitRuleFields(rule)
             if (parts[0] === 'MATCH') {
               return {
                 type: 'MATCH',

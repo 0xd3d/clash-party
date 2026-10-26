@@ -337,6 +337,8 @@ async function removeProfileItemSteps(id: string): Promise<IProfileItem | undefi
       return config
     })
     if (switched) await restartCore()
+    await rm(`${profilePath(id)}.previous`, { force: true })
+    await rm(`${profilePath(id)}.local.yaml`, { force: true })
     if (existsSync(profilePath(id))) await rm(profilePath(id))
     await removeProfileWorkDir(id)
     await updateProfileConfig((config) => {
@@ -662,14 +664,19 @@ export async function createProfile(item: Partial<IProfileItem>): Promise<IProfi
 export async function validateProfileCandidate(
   item: IProfileItem,
   content: string,
-  opts: CheckProfileOptions & { globalOverrideIds?: string[] } = {}
+  opts: CheckProfileOptions & { globalOverrideIds?: string[]; localTunnels?: unknown[] } = {}
 ): Promise<void> {
   const candidateDir = await mkdtemp(join(tmpdir(), 'mihomo-party-profile-'))
   const candidatePath = join(candidateDir, 'config.yaml')
 
   try {
     const { core = 'mihomo', operationMode } = await getAppConfig()
-    const baseProfile = await parseProfileContent(item.id, content, item.ageSecretKey)
+    const baseProfile = await parseProfileContent(
+      item.id,
+      content,
+      item.ageSecretKey,
+      opts.localTunnels
+    )
     if (operationMode === 'simple') {
       const [{ compileSimpleConfig }, { resolveSimpleDraft }, { getSimpleState }] =
         await Promise.all([
@@ -722,14 +729,8 @@ export async function getProfileStr(id: string | undefined): Promise<string> {
 export async function setProfileStr(id: string, content: string): Promise<void> {
   // Unified sources remain intact on disk. Validate the adapted candidate before
   // publishing it; retain a private backup and restore the active source on failure.
-  let unified =
-    /^\s*["']?format["']?\s*:\s*["']?clash-party-unified/m.test(content) ||
-    (content.trimStart().startsWith('{') && /"format"\s*:/.test(content))
-  try {
-    unified = unified || isUnifiedProfile(JSON.parse(content))
-  } catch {
-    /* Ordinary YAML/age imports keep their existing path. */
-  }
+  const { yamlMaxAliasCount } = await getAppConfig()
+  const unified = isUnifiedProfile(parse(content, { maxAliasCount: yamlMaxAliasCount }))
   if (unified) {
     if ((await getAppConfig()).operationMode === 'simple')
       throw new Error(
@@ -794,6 +795,47 @@ export async function setProfileStr(id: string, content: string): Promise<void> 
   if (current === id) await reloadCurrentProfile()
 }
 
+/** Port-forward listeners are device-local and must never rewrite a shared source. */
+export async function setProfileTunnels(id: string, tunnels: unknown[]): Promise<void> {
+  if (!Array.isArray(tunnels)) throw new Error('Expected a tunnels array')
+  const item = await getProfileItem(id)
+  if (!item) throw new Error('Profile not found')
+  const content = await getProfileStr(id)
+  const { yamlMaxAliasCount } = await getAppConfig()
+  const parsed = parse(content, { maxAliasCount: yamlMaxAliasCount })
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+    throw new Error('Profile is not a YAML mapping')
+  if (!isUnifiedProfile(parsed)) {
+    const next: Record<string, unknown> = { ...parsed }
+    if (tunnels.length) next.tunnels = tunnels
+    else delete next.tunnels
+    await setProfileStr(id, stringify(next))
+    return
+  }
+  await validateProfileCandidate(item, content, { localTunnels: tunnels })
+  const path = `${profilePath(id)}.local.yaml`
+  let previous: string | undefined
+  try {
+    previous = await readFile(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
+  await atomicWriteFile(path, stringify({ tunnels }), { encoding: 'utf8', mode: 0o600 })
+  const { current } = await getProfileConfig(true)
+  try {
+    if (current === id) await reloadCurrentProfile()
+  } catch (error) {
+    if (previous === undefined) await rm(path, { force: true })
+    else await atomicWriteFile(path, previous, { encoding: 'utf8', mode: 0o600 })
+    try {
+      await reloadCurrentProfile()
+    } catch (restoreError) {
+      profileLogger.error('Failed to restore local tunnel settings', restoreError)
+    }
+    throw error
+  }
+}
+
 // 当前订阅的内容已替换：热加载，失败则回退到重启核心
 async function reloadCurrentProfile(): Promise<void> {
   try {
@@ -820,7 +862,8 @@ export async function getProfile(id: string | undefined): Promise<IMihomoConfig>
 export async function parseProfileContent(
   id: string | undefined,
   content: string,
-  ageSecretKey?: string
+  ageSecretKey?: string,
+  localTunnels?: unknown[]
 ): Promise<IMihomoConfig> {
   const profile = await decryptAgeContent(content, ageSecretKey, `profile "${id || 'default'}"`)
 
@@ -839,11 +882,32 @@ export async function parseProfileContent(
 
   try {
     const { yamlMaxAliasCount } = await getAppConfig()
-    let result = adaptUnifiedProfile(
-      profile,
-      parse(profile, { maxAliasCount: yamlMaxAliasCount }),
-      process.platform
-    )
+    const parsed = parse(profile, { maxAliasCount: yamlMaxAliasCount })
+    let result = adaptUnifiedProfile(profile, parsed, process.platform)
+    if (isUnifiedProfile(parsed)) {
+      let local: unknown = localTunnels === undefined ? undefined : { tunnels: localTunnels }
+      if (local === undefined) {
+        try {
+          local = parse(await readFile(`${profilePath(id || 'default')}.local.yaml`, 'utf8'))
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+        }
+      }
+      if (local !== undefined) {
+        if (
+          !local ||
+          typeof local !== 'object' ||
+          Array.isArray(local) ||
+          Object.keys(local).some((key) => key !== 'tunnels') ||
+          !Array.isArray((local as { tunnels?: unknown }).tunnels)
+        )
+          throw new Error('Invalid local profile settings; expected only a tunnels array')
+        result = {
+          ...(result as IMihomoConfig),
+          tunnels: (local as { tunnels: unknown[] }).tunnels
+        }
+      }
+    }
     if (typeof result !== 'object') result = {}
     return result as IMihomoConfig
   } catch (e) {

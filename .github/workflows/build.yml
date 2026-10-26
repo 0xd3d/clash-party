@@ -171,6 +171,8 @@ jobs:
   ios:
     needs: checks
     uses: ./.github/workflows/ios.yml
+    with:
+      release-build: true
 
   publish:
     needs: [plan, checks, packages, ios]

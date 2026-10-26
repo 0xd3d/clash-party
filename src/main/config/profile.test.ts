@@ -6,6 +6,8 @@ import { addProfileUpdater } from '../core/profileUpdater'
 import { getOverrideConfig, updateOverrideConfig } from './override'
 import {
   setProfileStr,
+  setProfileTunnels,
+  getProfile,
   parseProfileContent,
   addProfileItem,
   createProfile,
@@ -39,7 +41,9 @@ const mocks = vi.hoisted(() => ({
   generateProfile: vi.fn(),
   hotReload: vi.fn(),
   restartCore: vi.fn(),
-  yamlMaxAliasCount: 100
+  yamlMaxAliasCount: 100,
+  operationMode: 'standard',
+  beforeRemove: vi.fn()
 }))
 
 vi.mock('electron', () => ({ app: { getVersion: () => '2.0.0' } }))
@@ -48,6 +52,10 @@ vi.mock('fs/promises', async (importOriginal) => {
   const readFile = orig.readFile as (p: string, o?: unknown) => Promise<unknown>
   return {
     ...orig,
+    rm: async (...args: Parameters<typeof orig.rm>) => {
+      await mocks.beforeRemove(String(args[0]))
+      return orig.rm(...args)
+    },
     readFile: async (p: string, o?: unknown) => {
       const r = await readFile(p, o)
       await mocks.afterRead(p)
@@ -118,6 +126,7 @@ vi.mock('./app', () => ({
   getAppConfig: () =>
     Promise.resolve({
       core: 'mihomo',
+      operationMode: mocks.operationMode,
       subscriptionTimeout: 30000,
       userAgent: 'mihomo.party/v2.0.0 (clash.meta)',
       yamlMaxAliasCount: mocks.yamlMaxAliasCount
@@ -171,6 +180,8 @@ beforeEach(async () => {
   mocks.checkProfileConfig.mockResolvedValue(undefined)
   mocks.hotReload.mockResolvedValue(undefined)
   mocks.yamlMaxAliasCount = 100
+  mocks.operationMode = 'standard'
+  mocks.beforeRemove.mockReset()
   // the plugin record the schedule is read from at write time
   mocks.getPluginItem.mockResolvedValue({ id: 'pg', interval: 60, autoUpdate: true })
   // the module caches must match the freshly written files (all real writes go through the queue and keep them in sync)
@@ -766,6 +777,119 @@ describe.skipIf(!['darwin', 'win32'].includes(process.platform))(
         name: 'Unified'
       })
       expect(readFileSync(join(testDir, 'profiles', `${result.id}.yaml`), 'utf8')).toBe(unified)
+    })
+  }
+)
+
+vi.mock('../simple/store', () => ({ getSimpleState: async () => ({ published: { sources: [] } }) }))
+
+describe('ordinary JSON and companion cleanup regressions', () => {
+  it('allows ordinary provider formats in simple-mode JSON without migrating the source', async () => {
+    mocks.operationMode = 'simple'
+    const source = JSON.stringify({
+      proxies: [],
+      'rule-providers': { cn: { type: 'http', behavior: 'domain', format: 'mrs' } },
+      rules: ['MATCH,DIRECT']
+    })
+    await setProfileStr('remote', source)
+    expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(source)
+    expect(existsSync(join(testDir, 'profiles', 'remote.yaml.previous'))).toBe(false)
+  })
+  it('keeps the profile retryable if its previous credentials cannot be removed', async () => {
+    const previous = join(testDir, 'profiles', 'remote.yaml.previous')
+    writeFileSync(previous, oldProfile)
+    mocks.beforeRemove.mockImplementation(async (path) => {
+      if (path === previous) throw Object.assign(new Error('permission denied'), { code: 'EACCES' })
+    })
+    await expect(removeProfileItem('remote')).rejects.toThrow('permission denied')
+    expect(await getProfileItem('remote')).toBeDefined()
+    expect(existsSync(previous)).toBe(true)
+    expect(existsSync(join(testDir, 'profiles', 'remote.yaml'))).toBe(true)
+    mocks.beforeRemove.mockReset()
+    await removeProfileItem('remote')
+    expect(await getProfileItem('remote')).toBeUndefined()
+    expect(existsSync(previous)).toBe(false)
+  })
+  it('preserves ordinary YAML content when editing or clearing tunnels', async () => {
+    const original = await getProfile('remote')
+    await setProfileTunnels('remote', [
+      { network: ['tcp'], address: '127.0.0.1:12345', target: 'example.com:443' }
+    ])
+    expect((await getProfile('remote')).proxies).toEqual(original.proxies)
+    expect((await getProfile('remote')).tunnels).toHaveLength(1)
+    await setProfileTunnels('remote', [])
+    expect(await getProfile('remote')).toEqual(original)
+  })
+})
+
+describe.skipIf(!['darwin', 'win32'].includes(process.platform))(
+  'shared-profile editor round trips',
+  () => {
+    const source = readFileSync('examples/unified-profile.json', 'utf8')
+    const tunnels = [
+      { network: ['tcp'], address: '127.0.0.1:12345', target: 'example.com:443', proxy: 'Overseas' }
+    ]
+    it('exposes compiled rules and groups to both editors and keeps local tunnels out of the shared source', async () => {
+      const envelope = JSON.parse(source)
+      envelope.rules.splice(0, 0, {
+        rule: 'PROCESS-NAME,Example.exe,DIRECT',
+        platforms: ['windows']
+      })
+      const raw = JSON.stringify(envelope)
+      await setProfileStr('remote', raw)
+      const before = await getProfile('remote')
+      expect(before['proxy-groups']).toMatchObject([{ name: 'Overseas' }])
+      expect(before.rules?.every((rule) => typeof rule === 'string')).toBe(true)
+      expect(
+        (before.rules as unknown as string[]).includes('PROCESS-NAME,Example.exe,DIRECT')
+      ).toBe(process.platform === 'win32')
+      await setProfileTunnels('remote', tunnels)
+      expect(await getProfile('remote')).toEqual({ ...before, tunnels })
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(raw)
+      expect(mocks.generateProfile).toHaveBeenLastCalledWith(
+        undefined,
+        expect.objectContaining({ baseProfile: { ...before, tunnels } })
+      )
+      const refreshed = JSON.stringify({ ...JSON.parse(raw), revision: 'updated-source' })
+      await setProfileStr('remote', refreshed)
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(refreshed)
+      expect((await getProfile('remote')).tunnels).toEqual(tunnels)
+      await setProfileTunnels('remote', [])
+      expect((await getProfile('remote')).tunnels).toEqual([])
+      await removeProfileItem('remote')
+      for (const suffix of ['', '.previous', '.local.yaml'])
+        expect(existsSync(join(testDir, 'profiles', 'remote.yaml' + suffix))).toBe(false)
+    })
+    it('leaves source and local settings intact when tunnel validation fails', async () => {
+      await setProfileStr('remote', source)
+      await setProfileTunnels('remote', tunnels)
+      const previous = readFileSync(join(testDir, 'profiles', 'remote.yaml.local.yaml'), 'utf8')
+      mocks.checkProfileConfig.mockRejectedValueOnce(new Error('invalid tunnel'))
+      await expect(setProfileTunnels('remote', [])).rejects.toThrow('invalid tunnel')
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml.local.yaml'), 'utf8')).toBe(
+        previous
+      )
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(source)
+    })
+    it.each([false, true])(
+      'restores local settings when activation fails (existing=%s)',
+      async (existing) => {
+        await setProfileStr('remote', source)
+        if (existing) await setProfileTunnels('remote', tunnels)
+        mocks.hotReload.mockRejectedValueOnce(new Error('reload failed'))
+        mocks.restartCore.mockRejectedValueOnce(new Error('restart failed'))
+        await expect(setProfileTunnels('remote', [])).rejects.toThrow('restart failed')
+        expect((await getProfile('remote')).tunnels).toEqual(existing ? tunnels : undefined)
+        expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(source)
+      }
+    )
+    it('does not allow local listener settings to change DNS or routing policy', async () => {
+      await setProfileStr('remote', source)
+      writeFileSync(
+        join(testDir, 'profiles', 'remote.yaml.local.yaml'),
+        'tunnels: []\ndns: {nameserver: [192.0.2.53]}'
+      )
+      await expect(getProfile('remote')).rejects.toThrow('Invalid local profile settings')
     })
   }
 )

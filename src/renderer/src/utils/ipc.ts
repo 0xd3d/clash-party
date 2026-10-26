@@ -84,6 +84,8 @@ interface IpcApi {
   getCurrentProfileItem: () => Promise<IProfileItem>
   getProfileItem: (id: string | undefined) => Promise<IProfileItem>
   getProfileStr: (id: string) => Promise<string>
+  getProfile: (id: string) => Promise<IMihomoConfig>
+  setProfileTunnels: (id: string, tunnels: unknown[]) => Promise<void>
   setProfileStr: (id: string, str: string) => Promise<void>
   addProfileItem: (
     item: Partial<IProfileItem>,
@@ -343,6 +345,8 @@ export const {
   getCurrentProfileItem,
   getProfileItem,
   getProfileStr,
+  getProfile,
+  setProfileTunnels,
   setProfileStr,
   addProfileItem,
   removeProfileItem,

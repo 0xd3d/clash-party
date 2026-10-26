@@ -133,3 +133,23 @@ describe('monorepo package boundary', () => {
     ).not.toThrow()
   })
 })
+
+describe('mobile workflow concurrency boundaries', () => {
+  it('never cancels an immutable release dependency and avoids duplicate push builds', () => {
+    const ios = parse(readFileSync('.github/workflows/ios.yml', 'utf8'))
+    const release = parse(readFileSync('.github/workflows/build.yml', 'utf8'))
+    expect(ios.on.push).toBeUndefined()
+    expect(ios.on.pull_request).toBeDefined()
+    expect(ios.on.workflow_dispatch).toBeDefined()
+    expect(release.jobs.ios.with['release-build']).toBe(true)
+    expect(ios.on.workflow_call.inputs['release-build']).toMatchObject({
+      type: 'boolean',
+      default: false
+    })
+    expect(ios.concurrency.group).toBe(
+      'ios-source-${{ inputs.release-build && github.run_id || github.ref }}'
+    )
+    expect(ios.concurrency['cancel-in-progress']).toBe('${{ !inputs.release-build }}')
+    expect(release.jobs.publish.needs).toContain('ios')
+  })
+})
