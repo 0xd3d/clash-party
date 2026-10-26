@@ -59,7 +59,7 @@ try {
   $action.WorkingDirectory = [IO.Path]::GetDirectoryName($action.Path)
   # TASK_CREATE | TASK_DONT_ADD_PRINCIPAL_ACE. Never replace an existing task, and restrict
   # running/modifying this elevated launcher to administrators and SYSTEM.
-  $task = $folder.RegisterTaskDefinition($name, 18, $definition, $identity.User.Value, $null, 3, 'D:P(A;;GA;;;SY)(A;;GA;;;BA)')
+  $task = $folder.RegisterTaskDefinition($name, $definition, 18, $identity.User.Value, $null, 3, 'D:P(A;;GA;;;SY)(A;;GA;;;BA)')
   $created = $true
   $running = $task.RunEx($null, 4, $session, $null)
   $deadline = [DateTime]::UtcNow.AddSeconds(12)

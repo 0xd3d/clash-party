@@ -15,7 +15,7 @@ describe('temporary Windows guard task', () => {
     expect(script).not.toContain(helper)
     expect(script).toContain(Buffer.from(helper, 'utf8').toString('base64'))
     expect(script).toContain("$action.Arguments = 'start'")
-    expect(script).toContain('RegisterTaskDefinition($name, 18,')
+    expect(script).toContain('RegisterTaskDefinition($name, $definition, 18,')
     expect(script).toContain('$definition.Principal.LogonType = 3')
     expect(script).toContain('$task.RunEx($null, 4, $session, $null)')
     expect(script).toContain('$folder.DeleteTask($name, 0)')
