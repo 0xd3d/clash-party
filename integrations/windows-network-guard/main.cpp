@@ -2,6 +2,7 @@
 #include <winsock2.h>
 #include <ws2ipdef.h>
 #include <windows.h>
+#include <tlhelp32.h>
 #include <initguid.h>
 #include <fwpmu.h>
 #include <iphlpapi.h>
@@ -128,6 +129,62 @@ std::wstring elevatedUser(HANDLE process) {
   const std::wstring result(text);
   LocalFree(text);
   return result;
+}
+// The WMI provider can retain an OS-owned quota Job even when breakaway was requested.
+// A Job-free direct launch and a verified service-origin launch are different lifetimes.
+// Never trust a command flag, process basename or caller-supplied PID as provenance.
+DWORD verifyLocalWmiCreator() {
+  Handle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+  handleCheck(snapshot, "Snapshot guard creator");
+  PROCESSENTRY32W entry{};
+  entry.dwSize = sizeof(entry);
+  DWORD parentPid = 0;
+  if (!Process32FirstW(snapshot.value, &entry)) winCheck(GetLastError(), "Read guard creator");
+  do {
+    if (entry.th32ProcessID == GetCurrentProcessId()) {
+      parentPid = entry.th32ParentProcessID;
+      break;
+    }
+  } while (Process32NextW(snapshot.value, &entry));
+  ng::require(parentPid != 0, "Local WMI creator is unconfirmed");
+  Handle parent(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, parentPid));
+  handleCheck(parent, "Open local WMI creator");
+  ng::require(WaitForSingleObject(parent.value, 0) == WAIT_TIMEOUT, "Local WMI creator has exited");
+  FILETIME parentCreated{}, childCreated{}, exited{}, kernel{}, user{};
+  if (!GetProcessTimes(parent.value, &parentCreated, &exited, &kernel, &user) ||
+      !GetProcessTimes(GetCurrentProcess(), &childCreated, &exited, &kernel, &user))
+    winCheck(GetLastError(), "Read creator lifetime");
+  ng::require(CompareFileTime(&parentCreated, &childCreated) < 0, "Local WMI creator PID was reused");
+  std::wstring system(32768, L'\0');
+  const auto length = GetSystemDirectoryW(system.data(), static_cast<UINT>(system.size()));
+  ng::require(length > 0 && length < system.size(), "Cannot resolve Windows system directory");
+  system.resize(length);
+  ng::require(equalPath(processPath(parent.value), canonicalPath(system + L"\\wbem\\WmiPrvSE.exe")),
+              "Guard broker creator is not the Windows system WMI provider");
+  DWORD session = 0;
+  if (!ProcessIdToSessionId(parentPid, &session)) winCheck(GetLastError(), "Read WMI creator session");
+  ng::require(session == 0, "WMI creator is not in the Windows service session");
+  Handle token;
+  if (!OpenProcessToken(parent.value, TOKEN_QUERY, &token.value)) winCheck(GetLastError(), "Read WMI creator token");
+  DWORD size = 0;
+  GetTokenInformation(token.value, TokenUser, nullptr, 0, &size);
+  ng::require(size > 0 && size <= 65536, "Invalid WMI creator identity size");
+  std::vector<std::uint8_t> storage(size);
+  if (!GetTokenInformation(token.value, TokenUser, storage.data(), size, &size))
+    winCheck(GetLastError(), "Read WMI creator identity");
+  const auto sid = reinterpret_cast<TOKEN_USER*>(storage.data())->User.Sid;
+  ng::require(IsWellKnownSid(sid, WinLocalSystemSid) || IsWellKnownSid(sid, WinLocalServiceSid) ||
+                  IsWellKnownSid(sid, WinNetworkServiceSid),
+              "WMI creator does not have a built-in service identity");
+  return parentPid;
+}
+struct LaunchOrigin { bool broker = false; bool inJob = false; DWORD creator = 0; };
+LaunchOrigin verifyLaunchOrigin(bool broker) {
+  BOOL inJob = FALSE;
+  if (!IsProcessInJob(GetCurrentProcess(), nullptr, &inJob)) winCheck(GetLastError(), "Inspect process job");
+  if (broker) return {true, inJob != FALSE, verifyLocalWmiCreator()};
+  ng::require(!inJob, "Guard must be launched as an independent process outside an inherited Windows job");
+  return {};
 }
 DWORD currentSession() {
   DWORD session = 0;
@@ -459,7 +516,7 @@ class Guard {
     filters_.clear();
     active_.reset();
   }
-  std::string status() const {
+  std::string status(const LaunchOrigin& origin) const {
     // A BFE restart or an administrator removing our rules must not leave a stale active report.
     for (const auto id : filters_) verifyFilter(id);
     std::ostringstream out;
@@ -472,7 +529,10 @@ class Guard {
     if (active_ && active_->tun) out << json(std::to_string(active_->tun->luid.Value)); else out << "null";
     out << ",\"tunIndex\":";
     if (active_ && active_->tun) out << active_->tun->index; else out << "null";
-    out << ",\"filterCount\":" << filters_.size() << '}';
+    out << ",\"filterCount\":" << filters_.size()
+        << ",\"launchOrigin\":" << json(origin.broker ? "local-wmi" : "job-free")
+        << ",\"jobMember\":" << (origin.inJob ? "true" : "false")
+        << ",\"creatorPid\":" << origin.creator << '}';
     return out.str();
   }
 };
@@ -497,11 +557,8 @@ void connect(HANDLE pipe) {
     if (!GetOverlappedResult(pipe, &overlapped, &transferred, FALSE)) winCheck(GetLastError(), "Complete local connection");
   }
 }
-void serve(const std::wstring& sid) {
-  // A process in an inheritable kill-on-close job would not survive an app crash.
-  BOOL inJob = FALSE;
-  if (!IsProcessInJob(GetCurrentProcess(), nullptr, &inJob)) winCheck(GetLastError(), "Inspect process job");
-  ng::require(!inJob, "Guard must be launched as an independent process outside an inherited Windows job");
+void serve(const std::wstring& sid, bool broker = false) {
+  const auto origin = verifyLaunchOrigin(broker);
   // Filtering is machine-wide. Refuse a second session/user owner rather than install two
   // incompatible global policies whose respective core exceptions would block each other.
   PSECURITY_DESCRIPTOR ownerSecurity = nullptr;
@@ -549,7 +606,7 @@ void serve(const std::wstring& sid) {
       if (request.operation == ng::Operation::Arm || request.operation == ng::Operation::Acquire)
         guard.replace(prepare(request, sid));
       if (request.operation == ng::Operation::Release) { guard.release(); shouldExit = true; }
-      response = "0" + guard.status();
+      response = "0" + guard.status(origin);
     } catch (const std::exception& error) {
       response = "1" + errorJson(error);
     }
@@ -648,6 +705,7 @@ int wmain(int argc, wchar_t** argv) {
     const auto sid = elevatedUser(GetCurrentProcess());
     if (argc == 2 && std::wstring(argv[1]) == L"start") return start(sid);
     if (argc == 2 && std::wstring(argv[1]) == L"serve") { serve(sid); return 0; }
+    if (argc == 2 && std::wstring(argv[1]) == L"serve-wmi") { serve(sid, true); return 0; }
     return client(arguments(argc, argv), sid);
   } catch (const std::exception& error) {
     std::cout << errorJson(error) << '\n';

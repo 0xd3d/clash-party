@@ -2,14 +2,15 @@
 
 This is a fixed-purpose, user-mode Windows Filtering Platform (WFP) owner. It is built with the Windows SDK for native x64 and ARM64. It is not a kernel driver, a Windows service, a browser extension, or a permanent firewall policy. Building and `--self-test` do not install rules or require elevation.
 
-The feature is opt-in. Nothing in this source or build process changes a currently running application or host network. Runtime commands require an elevated process under the same user and Windows session. The app must launch the helper independently with `start`, then explicitly arm it before starting the core.
+The feature is opt-in. Nothing in this source or build process changes a currently running application or host network. Runtime commands require an elevated process under the same user and Windows session. The app must launch the helper independently with `start` or the verified local WMI fallback, then explicitly arm it before starting the core.
 
 ## Fixed CLI contract
 
 `party.mihomo.network-guard.exe` supports only:
 
-- `start`: launch this exact executable with `CreateProcessW` and explicit job breakaway, support explicit/silent breakaway and verify the suspended child belongs to no job, then resume and confirm readiness through authenticated IPC. Only startup standard handles are inherited. A host job prohibiting breakaway is an explicit native startup error. The desktop app can then use the local WMI provider with explicit `CREATE_BREAKAWAY_FROM_JOB` to run this exact helper's fixed `serve` command outside the app Job; `serve` must still pass the unchanged all-ancestor Job check. No service, policy relaxation or existing-guard termination is used. Native startup errors are returned directly.
+- `start`: launch this exact executable with `CreateProcessW` and explicit job breakaway, support explicit/silent breakaway and verify the suspended child belongs to no job, then resume and confirm readiness through authenticated IPC. Only startup standard handles are inherited. A host job prohibiting breakaway is an explicit native startup error. The desktop app can then use the local WMI provider with explicit `CREATE_BREAKAWAY_FROM_JOB` to run this exact helper's fixed `serve-wmi` command outside the app Job. That separate entry point verifies its actual system-service creator; ordinary `serve` retains its all-ancestor Job check. No service, policy relaxation or existing-guard termination is used. Native startup errors are returned directly.
 - `serve`: run the foreground server (used internally by `start`), emit `READY` after reserving ownership and creating the command pipe. A helper inheriting a Windows job refuses to serve instead of claiming crash survival. Running `serve` directly from Windows Terminal may therefore fail; use `start`.
+- `serve-wmi`: internal WMI-only server entry point. Before opening IPC it verifies the actual creator PID, held live process identity and creation time, canonical Windows `System32/wbem/WmiPrvSE.exe` image, service session 0 and built-in SYSTEM/LocalService/NetworkService identity. A flag, matching basename or ordinary parent cannot opt out of the Job check. The guard itself remains the same elevated interactive user; it does not become SYSTEM.
 - `status`: report the existing server's state. Only an absent pipe means inactive; authorization, identity, busy and timeout failures return an error.
 - `arm --core-path <absolute exe> --tun-name <applied virtual alias>`: install the guard before core startup. The PID and TUN identity are null. No interface permit is installed, even if a matching interface already exists; public egress remains blocked until verified acquisition.
 - `acquire --core-path <absolute exe> --core-pid <pid> --tun-name <applied virtual alias>`: verify a live elevated core process and the actual Wintun adapter, then atomically replace the session's rules and status.
@@ -29,7 +30,10 @@ Successful status/arm/acquire/release responses are one JSON object on stdout:
   "tunName": "Configured Virtual Alias",
   "tunLuid": "123456",
   "tunIndex": 20,
-  "filterCount": 48
+  "filterCount": 48,
+  "launchOrigin": "local-wmi",
+  "jobMember": true,
+  "creatorPid": 300
 }
 ```
 
@@ -43,9 +47,9 @@ TUN lookup uses the configured alias, obtains its actual LUID/index, requires `I
 
 ## Desktop fallback for restrictive parent Jobs
 
-When native `start` specifically rejects inherited Job ownership, the app uses the local WMI provider (`\\.\root\cimv2`) and `Win32_ProcessStartup` with `CREATE_BREAKAWAY_FROM_JOB | CREATE_NO_WINDOW`. It starts only the installed helper's fixed `serve` command as the current elevated user. There are no remote WMI calls, scheduled tasks, stored passwords, SYSTEM-account execution, permanent services, or profile-supplied arguments. The native command still rejects every inherited Job; no check or authentication rule is relaxed.
+When native `start` specifically rejects inherited Job ownership, the app uses the local WMI provider (`\\.\root\cimv2`) and `Win32_ProcessStartup` with `CREATE_BREAKAWAY_FROM_JOB | CREATE_NO_WINDOW`. It starts only the installed helper's fixed `serve-wmi` command as the current elevated user. There are no remote WMI calls, scheduled tasks, stored passwords, SYSTEM-account execution, permanent services, or profile-supplied arguments. Windows can retain the provider quota Job despite breakaway. `serve-wmi` permits this service-origin lifetime only after native creator verification, while direct `start`/`serve` still reject inherited Jobs. No generic “allow Job” option exists, and IPC authentication and WFP filtering are unchanged.
 
-Creation success is not readiness. The broker obtains authenticated native `status` and requires the server PID to match the newly created process, including the existing exact-path, elevated SID and session checks. The app rechecks that same PID before arming. Timeouts and identity mismatches fail closed without killing an existing guard or releasing filters. App/core errors are written to the application log and shown in the UI. CI starts only an unarmed helper, verifies it survives its launcher exiting, then recovers that fixture; no WFP session or network settings are changed.
+`launchOrigin`, `jobMember` and `creatorPid` in live native status expose the verified startup context for diagnosis. An early helper exit is reported separately from a readiness timeout. Creation success is not readiness. The broker obtains authenticated native `status` and requires the server PID to match the newly created process, including the existing exact-path, elevated SID and session checks. The app rechecks that same PID before arming. Timeouts and identity mismatches fail closed without killing an existing guard or releasing filters. App/core errors are written to the application log and shown in the UI. CI rejects both an ordinary inherited-Job launch and a fake `WmiPrvSE.exe` outside the system directory. It then starts an unarmed helper through real WMI, forcibly closes the launcher’s private no-breakaway, kill-on-close Job, and verifies authenticated helper status afterwards. Both explicit breakaway and retained provider-Job cases are exercised. It recovers only the unarmed fixture; no WFP session or network settings are changed.
 
 Reference: [Win32_Process.Create](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/create-method-in-class-win32-process) and [Win32_ProcessStartup creation flags](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-processstartup). Task Scheduler was tested but rejected because it can retain a restrictive parent Job itself.
 

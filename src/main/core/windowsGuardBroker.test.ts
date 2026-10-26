@@ -6,7 +6,7 @@ import {
 } from './windowsGuardBroker'
 
 describe('local Windows guard broker', () => {
-  it('uses local WMI with explicit breakaway and only the fixed native serve command', () => {
+  it('uses local WMI with explicit breakaway and only the fixed native broker command', () => {
     const helper = String.raw`C:\Users\It's $(example) & files\resources\files\party.mihomo.network-guard.exe`
     const command = windowsGuardBrokerCommand(helper)
     const script = Buffer.from(command.args.at(-1) ?? '', 'base64').toString('utf16le')
@@ -15,8 +15,10 @@ describe('local Windows guard broker', () => {
     expect(script).toContain(Buffer.from(helper, 'utf8').toString('base64'))
     expect(script).toContain(String.raw`[wmiclass]'\\.\root\cimv2:Win32_Process'`)
     expect(script).toContain('16777216 -bor 134217728')
-    expect(script).toContain(`.Create(('"' + $exe + '" serve')`)
+    expect(script).toContain(`.Create(('"' + $exe + '" serve-wmi')`)
     expect(script).toContain('$state.guardPid -ne $result.ProcessId')
+    expect(script).toContain("$state.launchOrigin -ne 'local-wmi'")
+    expect(script).toContain('$process.HasExited')
     expect(script).not.toMatch(
       /Schedule.Service|RegisterTask|Stop-Process|ExecutionPolicy|netsh|recover|Invoke-Expression/
     )

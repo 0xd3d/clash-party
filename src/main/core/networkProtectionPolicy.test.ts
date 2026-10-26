@@ -117,6 +117,32 @@ describe('protected runtime policy', () => {
     value.tun = { enable: false }
     expect(() => applyNetworkProtectionPolicy(value, enabled)).toThrow('enabled TUN')
   })
+  it('reports an unavailable saved target without falling back to a different profile exit', () => {
+    const value = profile()
+    const original = structuredClone(value)
+    expect(() => protectionTarget(value, 'Previous profile')).toThrow(
+      '"Previous profile" references missing proxy or group "Previous profile"'
+    )
+    expect(value).toEqual(original)
+    expect(protectionTarget(value)).toBe('Protected')
+  })
+  it('identifies missing nested members and duplicate names rather than reporting empty rules', () => {
+    const value = profile()
+    value['proxy-groups'] = [
+      { name: 'Protected', type: 'select', proxies: ['Deleted node'] }
+    ] as unknown as []
+    expect(() => protectionTarget(value)).toThrow(
+      '"Protected" references missing proxy or group "Deleted node"'
+    )
+    value['proxy-groups'] = [
+      { name: 'Protected', type: 'select', proxies: ['Node'] }
+    ] as unknown as []
+    value.proxies = [
+      ...(value.proxies ?? []),
+      { name: 'Node', type: 'socks5', server: '198.51.100.20', port: 1080 }
+    ] as unknown as []
+    expect(() => protectionTarget(value)).toThrow('duplicate proxy/group name "Node"')
+  })
   it('rejects direct fallback, provider membership and recursive groups', () => {
     const value = profile()
     value['proxy-groups'] = [{ name: 'Protected', proxies: ['Node', 'DIRECT'] }] as unknown as []

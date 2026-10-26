@@ -114,9 +114,9 @@ inline Process independent(const std::wstring& executable, const wchar_t* comman
   return child;
 }
 
-inline std::string startupLine(Process& child) {
+inline std::string startupLine(Process& child, ULONGLONG timeoutMs = 6000) {
   std::string output;
-  const auto deadline = GetTickCount64() + 6000;
+  const auto deadline = GetTickCount64() + timeoutMs;
   for (;;) {
     DWORD available = 0;
     if (!PeekNamedPipe(child.output.value, nullptr, 0, nullptr, &available, nullptr)) {
@@ -139,7 +139,7 @@ inline std::string startupLine(Process& child) {
     }
     if (GetTickCount64() >= deadline)
       // Never terminate a running guard on timeout: another client may already have armed it.
-      throw std::runtime_error("Independent guard did not confirm startup within 6 seconds; retry status");
+      throw std::runtime_error("Independent guard did not confirm startup before deadline; retry status");
     Sleep(20);
   }
 }

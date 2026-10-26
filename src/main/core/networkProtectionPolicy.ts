@@ -80,8 +80,14 @@ export function protectionTarget(profile: Partial<IMihomoConfig>, selected = '')
     )
       throw new Error('Protection target has a direct fallback, unsupported target or cycle')
     const matches = entries.filter((e) => e.name === target)
-    if (matches.length !== 1)
-      throw new Error('Protection target must resolve to one explicit proxy or group')
+    if (matches.length === 0)
+      throw new Error(
+        `Protection target ${JSON.stringify(name)} references missing proxy or group ${JSON.stringify(target)}. Select a proxy-only target present in the active profile, or restore the missing group member.`
+      )
+    if (matches.length > 1)
+      throw new Error(
+        `Protection target ${JSON.stringify(name)} contains duplicate proxy/group name ${JSON.stringify(target)}. Give those entries unique names before starting protection.`
+      )
     const entry = matches[0]
     if (
       entry.use?.length ||

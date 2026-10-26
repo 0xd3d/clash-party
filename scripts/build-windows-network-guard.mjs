@@ -132,6 +132,15 @@ export function buildWindowsNetworkGuard(arch = process.env.npm_config_arch || p
     !['independent', 'restricted-parent-job'].includes(launchResult.hostEnvironment)
   )
     throw new Error('Native independent-launch regression failed')
+  const brokerFixture = path.join(path.dirname(output), 'broker-lifetime-selftest.exe')
+  const brokerArgs = windowsGuardCompilerArguments(arch, brokerFixture).map((arg) => {
+    if (arg === path.resolve('integrations/windows-network-guard/main.cpp'))
+      return path.resolve('integrations/windows-network-guard/broker-lifetime-selftest.cpp')
+    if (arg.startsWith('/Fo:'))
+      return `/Fo:${path.join(path.dirname(output), 'broker-selftest.obj')}`
+    return arg
+  })
+  execFileSync('cl.exe', brokerArgs, { env, stdio: 'inherit' })
   console.log(
     `Built Windows ${arch} guard; ${result.cases} policy and ${launchResult.cases} process/job checks passed.`
   )

@@ -15,9 +15,9 @@ export function windowsGuardBrokerCommand(
   if (!/^[A-Za-z]:\\/.test(systemRoot) || /["\r\n]/.test(systemRoot))
     throw new Error('Invalid Windows system directory')
   const encodedPath = Buffer.from(helper, 'utf8').toString('base64')
-  // Win32_ProcessStartup's explicit breakaway leaves the WMI provider's Job as well as
-  // Electron's restrictive parent Job. `serve` still rejects membership in ANY Job.
-  // Native status authenticates the exact helper path, elevated SID and Windows session.
+  // WMI separates the server from Electron's Job. Windows may retain a service quota Job;
+  // serve-wmi independently verifies its actual system WMI creator before opening IPC.
+  // Native status still authenticates the exact helper path, elevated SID and session.
   const script = String.raw`
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -34,8 +34,10 @@ try {
   $startup = ([wmiclass]'\\.\root\cimv2:Win32_ProcessStartup').CreateInstance()
   $startup.CreateFlags = 16777216 -bor 134217728
   $startup.ShowWindow = 0
-  $result = ([wmiclass]'\\.\root\cimv2:Win32_Process').Create(('"' + $exe + '" serve'), [IO.Path]::GetDirectoryName($exe), $startup)
+  $result = ([wmiclass]'\\.\root\cimv2:Win32_Process').Create(('"' + $exe + '" serve-wmi'), [IO.Path]::GetDirectoryName($exe), $startup)
   if ($result.ReturnValue -ne 0 -or !$result.ProcessId) { throw ('Local WMI guard creation failed: ' + $result.ReturnValue) }
+  $process = [Diagnostics.Process]::GetProcessById($result.ProcessId)
+  $null = $process.Handle # Keep the newly created process identity, including its exit code.
   $deadline = [DateTime]::UtcNow.AddSeconds(8)
   do {
     $raw = (& $exe status | Out-String)
@@ -46,10 +48,12 @@ try {
     $state = $raw | ConvertFrom-Json
     if ($state.protocolVersion -ne 1) { throw 'Native guard protocol is unconfirmed' }
     if ($state.guardPid) {
+      if ($state.launchOrigin -ne 'local-wmi') { throw 'Native guard did not verify its system WMI creator; check that the application and helper versions match' }
       if ($state.guardPid -ne $result.ProcessId) { throw 'Another guard owns the session; recheck existing protection before retrying' }
       [Console]::WriteLine((@{ protocolVersion = 1; launchMethod = 'local-wmi'; processId = $result.ProcessId; guardPid = $state.guardPid } | ConvertTo-Json -Compress))
       exit 0
     }
+    if ($process.HasExited) { throw ('Local WMI guard exited before readiness (code ' + $process.ExitCode + '); no protection was started') }
     if ([DateTime]::UtcNow -ge $deadline) { throw 'Local WMI guard did not confirm readiness; recheck status before retrying' }
     Start-Sleep -Milliseconds 100
   } while ($true)
