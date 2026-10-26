@@ -21,6 +21,7 @@ export function windowsGuardTaskCommand(
   // No triggers, saved password, SYSTEM identity, permanent service, WFP changes or recovery.
   const script = String.raw`
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $name = 'ClashParty-NetworkGuard-${taskId}'
 $created = $false
@@ -65,10 +66,18 @@ try {
   $deadline = [DateTime]::UtcNow.AddSeconds(12)
   do {
     Start-Sleep -Milliseconds 100
-    $running.Refresh()
+    try { $running.Refresh() }
+    catch {
+      $nativeError = $_.Exception
+      while ($nativeError.InnerException) { $nativeError = $nativeError.InnerException }
+      # SCHED_E_TASK_NOT_RUNNING means the short launcher already exited. Only this specific
+      # completion race is accepted; its exit code and authenticated guard are checked next.
+      if ($nativeError.HResult -ne -2147216629) { throw }
+      break
+    }
     if ([DateTime]::UtcNow -gt $deadline) { throw 'Task Scheduler guard launch timed out; retry status before starting again' }
   } while ($running.State -eq 2 -or $running.State -eq 4)
-  $taskResult = [long]$task.LastTaskResult
+  $taskResult = [long]$folder.GetTask($name).LastTaskResult
   if ($taskResult -ne 0) { throw ('Task Scheduler guard launcher exited with code ' + $taskResult) }
 } catch {
   $reason = $_.Exception.Message
