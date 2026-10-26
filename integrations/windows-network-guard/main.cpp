@@ -7,7 +7,6 @@
 #include <fwpmu.h>
 #include <iphlpapi.h>
 #include <setupapi.h>
-#include <devguid.h>
 #include <sddl.h>
 #include <rpc.h>
 #include <objbase.h>
