@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   NetworkGuardSession,
+  armWindowsNetworkGuard,
   parseTrafficGuardStatus,
   type NetworkGuardAdapter,
   type NetworkGuardStatus
@@ -153,5 +154,60 @@ describe('native traffic status validation', () => {
         'darwin'
       )
     ).toThrow('ownership')
+  })
+})
+
+describe('Windows independent helper startup', () => {
+  const absent = { active: false, corePid: null, guardPid: null }
+  const ready = { active: false, corePid: null, guardPid: 101 }
+  const armed = { active: true, corePid: null, guardPid: 101 }
+  it('confirms a native independent server before arming exactly once', async () => {
+    const call = vi
+      .fn()
+      .mockResolvedValueOnce(absent)
+      .mockResolvedValueOnce(ready)
+      .mockResolvedValueOnce(armed)
+    await expect(
+      armWindowsNetworkGuard('C:\\Core App\\mihomo.exe', 'Mihomo', call)
+    ).resolves.toEqual(armed)
+    expect(call.mock.calls.map(([args]) => args)).toEqual([
+      ['status'],
+      ['start'],
+      ['arm', '--core-path', 'C:\\Core App\\mihomo.exe', '--tun-name', 'Mihomo']
+    ])
+  })
+  it('reuses an existing server without spawning or releasing it', async () => {
+    const call = vi.fn().mockResolvedValueOnce(ready).mockResolvedValueOnce(armed)
+    await armWindowsNetworkGuard('/core', 'virtual', call)
+    expect(call.mock.calls.map(([args]) => args[0])).toEqual(['status', 'arm'])
+  })
+  it('preserves the actual native startup reason instead of retrying arm against a missing pipe', async () => {
+    const call = vi
+      .fn()
+      .mockResolvedValueOnce(absent)
+      .mockRejectedValueOnce(
+        new Error('Network protection: parent Windows job must permit breakaway failed (5)')
+      )
+    await expect(armWindowsNetworkGuard('/core', 'virtual', call)).rejects.toThrow(
+      'must permit breakaway'
+    )
+    expect(call.mock.calls.map(([args]) => args[0])).toEqual(['status', 'start'])
+  })
+  it('rejects unconfirmed startup without arming or disabling protection', async () => {
+    const call = vi.fn().mockResolvedValue(absent)
+    await expect(armWindowsNetworkGuard('/core', 'virtual', call)).rejects.toThrow(
+      'startup was not confirmed'
+    )
+    expect(call.mock.calls.map(([args]) => args[0])).toEqual(['status', 'start'])
+  })
+  it('preserves a previous lease when policy replacement fails', async () => {
+    const call = vi
+      .fn()
+      .mockResolvedValueOnce(armed)
+      .mockRejectedValueOnce(new Error('WFP replacement failed'))
+    await expect(armWindowsNetworkGuard('/core', 'virtual', call)).rejects.toThrow(
+      'WFP replacement failed'
+    )
+    expect(call.mock.calls.map(([args]) => args[0])).toEqual(['status', 'arm'])
   })
 })

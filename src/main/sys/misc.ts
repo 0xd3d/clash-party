@@ -13,6 +13,7 @@ import {
   resourcesDir
 } from '../utils/dirs'
 import { checkAdminPrivileges } from '../core/admin'
+import { configureFirewallRules } from './firewall'
 
 export function getFilePath(
   ext: string[],
@@ -81,24 +82,23 @@ export async function openUWPTool(): Promise<void> {
 }
 
 export async function setupFirewall(): Promise<void> {
-  const execPromise = promisify(exec)
-
-  if (process.platform === 'win32') {
-    const rules = [
+  if (process.platform !== 'win32') return
+  const execute = promisify(execFile)
+  const netsh = path.join(process.env.SystemRoot || String.raw`C:\Windows`, 'System32', 'netsh.exe')
+  await configureFirewallRules(
+    [
       { name: 'mihomo', program: mihomoCorePath('mihomo') },
       { name: 'mihomo-alpha', program: mihomoCorePath('mihomo-alpha') },
       { name: 'Mihomo Party', program: exePath() }
-    ]
-    for (const rule of rules) {
-      await execPromise(`netsh advfirewall firewall delete rule name="${rule.name}"`, {
-        shell: 'cmd'
-      }).catch(() => {})
-      await execPromise(
-        `netsh advfirewall firewall add rule name="${rule.name}" dir=in action=allow program="${rule.program}" enable=yes profile=any`,
-        { shell: 'cmd' }
-      )
+    ],
+    {
+      isAdministrator: checkAdminPrivileges,
+      execute: (args) =>
+        execute(netsh, args, { windowsHide: true, timeout: 15000, maxBuffer: 64 * 1024 }),
+      adminRequired: i18next.t('tun.firewall.adminRequired'),
+      commandFailed: i18next.t('tun.firewall.commandFailed')
     }
-  }
+  )
 }
 
 export function setNativeTheme(theme: 'system' | 'light' | 'dark'): void {

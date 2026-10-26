@@ -1,4 +1,4 @@
-import { execFile, spawn } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import path from 'node:path'
 import { app } from 'electron'
@@ -109,34 +109,26 @@ async function invoke(args: string[]): Promise<NetworkGuardStatus> {
   }
 }
 
+export async function armWindowsNetworkGuard(
+  corePath: string,
+  device: string,
+  call: (args: string[]) => Promise<NetworkGuardStatus> = invoke
+): Promise<NetworkGuardStatus> {
+  const status = await call(['status'])
+  if (status.guardPid === null) {
+    // The native launcher explicitly leaves inherited Windows jobs and verifies its child
+    // before resuming it. It returns startup failures directly; never release an old lease.
+    const started = await call(['start'])
+    if (!started.guardPid) throw new Error('Network protection: guard startup was not confirmed')
+  }
+  return call(['arm', '--core-path', corePath, '--tun-name', device])
+}
+
 const nativeAdapter: NetworkGuardAdapter = {
   async arm(corePath, device) {
-    if (process.platform === 'darwin') return invoke(['traffic-arm', device, '--close-old-public'])
-    let status = await invoke(['status'])
-    if (status.guardPid === null) {
-      const server = spawn(windowsHelperPath(), ['serve'], {
-        detached: true,
-        stdio: 'ignore',
-        windowsHide: true
-      })
-      await new Promise<void>((resolve, reject) => {
-        server.once('spawn', resolve)
-        server.once('error', reject)
-      })
-      server.unref()
-      const deadline = Date.now() + 5000
-      for (;;) {
-        try {
-          status = await invoke(['arm', '--core-path', corePath, '--tun-name', device])
-          break
-        } catch (error) {
-          if (Date.now() >= deadline) throw error
-          await new Promise((resolve) => setTimeout(resolve, 100))
-        }
-      }
-      return status
-    }
-    return invoke(['arm', '--core-path', corePath, '--tun-name', device])
+    return process.platform === 'darwin'
+      ? invoke(['traffic-arm', device, '--close-old-public'])
+      : armWindowsNetworkGuard(corePath, device)
   },
   async bind(corePath, corePid, device) {
     return process.platform === 'darwin'

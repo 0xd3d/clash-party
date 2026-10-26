@@ -92,7 +92,7 @@ const RuleCard: React.FC<Props> = (props) => {
               variant="bordered"
               className="mr-2 mt-2"
             >
-              {rules?.rules?.length ?? 0}
+              {rules?.rules?.length ?? '—'}
             </Chip>
           </div>
         </CardBody>

@@ -107,7 +107,30 @@ export function buildWindowsNetworkGuard(arch = process.env.npm_config_arch || p
   const result = JSON.parse(execFileSync(output, ['--self-test'], { encoding: 'utf8' }))
   if (result.protocolVersion !== 1 || result.selfTest !== 'passed' || result.cases < 10)
     throw new Error('Native guard self-test failed')
-  console.log(`Built Windows ${arch} guard; ${result.cases} unprivileged fixture checks passed.`)
+  // The separate fixture executable exercises real Windows job inheritance, explicit breakaway,
+  // parent-job termination and startup error capture. It cannot install filters or start IPC.
+  const launchFixture = path.join(
+    path.dirname(output),
+    'launch fixture',
+    'guard-launch-selftest.exe'
+  )
+  mkdirSync(path.dirname(launchFixture), { recursive: true })
+  const launchArgs = windowsGuardCompilerArguments(arch, launchFixture).map((arg) => {
+    if (arg === path.resolve('integrations/windows-network-guard/main.cpp'))
+      return path.resolve('integrations/windows-network-guard/launch-selftest.cpp')
+    if (arg.startsWith('/Fo:'))
+      return `/Fo:${path.join(path.dirname(output), 'launch-selftest.obj')}`
+    return arg
+  })
+  execFileSync('cl.exe', launchArgs, { env, stdio: 'inherit' })
+  const launchResult = JSON.parse(
+    execFileSync(launchFixture, [], { encoding: 'utf8', timeout: 30000 })
+  )
+  if (launchResult.launchSelfTest !== 'passed' || launchResult.cases !== 4)
+    throw new Error('Native independent-launch regression failed')
+  console.log(
+    `Built Windows ${arch} guard; ${result.cases} policy and ${launchResult.cases} process/job checks passed.`
+  )
   return output
 }
 

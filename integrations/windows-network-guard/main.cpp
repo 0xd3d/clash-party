@@ -19,6 +19,7 @@
 #include <sstream>
 #include <utility>
 #include "policy.h"
+#include "process-launch.h"
 
 namespace fs = std::filesystem;
 namespace ng = network_guard;
@@ -526,6 +527,7 @@ void serve(const std::wstring& sid) {
   LocalFree(security);
   handleCheck(pipe, "Create private local command pipe");
   Guard guard;
+  std::cout << "READY\n" << std::flush;
   for (;;) {
     try {
       connect(pipe.value);
@@ -592,8 +594,25 @@ int client(const ng::Request& request, const std::wstring& sid) {
   return response[0] == '0' ? 0 : 1;
 }
 
+int start(const std::wstring& sid) {
+  auto child = ng::launch::independent(selfPath(), L"serve");
+  const auto line = ng::launch::startupLine(child);
+  if (line != "READY") {
+    // This bounded startup message comes only from our canonical executable. Preserve the
+    // native error JSON instead of hiding it behind an eventual pipe-not-found error.
+    if (line.rfind("{\"protocolVersion\":1,\"error\":", 0) != 0)
+      throw std::runtime_error("Invalid independent guard startup response");
+    std::cout << line << '\n';
+    return 1;
+  }
+  ng::Request status;
+  status.operation = ng::Operation::Status;
+  // Reuse authenticated IPC: READY alone is not proof of a working command pipe.
+  return client(status, sid);
+}
+
 ng::Request arguments(int argc, wchar_t** argv) {
-  ng::require(argc >= 2, "Expected a fixed command: serve, status, arm, acquire, release or recover");
+  ng::require(argc >= 2, "Expected a fixed command: start, serve, status, arm, acquire, release or recover");
   const std::wstring command(argv[1]);
   ng::Request request;
   if (command == L"status") request.operation = ng::Operation::Status;
@@ -627,6 +646,7 @@ int wmain(int argc, wchar_t** argv) {
       return 0;
     }
     const auto sid = elevatedUser(GetCurrentProcess());
+    if (argc == 2 && std::wstring(argv[1]) == L"start") return start(sid);
     if (argc == 2 && std::wstring(argv[1]) == L"serve") { serve(sid); return 0; }
     return client(arguments(argc, argv), sid);
   } catch (const std::exception& error) {

@@ -21,7 +21,7 @@ const ProxyCard: React.FC<Props> = (props) => {
   const { proxyCardStatus = 'col-span-1', disableAnimations = false } = appConfig || {}
   const location = useLocation()
   const match = location.pathname.includes('/proxies')
-  const { groups = [] } = useGroups()
+  const { groups } = useGroups()
   const {
     attributes,
     listeners,
@@ -91,7 +91,7 @@ const ProxyCard: React.FC<Props> = (props) => {
               variant="bordered"
               className="mr-2 mt-2"
             >
-              {groups.length}
+              {groups?.length ?? '—'}
             </Chip>
           </div>
         </CardBody>

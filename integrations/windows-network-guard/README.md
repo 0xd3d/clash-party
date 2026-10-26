@@ -2,13 +2,14 @@
 
 This is a fixed-purpose, user-mode Windows Filtering Platform (WFP) owner. It is built with the Windows SDK for native x64 and ARM64. It is not a kernel driver, a Windows service, a browser extension, or a permanent firewall policy. Building and `--self-test` do not install rules or require elevation.
 
-The feature is opt-in. Nothing in this source or build process changes a currently running application or host network. Runtime commands require an elevated process under the same user and Windows session. The app must launch the helper independently with `serve`, then explicitly arm it before starting the core.
+The feature is opt-in. Nothing in this source or build process changes a currently running application or host network. Runtime commands require an elevated process under the same user and Windows session. The app must launch the helper independently with `start`, then explicitly arm it before starting the core.
 
 ## Fixed CLI contract
 
 `party.mihomo.network-guard.exe` supports only:
 
-- `serve`: run an independent foreground server. The app launches it detached, with no inherited kill-on-close job. A helper inheriting a Windows job refuses to serve instead of claiming crash survival.
+- `start`: launch this exact executable with `CreateProcessW` and explicit job breakaway, support explicit/silent breakaway and verify the suspended child belongs to no job, then resume and confirm readiness through authenticated IPC. Only startup standard handles are inherited. A host job prohibiting breakaway is an explicit startup error; no service, scheduled task, policy relaxation or existing-guard termination is used. Native startup errors are returned directly.
+- `serve`: run the foreground server (used internally by `start`), emit `READY` after reserving ownership and creating the command pipe. A helper inheriting a Windows job refuses to serve instead of claiming crash survival. Running `serve` directly from Windows Terminal may therefore fail; use `start`.
 - `status`: report the existing server's state. Only an absent pipe means inactive; authorization, identity, busy and timeout failures return an error.
 - `arm --core-path <absolute exe> --tun-name <applied virtual alias>`: install the guard before core startup. The PID and TUN identity are null. No interface permit is installed, even if a matching interface already exists; public egress remains blocked until verified acquisition.
 - `acquire --core-path <absolute exe> --core-pid <pid> --tun-name <applied virtual alias>`: verify a live elevated core process and the actual Wintun adapter, then atomically replace the session's rules and status.
@@ -58,7 +59,7 @@ On a matching native Windows x64/ARM64 host with Visual Studio C++ tools and the
 node scripts/build-windows-network-guard.mjs --x64
 ```
 
-Use `--arm64` on ARM64. The script discovers MSVC, compiles with warnings as errors, checks the PE architecture, and runs only `--self-test`. The result is generated under `build/native/windows/<arch>/`; electron-builder copies it only into Windows resources as `files/party.mihomo.network-guard.exe`.
+Use `--arm64` on ARM64. The script discovers MSVC, compiles with warnings as errors, checks the PE architecture, and runs `--self-test` plus a separate unprivileged process-launch fixture. The fixture verifies successful breakaway, survival after the parent job closes, rejection when breakaway is prohibited and startup error preservation. It cannot open WFP or start the real guard. The result is generated under `build/native/windows/<arch>/`; electron-builder copies it only into Windows resources as `files/party.mihomo.network-guard.exe`.
 
 Portable policy fixtures also compile with a C++17 compiler on macOS/Linux. Source checks, successful compilation and self-tests establish neither WFP filter acceptance nor real traffic containment. Privileged Windows VM validation still needs startup/arm, core crash, app crash, adapter replacement, arbitrary-port UDP, IPv6, DNS, LAN, domestic direct/QQ Music and explicit recovery tests. Do not perform those tests on a machine whose active app/network must remain untouched.
 
