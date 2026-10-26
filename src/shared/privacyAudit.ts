@@ -1,13 +1,30 @@
+import {
+  TUN_SCOPE_KEYS,
+  isLocalDestination,
+  ipRange,
+  sameHost,
+  parseAuditRule,
+  publicUDPMatch,
+  type TunRouteOrigin
+} from './privacyRouting'
 export type PrivacyAuditFinding = {
   id: string
   level: 'pass' | 'warning' | 'error' | 'info'
   detail?: string
+  origin?: TunRouteOrigin
+  reason?:
+    | 'inactive'
+    | 'previousConnection'
+    | 'tunnelUnavailable'
+    | 'trafficUnconfirmed'
+    | 'statusUnavailable'
 }
 
 export type PrivacyProtectionReport = {
   platform: NodeJS.Platform
   source: 'applied' | 'unavailable'
   findings: PrivacyAuditFinding[]
+  diagnostics?: { id: string; value: string }[]
 }
 
 type NamedOutbound = {
@@ -16,8 +33,8 @@ type NamedOutbound = {
   proxies?: string[]
   dynamicMembers: boolean
   isGroup: boolean
+  emptyFallback?: string
 }
-type Rule = { type: string; payload: string; target: string }
 
 function strings(value: unknown): string[] {
   return Array.isArray(value)
@@ -41,72 +58,14 @@ function namedOutbounds(value: unknown, isGroup = false): NamedOutbound[] {
           ('include-all' in item && item['include-all'] === true) ||
           ('include-all-providers' in item && item['include-all-providers'] === true) ||
           ('include-all-proxies' in item && item['include-all-proxies'] === true),
-        isGroup
+        isGroup,
+        emptyFallback:
+          'empty-fallback' in item && typeof item['empty-fallback'] === 'string'
+            ? item['empty-fallback']
+            : undefined
       }
     ]
   })
-}
-
-// Logical rules contain commas inside parentheses. Only split the outer rule fields.
-function parseRule(value: string): Rule {
-  const fields: string[] = []
-  let depth = 0
-  let start = 0
-  for (let index = 0; index < value.length; index++) {
-    if (value[index] === '(') depth++
-    if (value[index] === ')') depth--
-    if (value[index] === ',' && depth === 0) {
-      fields.push(value.slice(start, index).trim())
-      start = index + 1
-    }
-  }
-  fields.push(value.slice(start).trim())
-  if (fields.at(-1)?.toLowerCase() === 'no-resolve') fields.pop()
-  return {
-    type: fields[0]?.toUpperCase() ?? '',
-    payload: fields.length > 2 ? fields[1] : '',
-    target: fields.at(-1) ?? ''
-  }
-}
-
-function isLocalIPv4CIDR(value: string): boolean {
-  const [address, prefixText] = value.split('/')
-  const parts = address.split('.').map(Number)
-  const prefix = prefixText === undefined ? 32 : Number(prefixText)
-  if (
-    parts.length !== 4 ||
-    parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255) ||
-    !Number.isInteger(prefix) ||
-    prefix < 0 ||
-    prefix > 32
-  ) {
-    return false
-  }
-  const [a, b] = parts
-  return (
-    (a === 10 && prefix >= 8) ||
-    (a === 127 && prefix >= 8) ||
-    (a === 172 && b >= 16 && b <= 31 && prefix >= 12) ||
-    (a === 192 && b === 168 && prefix >= 16) ||
-    (a === 169 && b === 254 && prefix >= 16)
-  )
-}
-
-function isLocalRule(rule: Rule): boolean {
-  if (rule.type === 'DOMAIN' || rule.type === 'DOMAIN-SUFFIX') {
-    return ['localhost', 'lan', 'local'].includes(rule.payload.toLowerCase())
-  }
-  if (rule.type === 'IP-CIDR') return isLocalIPv4CIDR(rule.payload)
-  if (rule.type === 'IP-CIDR6') {
-    const [address, prefixText] = rule.payload.toLowerCase().split('/')
-    const prefix = prefixText === undefined ? 128 : Number(prefixText)
-    return (
-      (address === '::1' && prefix === 128) ||
-      (/^f[cd][0-9a-f]{2}:/.test(address) && prefix >= 7 && prefix <= 128) ||
-      (/^fe[89ab][0-9a-f]:/.test(address) && prefix >= 10 && prefix <= 128)
-    )
-  }
-  return rule.type === 'GEOIP' && rule.payload.toLowerCase() === 'private'
 }
 
 function isReject(target: string): boolean {
@@ -129,10 +88,9 @@ function maySelectDirect(
     return true
   if (seen.has(target)) return false
   seen.add(target)
-  return (
-    outbounds
-      .find((group) => group.name === target)
-      ?.proxies?.some((member) => maySelectDirect(member, outbounds, seen)) ?? false
+  const group = outbounds.find((item) => item.name === target)
+  return [...(group?.proxies ?? []), ...(group?.emptyFallback ? [group.emptyFallback] : [])].some(
+    (member) => maySelectDirect(member, outbounds, seen)
   )
 }
 
@@ -147,7 +105,10 @@ function hasUnknownMembers(
   if (!outbound.isGroup) return false
   if (!outbound.proxies?.length) return true
   seen.add(target)
-  const unknown = outbound.proxies.some((member) => hasUnknownMembers(member, outbounds, seen))
+  const unknown = [
+    ...outbound.proxies,
+    ...(outbound.emptyFallback ? [outbound.emptyFallback] : [])
+  ].some((member) => hasUnknownMembers(member, outbounds, seen))
   seen.delete(target)
   return unknown
 }
@@ -170,9 +131,10 @@ function dnsOutbound(server: string): string | undefined {
 export function auditPrivacyConfig(
   profile: Partial<IMihomoConfig>,
   platform: NodeJS.Platform,
-  appConfig?: Pick<IAppConfig, 'autoSetDNS'>
+  appConfig?: Pick<IAppConfig, 'autoSetDNS'>,
+  origins: TunRouteOrigin[] = []
 ): PrivacyAuditFinding[] {
-  const findings: PrivacyAuditFinding[] = [{ id: 'scope', level: 'info' }]
+  const findings: PrivacyAuditFinding[] = []
   const add = (id: string, level: PrivacyAuditFinding['level'], detail?: string): void => {
     findings.push({ id, level, ...(detail === undefined ? {} : { detail }) })
   }
@@ -208,21 +170,46 @@ export function auditPrivacyConfig(
   if (platform === 'darwin') {
     add('macSystemDNS', appConfig?.autoSetDNS === true ? 'info' : 'warning')
   }
-  const exclusions = [
-    'route-address',
-    'route-address-set',
-    'route-exclude-address',
-    'route-exclude-address-set',
-    'include-interface',
-    'exclude-interface',
-    'include-uid',
-    'include-uid-range',
-    'exclude-uid',
-    'exclude-uid-range',
-    'include-package',
-    'exclude-package'
-  ] as const
-  if (exclusions.some((key) => (tun?.[key]?.length ?? 0) > 0)) add('routeExclusions', 'warning')
+  for (const key of TUN_SCOPE_KEYS) {
+    const values = tun?.[key]
+    if (!Array.isArray(values)) continue
+    for (const value of values) {
+      const address = String(value)
+      const origin = origins.find((entry) => entry.key === key && entry.value === address) ?? {
+        key,
+        value: address,
+        source: 'runtime' as const
+      }
+      let id = 'routeScopeLimit'
+      let level: PrivacyAuditFinding['level'] = 'warning'
+      if (key === 'route-exclude-address') {
+        const node = (
+          profile.proxies as unknown as { server?: unknown; type?: string }[] | undefined
+        )?.some(
+          (proxy) =>
+            !!proxy.type &&
+            !/^(direct|reject|pass|compatible)$/i.test(proxy.type) &&
+            typeof proxy.server === 'string' &&
+            sameHost(address, proxy.server)
+        )
+        if (node) {
+          id = 'routeProxyEndpoint'
+          level = 'info'
+        } else if (isLocalDestination(address)) {
+          id = 'routeLocalExclusion'
+          level = 'info'
+        } else id = ipRange(address) ? 'routePublicExclusion' : 'routeUnknownExclusion'
+      } else if (
+        key === 'route-address' &&
+        strings(tun?.['route-address']).includes('0.0.0.0/0') &&
+        strings(tun?.['route-address']).includes('::/0')
+      ) {
+        id = 'routeCaptureRange'
+        level = 'info'
+      }
+      findings.push({ id, level, detail: address, origin })
+    }
+  }
 
   const dns = profile.dns
   add('dnsEnabled', dns?.enable === true ? 'pass' : 'error')
@@ -263,7 +250,7 @@ export function auditPrivacyConfig(
   add('ipv6Config', 'info', `${profile.ipv6 === true} / ${dns?.ipv6 === true}`)
   add('lanAccess', profile['allow-lan'] === true ? 'warning' : 'pass')
 
-  const rules = strings(profile.rules).map(parseRule)
+  const rules = strings(profile.rules).map(parseAuditRule)
   const blanketIndex = rules.findIndex(
     (rule) =>
       (rule.type === 'NETWORK' && rule.payload.toLowerCase() === 'udp') || rule.type === 'MATCH'
@@ -288,24 +275,45 @@ export function auditPrivacyConfig(
           : 'warning'
       )
       if (!isReject(blanket.target)) add('udpProxySupport', 'info')
-      if (maySelectDirect(blanket.target, outbounds)) add('udpGroupSelection', 'warning')
+      if (maySelectDirect(blanket.target, outbounds))
+        add('udpGroupSelection', 'warning', blanket.raw)
     }
-    const earlierRules = rules.slice(0, blanketIndex)
-    if (
-      earlierRules.some(
-        (rule) =>
-          maySelectDirect(rule.target, outbounds) &&
-          !(rule.type === 'NETWORK' && rule.payload.toLowerCase() === 'tcp') &&
-          !isLocalRule(rule)
+    for (const rule of rules.slice(0, blanketIndex)) {
+      const scope = publicUDPMatch(rule.type, rule.payload)
+      if (scope === 'excluded') continue
+      if (maySelectDirect(rule.target, outbounds)) add('udpRuleOrdering', 'warning', rule.raw)
+      if (scope === 'unknown') add('udpComplexRules', 'warning', rule.raw)
+      else if (
+        !isReject(rule.target) &&
+        !maySelectDirect(rule.target, outbounds) &&
+        hasUnknownMembers(rule.target, outbounds)
       )
-    ) {
-      add('udpRuleOrdering', 'warning')
-    }
-    if (
-      earlierRules.some((rule) => ['RULE-SET', 'SUB-RULE', 'AND', 'OR', 'NOT'].includes(rule.type))
-    ) {
-      add('udpComplexRules', 'warning')
+        add('udpUnknownTarget', 'warning', rule.raw)
     }
   }
+
   return findings
+}
+
+export function requiredNativeChecks(platform: NodeJS.Platform): string[] {
+  return platform === 'darwin' ? ['macDNSGuard', 'networkGuard'] : ['networkGuard']
+}
+export function nativeProtectionConfirmed(report: PrivacyProtectionReport): boolean {
+  return (
+    report.source === 'applied' &&
+    requiredNativeChecks(report.platform).every((id) =>
+      report.findings.some((finding) => finding.id === id && finding.level === 'pass')
+    )
+  )
+}
+
+export function nativeGuardReason(
+  guard: { active: boolean; corePid?: number | null; coreAlive?: boolean; trafficLease?: boolean },
+  expectedPid: number
+): PrivacyAuditFinding['reason'] {
+  if (!guard.active) return 'inactive'
+  if (guard.corePid !== expectedPid) return 'previousConnection'
+  if (guard.coreAlive === false) return 'tunnelUnavailable'
+  if (guard.trafficLease === false) return 'trafficUnconfirmed'
+  return undefined
 }

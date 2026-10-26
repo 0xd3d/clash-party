@@ -24,6 +24,7 @@ import { parse, stringify } from '../utils/yaml'
 import { deepMerge } from '../utils/merge'
 import { createLogger } from '../utils/logger'
 import { decryptAgeContent } from '../utils/age'
+import { traceTunRoutes, type TunRouteOrigin } from '../../shared/privacyRouting'
 import { DEFAULT_CONTROL_DNS, DEFAULT_CONTROL_SNIFF } from '../../shared/appConfig'
 import { atomicWriteFile } from '../utils/safeFile'
 import { compileSimpleRuntime } from '../simple/service'
@@ -53,6 +54,7 @@ interface GenerateProfileOptions {
 }
 
 export interface GenerateProfileResult {
+  routeOrigins?: TunRouteOrigin[]
   runtimeConfig: IMihomoConfig
   profileId: string | undefined
   // 随本次配置成功应用后同步。
@@ -148,8 +150,8 @@ export async function generateProfile(
     if (result.errors.length > 0) {
       throw new Error(`简易模式配置无效：\n${result.errors.join('\n')}`)
     }
+    const protectedProfile = parse(result.yaml) as IMihomoConfig
     if (selectedAppConfig.networkProtection) {
-      const protectedProfile = parse(result.yaml) as IMihomoConfig
       applyNetworkProtectionPolicy(protectedProfile, selectedAppConfig)
       prepareSystemDNSListener(protectedProfile, selectedAppConfig)
       result.yaml = stringify(protectedProfile)
@@ -157,11 +159,12 @@ export async function generateProfile(
     }
     if (options.updateRuntimeConfig !== false) {
       runtimeConfigStr = result.yaml
-      runtimeConfig = parse(result.yaml) as IMihomoConfig
+      runtimeConfig = protectedProfile
     }
     return {
+      routeOrigins: traceTunRoutes(protectedProfile, [], { source: 'simple' }),
       profileId: 'simple-mode',
-      runtimeConfig: structuredClone(parse(result.yaml) as IMihomoConfig),
+      runtimeConfig: structuredClone(protectedProfile),
       dnsGuard: { controlDns: false, autoDisabled: false, fingerprint: null, request: null }
     }
   }
@@ -198,16 +201,25 @@ export async function generateProfile(
     !disableDnsOverrideGuard
   )
   const { controlDns } = dnsGuard
+  let routeOrigins = traceTunRoutes(baseProfile, [], {
+    source: 'profile',
+    name: currentProfileItem?.name
+  })
+  const observeOverride = (profile: IMihomoConfig, id: string, name?: string): void => {
+    routeOrigins = traceTunRoutes(profile, routeOrigins, { source: 'override', name: name || id })
+  }
   const profileWithNormalOverride = await applyOverrides(
     baseProfile,
     overrideIds.normal,
-    ageSecretKey
+    ageSecretKey,
+    observeOverride
   )
   const profileWithRuleOverride = await applyRuleOverride(profileId, profileWithNormalOverride)
   const currentProfile = await applyOverrides(
     profileWithRuleOverride,
     overrideIds.smart,
-    ageSecretKey
+    ageSecretKey,
+    observeOverride
   )
 
   // 根据开关状态过滤控制配置
@@ -224,6 +236,12 @@ export async function generateProfile(
   }
 
   const profile = deepMerge(currentProfile, controledMihomoConfig)
+  routeOrigins = traceTunRoutes(
+    profile,
+    routeOrigins,
+    { source: 'globalTun' },
+    Object.keys(controledMihomoConfig.tun ?? {})
+  )
   applyNetworkProtectionPolicy(profile, appConfig)
   prepareSystemDNSListener(profile, appConfig)
   // 关闭 DNS 覆写时，如果最终配置没有启用的 DNS 配置，清空 dns-hijack 避免请求被劫持但无法处理
@@ -235,6 +253,7 @@ export async function generateProfile(
     profile,
     overrideIds.smart.length > 0
   )
+  routeOrigins = traceTunRoutes(profile, routeOrigins, { source: 'automatic' })
   if (addedProxyServerRouteExcludes.length > 0) {
     factoryLogger.info(
       'Added Smart Override proxy server TUN route excludes',
@@ -275,7 +294,7 @@ export async function generateProfile(
     runtimeConfig = profile
     runtimeConfigStr = nextRuntimeConfigStr
   }
-  return { profileId, dnsGuard, runtimeConfig: structuredClone(profile) }
+  return { profileId, dnsGuard, routeOrigins, runtimeConfig: structuredClone(profile) }
 }
 
 async function applyRuleOverride(
@@ -394,7 +413,8 @@ async function getOrderedOverrideIds(
 async function applyOverrides(
   profile: IMihomoConfig,
   overrideIds: string[],
-  ageSecretKey: string
+  ageSecretKey: string,
+  onApplied?: (profile: IMihomoConfig, id: string, name?: string) => void
 ): Promise<IMihomoConfig> {
   for (const ov of overrideIds) {
     const item = await getOverrideItem(ov)
@@ -411,6 +431,7 @@ async function applyOverrides(
         break
       }
     }
+    onApplied?.(profile, ov, item?.name)
   }
   return profile
 }

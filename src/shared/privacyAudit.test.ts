@@ -42,7 +42,7 @@ describe('privacy configuration audit', () => {
   it('checks Windows configuration without equating it with a network measurement', () => {
     const config = profile()
     const findings = auditPrivacyConfig(config, 'win32')
-    expect(findings).toContainEqual({ id: 'scope', level: 'info' })
+    expect(findings.some((finding) => finding.id === 'scope')).toBe(false)
     expect(findings).toContainEqual({ id: 'windowsRouting', level: 'info' })
     for (const id of [
       'tunEnabled',
@@ -271,7 +271,7 @@ describe('privacy configuration audit', () => {
       'allow-lan': true,
       tun: { 'route-exclude-address': ['192.168.0.0/16'] }
     })
-    expect(finding(config, 'routeExclusions')?.level).toBe('warning')
+    expect(finding(config, 'routeLocalExclusion')?.level).toBe('info')
     expect(finding(config, 'lanAccess')?.level).toBe('warning')
   })
 })

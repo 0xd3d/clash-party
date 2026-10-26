@@ -1,21 +1,10 @@
 import { isIP } from 'node:net'
+import { LOCAL_NETWORKS } from '../../shared/privacyRouting'
 
 export const QQ_MUSIC_DNS_KEYS = new Set(['aqqmusic.tc.qq.com', '+.stream.qqmusic.qq.com'])
 export const QQ_MUSIC_DNS_EXCEPTION = 'https://doh.pub/dns-query#DIRECT'
-export const LOCAL_NETWORKS = [
-  '127.0.0.0/8',
-  '10.0.0.0/8',
-  '172.16.0.0/12',
-  '192.168.0.0/16',
-  '169.254.0.0/16',
-  '100.64.0.0/10',
-  '224.0.0.0/4',
-  '255.255.255.255/32',
-  '::1/128',
-  'fc00::/7',
-  'fe80::/10',
-  'ff00::/8'
-]
+export { LOCAL_NETWORKS } from '../../shared/privacyRouting'
+
 export const ENCRYPTED_DNS_DOMAINS = [
   'cloudflare-dns.com',
   'one.one.one.one',

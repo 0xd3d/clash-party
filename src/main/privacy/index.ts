@@ -2,11 +2,20 @@ import { access, cp, mkdir } from 'fs/promises'
 import path from 'path'
 import { app, dialog, type WebContents } from 'electron'
 import { getAppConfig } from '../config'
-import { getAppliedCoreConfig, getAppliedCoreRevision, getCurrentCorePID } from '../core/manager'
+import {
+  getAppliedCoreConfig,
+  getAppliedCoreRevision,
+  getAppliedRouteOrigins,
+  getCurrentCorePID
+} from '../core/manager'
 import { getAxios } from '../core/mihomoApi'
 import { inspectMacDNSGuard } from '../core/macDNSGuard'
 import { inspectNetworkGuard } from '../core/networkGuard'
-import { auditPrivacyConfig, type PrivacyProtectionReport } from '../../shared/privacyAudit'
+import {
+  auditPrivacyConfig,
+  nativeGuardReason,
+  type PrivacyProtectionReport
+} from '../../shared/privacyAudit'
 
 /** Covers this application's own pages, not external browser processes. */
 export function protectWebContentsPrivacy(
@@ -37,21 +46,43 @@ export async function inspectPrivacyProtection(): Promise<PrivacyProtectionRepor
       'allow-lan': live['allow-lan'],
       'bind-address': live['bind-address']
     }
-    const findings = [...auditPrivacyConfig(applied, process.platform, config)]
+    const diagnostics: { id: string; value: string }[] = [
+      { id: 'dnsPolicy', value: JSON.stringify(applied.dns?.['nameserver-policy'] ?? {}) },
+      { id: 'platform', value: process.platform },
+      { id: 'corePid', value: String(corePid) }
+    ]
+    const findings = [
+      ...auditPrivacyConfig(applied, process.platform, config, getAppliedRouteOrigins())
+    ]
     if (process.platform === 'darwin' && config.autoSetDNS !== false && live.tun?.enable) {
       try {
         const guard = await inspectMacDNSGuard()
+        diagnostics.push({
+          id: 'dnsGuard',
+          value: JSON.stringify({ backend: 'PF', active: guard.active, corePid: guard.corePid })
+        })
         findings.push({
           id: 'macDNSGuard',
-          level: guard.active && guard.corePid === corePid ? 'pass' : 'warning'
+          level: guard.active && guard.corePid === corePid ? 'pass' : 'warning',
+          reason: nativeGuardReason({ active: guard.active, corePid: guard.corePid }, corePid)
         })
       } catch {
-        findings.push({ id: 'macDNSGuard', level: 'warning' })
+        findings.push({ id: 'macDNSGuard', level: 'warning', reason: 'statusUnavailable' })
       }
     }
     if (config.networkProtection && ['darwin', 'win32'].includes(process.platform)) {
       try {
         const guard = await inspectNetworkGuard()
+        diagnostics.push({
+          id: 'networkGuard',
+          value: JSON.stringify({
+            backend: process.platform === 'darwin' ? 'PF' : 'WFP',
+            active: guard.active,
+            corePid: guard.corePid,
+            coreAlive: guard.coreAlive,
+            trafficLease: guard.trafficLease
+          })
+        })
         findings.push({
           id: 'networkGuard',
           level:
@@ -60,18 +91,20 @@ export async function inspectPrivacyProtection(): Promise<PrivacyProtectionRepor
             guard.coreAlive !== false &&
             guard.trafficLease !== false
               ? 'pass'
-              : 'warning'
+              : 'warning',
+          reason: nativeGuardReason(guard, corePid)
         })
       } catch {
-        findings.push({ id: 'networkGuard', level: 'warning' })
+        findings.push({ id: 'networkGuard', level: 'warning', reason: 'statusUnavailable' })
       }
       if (config.networkProtectionPublicUDP === false)
         findings.push({ id: 'publicUDPProtection', level: 'warning' })
     }
+    if (!config.networkProtection) findings.push({ id: 'networkGuardDisabled', level: 'warning' })
     // Native status is asynchronous too; reject reports crossing a restart or hot reload.
     if (getCurrentCorePID() !== corePid || getAppliedCoreRevision() !== revision)
       return unavailable()
-    return { platform: process.platform, source: 'applied', findings }
+    return { platform: process.platform, source: 'applied', findings, diagnostics }
   } catch {
     return unavailable()
   }

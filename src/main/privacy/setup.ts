@@ -5,6 +5,7 @@ import { isDeepStrictEqual } from 'node:util'
 import path from 'node:path'
 import os from 'node:os'
 import { BrowserWindow } from 'electron'
+import { nativeProtectionConfirmed } from '../../shared/privacyAudit'
 import { getAppConfig, patchAppConfig } from '../config/app'
 import { runtimeConfigWriteQueue } from '../config/runtimeConfigQueue'
 import {
@@ -170,13 +171,7 @@ export async function applyProtectionSetup(token: string): Promise<ProtectionSet
           )
             return null
           const report = await inspectPrivacyProtection()
-          const required =
-            process.platform === 'darwin' ? ['macDNSGuard', 'networkGuard'] : ['networkGuard']
-          if (
-            report.source !== 'applied' ||
-            !required.every((id) => report.findings.some((f) => f.id === id && f.level === 'pass'))
-          )
-            return null
+          if (!nativeProtectionConfirmed(report)) return null
           return { backupPath: null, restarted: false, verified: true, report }
         },
         checkPermissions: async (value) => {

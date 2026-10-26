@@ -1,3 +1,4 @@
+import { nativeProtectionConfirmed } from '../../shared/privacyAudit'
 import type { ProtectionSetupResult } from '../../shared/protectionSetup'
 
 export type ProtectionSetupTransaction<T> = {
@@ -30,13 +31,7 @@ export async function executeProtectionSetup<T>(
   try {
     await actions.restart()
     const report = await actions.verify()
-    const required =
-      report.platform === 'darwin' ? ['macDNSGuard', 'networkGuard'] : ['networkGuard']
-    const verified =
-      report.source === 'applied' &&
-      required.every((id) =>
-        report.findings.some((finding) => finding.id === id && finding.level === 'pass')
-      )
+    const verified = nativeProtectionConfirmed(report)
     if (!verified) throw new Error('Native protection could not be confirmed')
     return { backupPath, restarted: true, verified, report }
   } catch (error) {

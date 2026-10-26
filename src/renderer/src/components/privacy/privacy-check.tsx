@@ -1,16 +1,11 @@
-import { Button, Chip } from '@heroui/react'
+import { Button } from '@heroui/react'
 import SettingCard from '@renderer/components/base/base-setting-card'
 import { exportWebRTCGuard, inspectPrivacyProtection } from '@renderer/utils/ipc'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PrivacyProtectionReport } from '../../../../shared/privacyAudit'
-
-const findingColors = {
-  pass: 'success',
-  warning: 'warning',
-  error: 'danger',
-  info: 'default'
-} as const
+import ProtectionReport from './protection-report'
+import { useProtectionRevision } from './use-protection-revision'
 
 export default function PrivacyCheck(): React.JSX.Element {
   const { t } = useTranslation()
@@ -20,14 +15,25 @@ export default function PrivacyCheck(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [exportedPath, setExportedPath] = useState<string | null>(null)
 
+  const [stale, setStale] = useState(false)
+  const invalidate = useCallback(() => {
+    setError(null)
+    setReport(null)
+    setStale(true)
+  }, [])
+  const revision = useProtectionRevision(invalidate)
+
   const inspect = async (): Promise<void> => {
     setChecking(true)
     setError(null)
     setReport(null)
+    setStale(false)
+    const ticket = revision.current
     try {
-      setReport(await inspectPrivacyProtection())
+      const next = await inspectPrivacyProtection()
+      if (revision.current === ticket) setReport(next)
     } catch {
-      setError(t('privacy.error.check'))
+      if (revision.current === ticket) setError(t('privacy.error.check'))
     } finally {
       setChecking(false)
     }
@@ -57,20 +63,25 @@ export default function PrivacyCheck(): React.JSX.Element {
           <Button size="sm" color="primary" isLoading={checking} onPress={inspect}>
             {t('privacy.check')}
           </Button>
-          <Button size="sm" variant="flat" isLoading={exporting} onPress={exportGuard}>
-            {t('privacy.export')}
-          </Button>
-          <Button
-            size="sm"
-            variant="flat"
-            onPress={() =>
-              window.open('https://browserleaks.com/ip', '_blank', 'noopener,noreferrer')
-            }
-          >
-            {t('privacy.openTest')}
-          </Button>
         </div>
-        <p className="text-xs text-default-500">{t('privacy.browserNote')}</p>
+        <details>
+          <summary className="cursor-pointer text-sm">{t('privacy.tools')}</summary>
+          <div className="flex flex-wrap gap-2 py-2">
+            <Button size="sm" variant="flat" isLoading={exporting} onPress={exportGuard}>
+              {t('privacy.export')}
+            </Button>
+            <Button
+              size="sm"
+              variant="flat"
+              onPress={() =>
+                window.open('https://browserleaks.com/ip', '_blank', 'noopener,noreferrer')
+              }
+            >
+              {t('privacy.openTest')}
+            </Button>
+          </div>
+          <p className="text-xs text-default-500">{t('privacy.browserNote')}</p>
+        </details>
         {error && (
           <p role="alert" className="text-sm text-danger">
             {error}
@@ -81,26 +92,14 @@ export default function PrivacyCheck(): React.JSX.Element {
             {t('privacy.exported', { path: exportedPath })}
           </p>
         )}
+        {stale && (
+          <p role="status" className="text-sm text-warning-700">
+            {t('privacy.stale')}
+          </p>
+        )}
         {report && (
-          <div aria-live="polite" className="flex flex-col gap-2">
-            <p className="text-xs text-default-500">
-              {t(`privacy.source.${report.source}`)} · {report.platform}
-            </p>
-            <ul className="flex flex-col gap-2">
-              {report.findings.map((finding, index) => (
-                <li key={`${finding.id}-${index}`} className="flex items-start gap-2 text-sm">
-                  <Chip size="sm" variant="flat" color={findingColors[finding.level]}>
-                    {t(`privacy.level.${finding.level}`)}
-                  </Chip>
-                  <span className="min-w-0 pt-0.5 break-words">
-                    {t(`privacy.finding.${finding.id}.${finding.level}`, {
-                      defaultValue: t('privacy.finding.unknown')
-                    })}
-                    {finding.detail && <span className="ml-1">({finding.detail})</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div aria-live="polite">
+            <ProtectionReport report={report} />
           </div>
         )}
       </section>

@@ -11,9 +11,11 @@ const mocks = vi.hoisted(() => ({
   getAppliedCoreConfig: vi.fn(),
   getCurrentCorePID: vi.fn(),
   getAppliedCoreRevision: vi.fn(),
+  getAppliedRouteOrigins: vi.fn(),
   get: vi.fn(),
   inspectGuard: vi.fn(),
   auditPrivacyConfig: vi.fn(),
+  nativeGuardReason: vi.fn(),
   app: { isPackaged: false, getAppPath: () => '/mock/repository' }
 }))
 vi.mock('fs/promises', () => ({ access: mocks.access, cp: mocks.cp, mkdir: mocks.mkdir }))
@@ -22,11 +24,15 @@ vi.mock('../config', () => ({ getAppConfig: mocks.getAppConfig }))
 vi.mock('../core/manager', () => ({
   getAppliedCoreConfig: mocks.getAppliedCoreConfig,
   getCurrentCorePID: mocks.getCurrentCorePID,
-  getAppliedCoreRevision: mocks.getAppliedCoreRevision
+  getAppliedCoreRevision: mocks.getAppliedCoreRevision,
+  getAppliedRouteOrigins: mocks.getAppliedRouteOrigins
 }))
 vi.mock('../core/macDNSGuard', () => ({ inspectMacDNSGuard: mocks.inspectGuard }))
 vi.mock('../core/mihomoApi', () => ({ getAxios: async () => ({ get: mocks.get }) }))
-vi.mock('../../shared/privacyAudit', () => ({ auditPrivacyConfig: mocks.auditPrivacyConfig }))
+vi.mock('../../shared/privacyAudit', () => ({
+  auditPrivacyConfig: mocks.auditPrivacyConfig,
+  nativeGuardReason: mocks.nativeGuardReason
+}))
 
 const resourcesPathDescriptor = Object.getOwnPropertyDescriptor(process, 'resourcesPath')
 afterEach(() => {
@@ -44,6 +50,7 @@ beforeEach(() => {
   mocks.app.isPackaged = false
   mocks.getCurrentCorePID.mockReturnValue(1234)
   mocks.getAppliedCoreRevision.mockReturnValue(1)
+  mocks.getAppliedRouteOrigins.mockReturnValue([])
   mocks.getAppConfig.mockResolvedValue({ autoSetDNS: true })
   mocks.getAppliedCoreConfig.mockReturnValue({
     dns: { nameserver: ['https://dns.example.test#Proxy'] }
@@ -66,11 +73,20 @@ describe('privacy inspection boundary', () => {
         'allow-lan': false
       }),
       process.platform,
-      { autoSetDNS: true }
+      { autoSetDNS: true },
+      []
     )
     expect(result.source).toBe('applied')
     expect(result).not.toHaveProperty('dns')
     expect(result).not.toHaveProperty('proxies')
+  })
+
+  it('keeps DNS status independent of a public-traffic lease', async () => {
+    if (process.platform !== 'darwin') return
+    mocks.inspectGuard.mockResolvedValue({ active: true, corePid: 1234, trafficLease: false })
+    const report = await inspectPrivacyProtection()
+    expect(mocks.nativeGuardReason).toHaveBeenCalledWith({ active: true, corePid: 1234 }, 1234)
+    expect(report.findings.find((finding) => finding.id === 'macDNSGuard')?.level).toBe('pass')
   })
 
   it('does not inspect a candidate when there is no applied core', async () => {

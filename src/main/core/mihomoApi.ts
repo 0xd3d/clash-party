@@ -501,7 +501,12 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
   // Smart 覆写脚本由应用配置生成，必须先同步再生成配置，
   // 否则界面上改动的 Smart 选项会沿用旧脚本，要等到下次重启内核才生效
   await manageSmartOverride()
-  const { profileId: current, dnsGuard, runtimeConfig: appliedCandidate } = await generateProfile()
+  const {
+    profileId: current,
+    dnsGuard,
+    runtimeConfig: appliedCandidate,
+    routeOrigins
+  } = await generateProfile()
   const appConfig = await getAppConfig()
   const diffWorkDir = appConfig.operationMode === 'simple' ? false : appConfig.diffWorkDir === true
   const configPath = diffWorkDir ? mihomoWorkConfigPath(current) : mihomoWorkConfigPath('work')
@@ -519,7 +524,7 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
     return
   }
   if (appConfig.networkProtection) await commitNetworkProtectionReload(appliedCandidate, corePid)
-  commitSystemDNSReload(appliedCandidate, corePid)
+  commitSystemDNSReload(appliedCandidate, corePid, routeOrigins)
   mihomoApiLogger.info('hot reload config completed')
   try {
     await syncControlDnsAfterApply(dnsGuard)

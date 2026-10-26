@@ -34,6 +34,7 @@ import { parseAgeSecretKeys } from '../utils/age'
 import i18next from '../../shared/i18n'
 import { managerLogger } from '../utils/logger'
 import { createCoreLogWritableStream } from '../utils/logFile'
+import type { TunRouteOrigin } from '../../shared/privacyRouting'
 import {
   startMihomoTraffic,
   startMihomoConnections,
@@ -121,7 +122,7 @@ let child: ChildProcess | null = null
 const dnsIneligibleProcesses = new WeakSet<ChildProcess>()
 const coreDNSStates = new WeakMap<
   ChildProcess,
-  { proof: SystemDNSListenerProof; runtime: IMihomoConfig }
+  { proof: SystemDNSListenerProof; runtime: IMihomoConfig; routeOrigins?: TunRouteOrigin[] }
 >()
 let appliedCoreRevision = 0
 let coreProcessWatchdog: CoreProcessWatchdog | null = null
@@ -165,6 +166,11 @@ export function getAppliedCoreConfig(): IMihomoConfig | null {
   return state ? structuredClone(state.runtime) : null
 }
 
+export function getAppliedRouteOrigins(): TunRouteOrigin[] {
+  if (!child || !hasCoreProcess() || dnsIneligibleProcesses.has(child)) return []
+  return structuredClone(coreDNSStates.get(child)?.routeOrigins ?? [])
+}
+
 export function getAppliedCoreRevision(): number | undefined {
   if (!child || !hasCoreProcess() || dnsIneligibleProcesses.has(child)) return undefined
   return coreDNSStates.has(child) ? appliedCoreRevision : undefined
@@ -183,11 +189,16 @@ export function prepareSystemDNSReload(runtime: IMihomoConfig, corePid: number |
   }
 }
 
-export function commitSystemDNSReload(runtime: IMihomoConfig, corePid: number | undefined): void {
+export function commitSystemDNSReload(
+  runtime: IMihomoConfig,
+  corePid: number | undefined,
+  routeOrigins?: TunRouteOrigin[]
+): void {
   if (!child || child.pid !== corePid || dnsIneligibleProcesses.has(child)) return
   const state = coreDNSStates.get(child)
   if (state) {
     state.runtime = structuredClone(runtime)
+    state.routeOrigins = structuredClone(routeOrigins)
     appliedCoreRevision++
   }
   updateSystemDNSRuntime(runtime, corePid)
@@ -495,6 +506,7 @@ interface CoreConfig {
   startupHook?: CoreStartupHook
   dnsGuard: DnsOverrideGuardResult
   runtimeConfig: IMihomoConfig
+  routeOrigins?: TunRouteOrigin[]
 }
 
 function buildCoreEnv(safePath?: string, ageSecretKey?: string): NodeJS.ProcessEnv {
@@ -546,7 +558,7 @@ async function prepareCore(
   await manageSmartOverride()
 
   // generateProfile 返回实际使用的 current
-  const { profileId: current, dnsGuard, runtimeConfig } = await generateProfile()
+  const { profileId: current, dnsGuard, runtimeConfig, routeOrigins } = await generateProfile()
   if (appConfig.operationMode === 'simple') {
     const simpleRuntime = await getRuntimeConfig()
     logLevel = simpleRuntime['log-level'] || 'info'
@@ -592,7 +604,8 @@ async function prepareCore(
     startupMode,
     startupHook,
     dnsGuard,
-    runtimeConfig
+    runtimeConfig,
+    routeOrigins
   }
 }
 
@@ -651,7 +664,11 @@ function setupCoreListeners(
 ): void {
   const { logLevel, startupMode } = config
   const dnsProof = new SystemDNSListenerProof()
-  coreDNSStates.set(proc, { proof: dnsProof, runtime: structuredClone(config.runtimeConfig) })
+  coreDNSStates.set(proc, {
+    proof: dnsProof,
+    runtime: structuredClone(config.runtimeConfig),
+    routeOrigins: structuredClone(config.routeOrigins)
+  })
   appliedCoreRevision++
   let startupSettled = false
   let protectedTunFailed = false

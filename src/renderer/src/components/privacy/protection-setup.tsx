@@ -1,12 +1,19 @@
 import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@heroui/react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { platform } from '@renderer/utils/init'
 import SettingCard from '@renderer/components/base/base-setting-card'
 import { previewProtectionSetup, applyProtectionSetup } from '@renderer/utils/ipc'
+import {
+  protectionErrorHint,
+  summarizeProtectionReport
+} from '../../../../shared/privacyPresentation'
 import type {
   ProtectionSetupPreview,
   ProtectionSetupResult
 } from '../../../../shared/protectionSetup'
+import ProtectionReport from './protection-report'
+import { useProtectionRevision } from './use-protection-revision'
 
 export default function ProtectionSetup({
   onApplied
@@ -18,14 +25,27 @@ export default function ProtectionSetup({
   const [result, setResult] = useState<ProtectionSetupResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [stale, setStale] = useState(false)
+  const invalidate = useCallback(() => {
+    setError(null)
+    setResult(null)
+    setPreview(null)
+    setStale(true)
+  }, [])
+  const revision = useProtectionRevision(invalidate)
+  const summary = result ? summarizeProtectionReport(result.report) : null
   const prepare = async (): Promise<void> => {
     setBusy(true)
     setError(null)
     setResult(null)
+    setStale(false)
+    const ticket = revision.current
     try {
-      setPreview(await previewProtectionSetup())
+      const next = await previewProtectionSetup()
+      if (ticket === revision.current) setPreview(next)
     } catch (value) {
-      setError(value instanceof Error ? value.message : String(value))
+      if (ticket === revision.current)
+        setError(value instanceof Error ? value.message : String(value))
     } finally {
       setBusy(false)
     }
@@ -36,6 +56,7 @@ export default function ProtectionSetup({
     setError(null)
     try {
       setResult(await applyProtectionSetup(preview.token))
+      setStale(false)
       setPreview(null)
       onApplied()
     } catch (value) {
@@ -58,19 +79,48 @@ export default function ProtectionSetup({
           </Button>
         </div>
         {error && (
-          <p role="alert" className="text-sm text-danger break-words">
-            {error}
+          <div role="alert" className="text-sm text-danger space-y-2">
+            <p>{t('privacy.setup.error.' + protectionErrorHint(error))}</p>
+            <details>
+              <summary className="cursor-pointer">{t('privacy.diagnostics')}</summary>
+              <p className="break-all pt-2">{error}</p>
+            </details>
+          </div>
+        )}
+        {stale && (
+          <p role="status" className="text-sm text-warning-700">
+            {t('privacy.stale')}
           </p>
         )}
-        {result && (
+        {result && summary && (
           <div role="status" className="text-sm flex flex-col gap-2">
-            <p>{t(result.restarted ? 'privacy.setup.success' : 'privacy.setup.already')}</p>
+            <p>{t(result.restarted ? 'privacy.setup.applied' : 'privacy.setup.unchanged')}</p>
+            <p>
+              {t(
+                summary.nativeConfirmed
+                  ? 'privacy.setup.nativeConfirmed'
+                  : 'privacy.setup.nativePending'
+              )}
+            </p>
+            <p>{t('privacy.setup.networkNotRun')}</p>
+            {summary.unresolvedCount > 0 && (
+              <p className="text-warning-700">
+                {t('privacy.setup.pending', {
+                  count: summary.unresolvedCount
+                })}
+              </p>
+            )}
+            <details open={summary.unresolvedCount > 0}>
+              <summary className="cursor-pointer">{t('privacy.setup.viewReport')}</summary>
+              <div className="pt-2">
+                <ProtectionReport report={result.report} />
+              </div>
+            </details>
             {result.backupPath && (
               <p className="break-all">
                 {t('privacy.setup.backup')}: {result.backupPath}
               </p>
             )}
-            <p className="text-xs text-default-500">{t('privacy.setup.verifyNote')}</p>
           </div>
         )}
       </section>
@@ -95,6 +145,8 @@ export default function ProtectionSetup({
               ))}
             </ul>
             <p className="text-sm text-warning-700">{t('privacy.setup.interruption')}</p>
+            <p className="text-sm">{t('privacy.setup.permission.' + platform)}</p>
+            {platform === 'darwin' && <p className="text-sm">{t('privacy.setup.restoreDNS')}</p>}
           </ModalBody>
           <ModalFooter>
             <Button size="sm" variant="light" isDisabled={busy} onPress={() => setPreview(null)}>
