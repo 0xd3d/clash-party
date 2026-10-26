@@ -1,10 +1,10 @@
-import { spawn, exec, execFileSync } from 'child_process'
+import { spawn, exec } from 'child_process'
 import { promisify } from 'util'
 import { stat } from 'fs/promises'
 import { existsSync } from 'fs'
 import { app, powerMonitor } from 'electron'
 import { stopCoreForExit, cleanupCoreWatcher } from './core/manager'
-import { primeAdminPrivilegesCache } from './core/admin'
+import { primeAdminPrivilegesCache, queryWindowsElevationSync } from './core/admin'
 import { triggerSysProxy, disableSysProxySync } from './sys/sysproxy'
 import { closeTrafficUsage } from './traffic/recorder'
 import { exePath } from './utils/dirs'
@@ -59,22 +59,11 @@ export function setupPlatformSpecifics(): void {
   }
 
   if (process.platform === 'win32') {
-    const elevated = isWindowsElevatedSync()
+    const elevated = queryWindowsElevationSync()
+    if (elevated !== null) primeAdminPrivilegesCache(elevated)
     if (elevated === true) {
-      primeAdminPrivilegesCache(true)
       app.commandLine.appendSwitch('disable-gpu-sandbox')
     }
-  }
-}
-
-function isWindowsElevatedSync(): boolean | null {
-  if (process.platform !== 'win32') return false
-  try {
-    execFileSync('fltmc', [], { stdio: 'ignore', windowsHide: true, timeout: 800 })
-    return true
-  } catch {
-    // 只有成功结果可安全缓存；所有失败交给异步 fltmc + net session 回退确认。
-    return null
   }
 }
 

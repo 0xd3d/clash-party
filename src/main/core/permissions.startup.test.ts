@@ -12,7 +12,10 @@ vi.mock('../utils/logger', () => ({
 }))
 vi.mock('../sys/autoRun', () => ({ checkAutoRun: vi.fn(), enableAutoRun: vi.fn() }))
 vi.mock('../../shared/i18n', () => ({ default: { t: (key: string) => key } }))
-vi.mock('./admin', () => ({ checkAdminPrivileges: mocks.admin }))
+vi.mock('./admin', () => ({
+  checkAdminPrivileges: mocks.admin,
+  getConfirmedAdminPrivileges: () => null
+}))
 import { requireWindowsTunPrivileges } from './permissions'
 const descriptor = Object.getOwnPropertyDescriptor(process, 'platform') ?? {
   configurable: true,

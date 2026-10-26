@@ -226,8 +226,8 @@ app.on('open-file', (event, filePath) => {
 const initPromise = (async () => {
   await initBasic()
 
-  const adminPromise: Promise<boolean> =
-    process.platform === 'win32' ? checkAdminPrivileges().catch(() => false) : Promise.resolve(true)
+  const adminPromise: Promise<boolean | null> =
+    process.platform === 'win32' ? checkAdminPrivileges().catch(() => null) : Promise.resolve(true)
 
   const appConfigPromise = (async () => {
     try {
@@ -292,7 +292,7 @@ app
 
     // 安全检查尽早并行执行，但只用一个布尔 gate 控制核心启动。
     const startupSafetyPromise = (async (): Promise<boolean> => {
-      const isAdmin = await adminPromise
+      const isAdmin = (await adminPromise) ?? (await checkAdminPrivileges())
       await initAdminStatus()
       if (!(await ensureSupportedWindowsPowerShell())) return false
       return ensureNoHighPrivilegeCore(isAdmin)

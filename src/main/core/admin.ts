@@ -1,48 +1,83 @@
-import { execFile } from 'child_process'
+import { execFile, execFileSync } from 'child_process'
 import { promisify } from 'util'
+import i18next from 'i18next'
 import { managerLogger } from '../utils/logger'
+import {
+  windowsTokenProbe,
+  parseWindowsTokenElevation,
+  WindowsElevationCache
+} from './windowsTokenElevation'
 
-const execFilePromise = promisify(execFile)
+const execute = promisify(execFile)
+function probe(): { file: string; args: string[] } {
+  return windowsTokenProbe(process.pid, process.env.SystemRoot || String.raw`C:\Windows`)
+}
+function probeReason(error: unknown): string {
+  if (error && typeof error === 'object' && 'stdout' in error && typeof error.stdout === 'string') {
+    try {
+      parseWindowsTokenElevation(error.stdout, process.pid)
+    } catch (parsed) {
+      if (parsed instanceof Error && !(parsed instanceof SyntaxError)) return parsed.message
+    }
+  }
+  return error instanceof Error ? error.message.slice(0, 512) : String(error).slice(0, 512)
+}
+const cache = new WindowsElevationCache(async () => {
+  const command = probe()
+  try {
+    const { stdout } = await execute(command.file, command.args, {
+      windowsHide: true,
+      timeout: 10000,
+      maxBuffer: 16 * 1024,
+      encoding: 'utf8'
+    })
+    const elevated = parseWindowsTokenElevation(stdout, process.pid)
+    managerLogger.info(`App process TokenElevation: pid=${process.pid}, elevated=${elevated}`)
+    return elevated
+  } catch (error) {
+    const reason = probeReason(error)
+    managerLogger.warn(
+      'App token elevation check failed; result is unknown and will not be cached as non-admin',
+      reason
+    )
+    throw new Error(
+      i18next.t('tun.permissions.elevationUnconfirmed', {
+        defaultValue:
+          'Cannot read the Clash Party process token. Elevation is unconfirmed; retry and inspect the application log. Reason: {{reason}}',
+        reason
+      }),
+      { cause: error }
+    )
+  }
+})
 
-// admin 状态在 Node 进程生命周期内不会变化，永久缓存
-let adminPrivilegePromise: Promise<boolean> | null = null
-
-// 允许 lifecycle.ts 同步检测的结果直接填入缓存，避免重复跑一次 fltmc
 export function primeAdminPrivilegesCache(value: boolean): void {
-  if (adminPrivilegePromise) return
-  adminPrivilegePromise = Promise.resolve(value)
-  managerLogger.info(`Admin privileges primed from sync check: ${value}`)
+  cache.prime(value)
+  managerLogger.info(`Admin privileges primed from process token: ${value}`)
+}
+export function getConfirmedAdminPrivileges(): boolean | null {
+  return cache.confirmed
 }
 
-export async function checkAdminPrivileges(): Promise<boolean> {
-  if (process.platform !== 'win32') {
-    return true
+export function queryWindowsElevationSync(): boolean | null {
+  if (process.platform !== 'win32') return false
+  const command = probe()
+  try {
+    const stdout = execFileSync(command.file, command.args, {
+      windowsHide: true,
+      timeout: 2000,
+      maxBuffer: 16 * 1024,
+      encoding: 'utf8'
+    })
+    return parseWindowsTokenElevation(stdout, process.pid)
+  } catch (error) {
+    managerLogger.debug(
+      'Early token check unconfirmed; deferring to asynchronous check',
+      probeReason(error)
+    )
+    return null
   }
-
-  if (adminPrivilegePromise) return adminPrivilegePromise
-
-  adminPrivilegePromise = (async () => {
-    try {
-      await execFilePromise('fltmc', [], { windowsHide: true, timeout: 1500 })
-      managerLogger.info('Admin privileges confirmed via fltmc')
-      return true
-    } catch (fltmcError: unknown) {
-      const errorCode = (fltmcError as { code?: number })?.code || 0
-      managerLogger.debug(`fltmc failed with code ${errorCode}, trying net session as fallback`)
-
-      try {
-        await execFilePromise('net', ['session'], { windowsHide: true, timeout: 1500 })
-        managerLogger.info('Admin privileges confirmed via net session')
-        return true
-      } catch (netSessionError: unknown) {
-        const netErrorCode = (netSessionError as { code?: number })?.code || 0
-        managerLogger.debug(
-          `Both fltmc and net session failed, no admin privileges. Error codes: fltmc=${errorCode}, net=${netErrorCode}`
-        )
-        return false
-      }
-    }
-  })()
-
-  return adminPrivilegePromise
+}
+export async function checkAdminPrivileges(): Promise<boolean> {
+  return process.platform === 'win32' ? cache.check() : true
 }

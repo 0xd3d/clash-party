@@ -1100,5 +1100,6 @@
   "privacy.reason.trafficUnconfirmed": "防护组件尚未确认当前隧道能够转发公网流量。",
   "privacy.reason.statusUnavailable": "无法读取防护组件状态。",
   "tun.firewall.adminRequired": "添加 Windows 防火墙规则需要管理员权限。请在 Windows 上右键 Clash Party，选择“以管理员身份运行”后重试；安装时授权不代表当前运行的应用已提升权限。",
-  "tun.firewall.commandFailed": "Windows 拒绝了程序入站规则操作。下方保留退出代码和系统返回的具体原因；若已管理员运行，请检查 Windows Defender Firewall 服务及组织策略，不要关闭防火墙作为替代。"
+  "tun.firewall.commandFailed": "Windows 拒绝了程序入站规则操作。下方保留退出代码和系统返回的具体原因；若已管理员运行，请检查 Windows Defender Firewall 服务及组织策略，不要关闭防火墙作为替代。",
+  "tun.permissions.elevationUnconfirmed": "无法读取 Clash Party 进程令牌，当前权限状态尚未确认。请重试；若仍失败，查看应用日志中的 TokenElevation 检测错误。原因：{{reason}}"
 }

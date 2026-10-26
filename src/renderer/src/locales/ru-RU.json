@@ -1083,5 +1083,6 @@
   "privacy.reason.trafficUnconfirmed": "The guard has not confirmed that this tunnel can forward public traffic.",
   "privacy.reason.statusUnavailable": "Native guard status could not be read.",
   "tun.firewall.adminRequired": "Windows firewall rules require administrator rights. On Windows, right-click Clash Party and choose Run as administrator, then retry. Authorizing installation does not elevate the running app.",
-  "tun.firewall.commandFailed": "Windows rejected the application inbound-rule operation. The exit code and native response are included below. If already elevated, check Windows Defender Firewall service and organization policy; do not disable the firewall as a workaround."
+  "tun.firewall.commandFailed": "Windows rejected the application inbound-rule operation. The exit code and native response are included below. If already elevated, check Windows Defender Firewall service and organization policy; do not disable the firewall as a workaround.",
+  "tun.permissions.elevationUnconfirmed": "Cannot read the Clash Party process token. Elevation is unconfirmed; retry and inspect the application log for TokenElevation errors. Reason: {{reason}}"
 }

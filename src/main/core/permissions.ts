@@ -9,7 +9,7 @@ import { mihomoCorePath, mihomoCoreDir } from '../utils/dirs'
 import { managerLogger } from '../utils/logger'
 import { checkAutoRun, enableAutoRun } from '../sys/autoRun'
 import i18next from '../../shared/i18n'
-import { checkAdminPrivileges } from './admin'
+import { checkAdminPrivileges, getConfirmedAdminPrivileges } from './admin'
 import { repairMacTrafficCores } from './macDNSGuard'
 
 const execPromise = promisify(exec)
@@ -53,19 +53,15 @@ function shellEscape(arg: string): string {
 }
 
 // 会话管理员状态缓存
-let sessionAdminStatus: boolean | null = null
-
 export async function initAdminStatus(): Promise<void> {
-  if (process.platform === 'win32' && sessionAdminStatus === null) {
-    sessionAdminStatus = await checkAdminPrivileges().catch(() => false)
-  }
+  if (process.platform === 'win32') await checkAdminPrivileges()
 }
 
 export function getSessionAdminStatus(): boolean {
   if (process.platform !== 'win32') {
     return true
   }
-  return sessionAdminStatus ?? false
+  return getConfirmedAdminPrivileges() ?? false
 }
 
 export { checkAdminPrivileges } from './admin'
@@ -74,11 +70,8 @@ export async function checkMihomoCorePermissions(): Promise<boolean> {
   const { core = 'mihomo' } = await getAppConfig()
   const corePath = mihomoCorePath(core)
 
+  if (process.platform === 'win32') return checkAdminPrivileges()
   try {
-    if (process.platform === 'win32') {
-      return await checkAdminPrivileges()
-    }
-
     if (process.platform === 'darwin' || process.platform === 'linux') {
       const stats = await stat(corePath)
       return (stats.mode & 0o4000) !== 0 && stats.uid === 0
