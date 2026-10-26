@@ -23,6 +23,33 @@ public struct CompatibilityService {
 
   public init() {}
 
+  /// Validate a shared import without changing the current editor, library or tunnel.
+  public func prepareUnifiedImport(_ text: String, current: CompatibilityInput) throws -> CompatibilityInput? {
+    guard let compiled = try UnifiedProfile.importedYAML(text) else { return nil }
+    var candidate = current
+    candidate.profileYaml = compiled
+    let sharedKeys = topLevelKeys(in: compiled)
+    guard sharedKeys.isDisjoint(with: topLevelKeys(in: current.overrideYaml)) else {
+      throw UnifiedProfile.Failure(reason: "Existing YAML overrides change shared policy fields. Review or remove those overrides before importing.")
+    }
+    candidate.controlledConfigYaml = removingTopLevelKeys(from: current.controlledConfigYaml, keys: sharedKeys)
+    // Mobile DNS controls are mandatory. Import the explicit shared DNS atomically
+    // instead of allowing an old resolver policy to shadow its exact exceptions.
+    if sharedKeys.contains("dns") {
+      candidate.controlledConfigYaml += "\ndns:\n" + section(named: "dns", in: compiled)
+      let localListener = dnsChildBlock("listen", in: current.controlledConfigYaml)
+      if !localListener.isEmpty { candidate.controlledConfigYaml += "\n" + localListener.joined(separator: "\n") }
+    }
+    // Shared policy is explicit; do not replace it with the mobile general-policy preset.
+    let data = Data(candidate.appConfigJson.utf8)
+    var settings = (try JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+    settings["iosRoutingPolicy"] = "profile"
+    candidate.appConfigJson = String(decoding: try JSONSerialization.data(withJSONObject: settings, options: [.sortedKeys]), as: UTF8.self)
+    let report = validate(candidate)
+    guard report.isValid else { throw UnifiedProfile.Failure(reason: report.blockingErrors.joined(separator: "\n")) }
+    return candidate
+  }
+
   public func sanitizedMobileInput(_ input: CompatibilityInput) -> CompatibilityInput {
     var result = input
     result.profileYaml = removingUnavailableMobileKeys(in: input.profileYaml)

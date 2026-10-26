@@ -1,0 +1,1302 @@
+[
+  {
+    "name": "shared-dns-and-rule-order",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": ["macos", "windows", "ios"]
+  },
+  {
+    "name": "explicit-process-rule",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        {
+          "rule": "AND,((NETWORK,tcp),(PROCESS-NAME,QQMusic.exe),(GEOIP,CN)),DIRECT",
+          "platforms": ["windows"]
+        },
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": ["macos", "windows", "ios"]
+  },
+  {
+    "name": "undeclared-process-rule",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "AND,((NETWORK,tcp),(PROCESS-NAME,QQMusic),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": ["macos", "windows"]
+  },
+  {
+    "name": "mrs-requires-mobile-variant",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        },
+        "rule-providers": {
+          "cn": {
+            "type": "http",
+            "format": "mrs",
+            "behavior": "domain",
+            "url": "https://example.invalid/cn.mrs",
+            "path": "./rules/cn.mrs"
+          }
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": ["macos", "windows"]
+  },
+  {
+    "name": "explicit-mobile-provider",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        },
+        "rule-providers": {
+          "cn": {
+            "type": "http",
+            "format": "mrs",
+            "behavior": "domain",
+            "url": "https://example.invalid/cn.mrs",
+            "path": "./rules/cn.mrs"
+          }
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ],
+      "platforms": {
+        "ios": {
+          "rule-providers": {
+            "cn": {
+              "type": "http",
+              "format": "yaml",
+              "behavior": "domain",
+              "url": "https://example.invalid/cn.yaml",
+              "path": "./rules/cn.yaml"
+            }
+          }
+        }
+      }
+    },
+    "validPlatforms": ["macos", "windows", "ios"]
+  },
+  {
+    "name": "future-version",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 2,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "boolean-version",
+    "input": {
+      "format": "clash-party-unified",
+      "version": true,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "machine-interface",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        },
+        "interface-name": "en0"
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "machine-tun",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        },
+        "tun": {
+          "device": "WLAN"
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "unknown-platform",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ],
+      "platforms": {
+        "android": {
+          "rule-providers": {}
+        }
+      }
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "unknown-rule-platform",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        {
+          "rule": "MATCH,DIRECT",
+          "platforms": ["darwn"]
+        },
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "empty-platform-selection",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        {
+          "rule": "MATCH,DIRECT",
+          "platforms": []
+        },
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "unreachable-tail",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "MATCH,DIRECT",
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "missing-match",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "unsafe-object-key",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        },
+        "hosts": {
+          "__proto__": {}
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "platform-cannot-change-node",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ],
+      "platforms": {
+        "ios": {
+          "proxies": []
+        }
+      }
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "yaml-scalar-roundtrip",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        },
+        "hosts": {
+          "true": "1.2.3.4",
+          "colon: name": "null",
+          "number": "001",
+          "line": "a\nb",
+          "quoted": "a\"b"
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": ["macos", "windows", "ios"]
+  },
+  {
+    "name": "explicit-provider-removal",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        },
+        "rule-providers": {
+          "cn": {
+            "type": "http",
+            "format": "mrs",
+            "behavior": "domain",
+            "url": "https://example.invalid/cn.mrs",
+            "path": "./rules/cn.mrs"
+          }
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ],
+      "platforms": {
+        "ios": {
+          "rule-providers": {
+            "cn": null
+          }
+        }
+      }
+    },
+    "validPlatforms": ["macos", "windows", "ios"]
+  },
+  {
+    "name": "removed-provider-still-referenced",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        },
+        "rule-providers": {
+          "cn": {
+            "type": "http",
+            "format": "mrs",
+            "behavior": "domain",
+            "url": "https://example.invalid/cn.mrs",
+            "path": "./rules/cn.mrs"
+          }
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "RULE-SET,cn,DIRECT",
+        "MATCH,Overseas"
+      ],
+      "platforms": {
+        "ios": {
+          "rule-providers": {
+            "cn": null
+          }
+        }
+      }
+    },
+    "validPlatforms": ["macos", "windows"]
+  },
+  {
+    "name": "missing-nested-provider",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"]
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "AND,((NETWORK,tcp),(RULE-SET,missing)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  },
+  {
+    "name": "machine-dns-listener",
+    "input": {
+      "format": "clash-party-unified",
+      "version": 1,
+      "revision": "example-1",
+      "common": {
+        "mode": "rule",
+        "ipv6": false,
+        "proxies": [
+          {
+            "name": "Example",
+            "type": "http",
+            "server": "192.0.2.10",
+            "port": 443,
+            "tls": true
+          }
+        ],
+        "proxy-groups": [
+          {
+            "name": "Overseas",
+            "type": "select",
+            "proxies": ["Example"]
+          }
+        ],
+        "dns": {
+          "enable": true,
+          "enhanced-mode": "fake-ip",
+          "fake-ip-range": "198.18.0.1/16",
+          "ipv6": false,
+          "nameserver": ["https://1.1.1.1/dns-query#Overseas"],
+          "proxy-server-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "default-nameserver": ["https://1.12.12.12/dns-query#DIRECT"],
+          "nameserver-policy": {
+            "aqqmusic.tc.qq.com": "https://doh.pub/dns-query#DIRECT",
+            "+.stream.qqmusic.qq.com": "https://doh.pub/dns-query#DIRECT"
+          },
+          "fake-ip-filter": ["*.lan", "*.local"],
+          "listen": "0.0.0.0:53"
+        }
+      },
+      "rules": [
+        "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+        "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+        "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+        "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
+        "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+        "NETWORK,udp,Overseas",
+        "GEOSITE,geolocation-!cn,Overseas",
+        "GEOSITE,cn,DIRECT",
+        "AND,((NETWORK,tcp),(GEOIP,CN)),DIRECT",
+        "MATCH,Overseas"
+      ]
+    },
+    "validPlatforms": []
+  }
+]

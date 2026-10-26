@@ -14,17 +14,20 @@
 		A10000050000000000000000 /* CompatibilityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000050000000000000000 /* CompatibilityModels.swift */; };
 		A10000060000000000000000 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000060000000000000000 /* SharedStore.swift */; };
 		A10000070000000000000000 /* CompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000070000000000000000 /* CompatibilityService.swift */; };
+		B10000F00000000000000000 /* UnifiedProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000F00000000000000000 /* UnifiedProfile.swift */; };
 		A10000080000000000000000 /* RuntimeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000080000000000000000 /* RuntimeBridge.swift */; };
 		A10000090000000000000000 /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000090000000000000000 /* PacketTunnelProvider.swift */; };
 		A10000100000000000000000 /* RuntimeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000040000000000000000 /* RuntimeModels.swift */; };
 		A10000110000000000000000 /* CompatibilityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000050000000000000000 /* CompatibilityModels.swift */; };
 		A10000120000000000000000 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000060000000000000000 /* SharedStore.swift */; };
 		A10000130000000000000000 /* CompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000070000000000000000 /* CompatibilityService.swift */; };
+		B10000F10000000000000000 /* UnifiedProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000F00000000000000000 /* UnifiedProfile.swift */; };
 		A10000140000000000000000 /* RuntimeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000080000000000000000 /* RuntimeBridge.swift */; };
 		A10000150000000000000000 /* RuntimeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000040000000000000000 /* RuntimeModels.swift */; };
 		A10000160000000000000000 /* CompatibilityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000050000000000000000 /* CompatibilityModels.swift */; };
 		A10000170000000000000000 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000060000000000000000 /* SharedStore.swift */; };
 		A10000180000000000000000 /* CompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000070000000000000000 /* CompatibilityService.swift */; };
+		B10000F20000000000000000 /* UnifiedProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000F00000000000000000 /* UnifiedProfile.swift */; };
 		A10000190000000000000000 /* RuntimeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000080000000000000000 /* RuntimeBridge.swift */; };
 		A10000200000000000000000 /* ClashPartyTunnel.appex in CopyFiles */ = {isa = PBXBuildFile; fileRef = A30000020000000000000000 /* ClashPartyTunnel.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A10000210000000000000000 /* ConsoleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000160000000000000000 /* ConsoleViewModel.swift */; };
@@ -110,6 +113,7 @@
 		A20000050000000000000000 /* CompatibilityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityModels.swift; sourceTree = "<group>"; };
 		A20000060000000000000000 /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
 		A20000070000000000000000 /* CompatibilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityService.swift; sourceTree = "<group>"; };
+		B20000F00000000000000000 /* UnifiedProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedProfile.swift; sourceTree = "<group>"; };
 		A20000080000000000000000 /* RuntimeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeBridge.swift; sourceTree = "<group>"; };
 		A20000090000000000000000 /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
 		A20000100000000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -324,6 +328,7 @@
 			children = (
 				A20000400000000000000000 /* RoutingPolicyService.swift */,
 				A20000070000000000000000 /* CompatibilityService.swift */,
+				B20000F00000000000000000 /* UnifiedProfile.swift */,
 			);
 			path = Compatibility;
 			sourceTree = "<group>";
@@ -496,6 +501,7 @@
 				A10000050000000000000000 /* CompatibilityModels.swift in Sources */,
 				A10000060000000000000000 /* SharedStore.swift in Sources */,
 				A10000070000000000000000 /* CompatibilityService.swift in Sources */,
+				B10000F00000000000000000 /* UnifiedProfile.swift in Sources */,
 				A10000080000000000000000 /* RuntimeBridge.swift in Sources */,
 				A10000220000000000000000 /* MihomoCoreFFI.swift in Sources */,
 				A10000250000000000000000 /* MihomoControllerClient.swift in Sources */,
@@ -529,6 +535,7 @@
 				A10000110000000000000000 /* CompatibilityModels.swift in Sources */,
 				A10000120000000000000000 /* SharedStore.swift in Sources */,
 				A10000130000000000000000 /* CompatibilityService.swift in Sources */,
+				B10000F10000000000000000 /* UnifiedProfile.swift in Sources */,
 				A10000140000000000000000 /* RuntimeBridge.swift in Sources */,
 				A10000230000000000000000 /* MihomoCoreFFI.swift in Sources */,
 				A10000260000000000000000 /* MihomoControllerClient.swift in Sources */,
@@ -551,6 +558,7 @@
 				A10000160000000000000000 /* CompatibilityModels.swift in Sources */,
 				A10000170000000000000000 /* SharedStore.swift in Sources */,
 				A10000180000000000000000 /* CompatibilityService.swift in Sources */,
+				B10000F20000000000000000 /* UnifiedProfile.swift in Sources */,
 				A10000190000000000000000 /* RuntimeBridge.swift in Sources */,
 				A10000240000000000000000 /* MihomoCoreFFI.swift in Sources */,
 				A10000270000000000000000 /* MihomoControllerClient.swift in Sources */,

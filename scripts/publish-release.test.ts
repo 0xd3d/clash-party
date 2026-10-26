@@ -70,6 +70,24 @@ beforeEach(() => {
       )
       assets.push(manifest)
     }
+  for (const name of ['ClashParty-ios-device-unsigned.zip', 'ClashParty-ios-simulator-arm64.zip']) {
+    const bytes = Buffer.from(name)
+    files.set(path.join('release-assets', name), bytes)
+    files.set(
+      path.join('release-assets', `${name}.sha256`),
+      createHash('sha256').update(bytes).digest('hex')
+    )
+    assets.push(name, `${name}.sha256`)
+  }
+  files.set(
+    path.join('release-assets', 'ios-build-manifest.json'),
+    JSON.stringify({ commit, signed: false })
+  )
+  files.set(
+    path.join('release-assets', 'SIGNING.txt'),
+    'Unsigned device archive; private signing required.'
+  )
+  assets.push('ios-build-manifest.json', 'SIGNING.txt')
   mocks.readFileSync.mockImplementation((name: string) => {
     if (!files.has(name)) throw new Error(`Unexpected file: ${name}`)
     return files.get(name)
@@ -91,6 +109,22 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs())
 
 describe('release publication uses the reserved Git tag', () => {
+  it('rejects an iOS artifact from another commit', async () => {
+    files.set(
+      path.join('release-assets', 'ios-build-manifest.json'),
+      JSON.stringify({ commit: 'b'.repeat(40), signed: false })
+    )
+    await expect(import('./publish-release.mjs')).rejects.toThrow('Invalid iOS build manifest')
+    expect(mocks.execFileSync).not.toHaveBeenCalled()
+  })
+  it('rejects corrupted mobile archives before publishing desktop assets', async () => {
+    files.set(
+      path.join('release-assets', 'ClashParty-ios-device-unsigned.zip'),
+      Buffer.from('corrupt')
+    )
+    await expect(import('./publish-release.mjs')).rejects.toThrow('Checksum mismatch')
+    expect(mocks.execFileSync).not.toHaveBeenCalled()
+  })
   it('creates from an existing verified tag without the historical target parameter', async () => {
     await import('./publish-release.mjs')
     const args = mocks.execFileSync.mock.calls[0][1] as string[]

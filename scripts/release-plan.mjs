@@ -35,7 +35,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     }
     mkdirSync('release-metadata', { recursive: true })
     writeFileSync('release-metadata/release-plan.json', JSON.stringify(plan, null, 2) + '\n')
-    const notes = `Source: ${plan.commit}\n\nNative Windows x64/ARM64 and macOS Intel/Apple Silicon builds.\n\nChecks: review, unit tests, packaged architecture, resources and Electron native module loading. This is not Windows hardware network/leak certification.\n\nWindows installers are unsigned. macOS app signatures are ad-hoc; PKGs are unsigned and not notarized.\n\nPrivate node credentials and operating policies are not embedded.\n\n${plan.prerelease ? 'Automatic preview build. Existing stable updates are not replaced.' : 'Stable tagged build.'}\n`
+    const notes = `Source: ${plan.commit}\n\nNative Windows x64/ARM64 and macOS Intel/Apple Silicon builds, plus unsigned iOS device and ARM64 simulator archives. The iOS device archive requires private signing and provisioning before installation.\n\nChecks: review, unit tests, Swift/TypeScript shared-profile parity, mobile policy checks, unsigned iOS builds, packaged architecture, resources and Electron native module loading. This is not Windows hardware network/leak certification.\n\nWindows installers are unsigned. macOS app signatures are ad-hoc; PKGs are unsigned and not notarized.\n\nPrivate node credentials and operating policies are not embedded.\n\n${plan.prerelease ? 'Automatic preview build. Existing stable updates are not replaced.' : 'Stable tagged build.'}\n`
     writeFileSync('release-metadata/release-notes.md', notes)
     // JSON is valid YAML, and the existing updater consumes version/changelog.
     if (!plan.prerelease)

@@ -7,7 +7,7 @@ trap 'rm -rf "$CHECK_ROOT"' EXIT
 SHARED=("$IOS_ROOT"/ClashPartyShared/Models/*.swift "$IOS_ROOT"/ClashPartyShared/Compatibility/*.swift "$IOS_ROOT/ClashPartyShared/Store/SharedStore.swift")
 swiftc "${SHARED[@]}" "$IOS_ROOT/scripts/check_ios_routing.swift" -o "$CHECK_ROOT/routing-check"
 "$CHECK_ROOT/routing-check" "$IOS_ROOT/tests/Fixtures/legacy-service-profile.yaml" "$IOS_ROOT/ClashParty/Resources/RuleResources" "$CHECK_ROOT/runtime"
-for check in check_ios_doh_preservation check_ios_dns_route_protection check_ios_proxy_projection check_mobile_runtime; do
+for check in check_ios_doh_preservation check_ios_dns_route_protection check_ios_proxy_projection check_mobile_runtime check_ios_unified_import; do
   swiftc "${SHARED[@]}" "$IOS_ROOT/scripts/$check.swift" -o "$CHECK_ROOT/$check"
   "$CHECK_ROOT/$check"
 done

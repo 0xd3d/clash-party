@@ -158,7 +158,7 @@ public enum RoutingPolicyService {
       general += ["IP-CIDR,127.0.0.0/8,DIRECT,no-resolve", "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
                   "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve", "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
                   "IP-CIDR,100.64.0.0/10,DIRECT,no-resolve", "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
-                  "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve", "IP-CIDR6,::1/128,DIRECT,no-resolve",
+                  "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve", "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve", "IP-CIDR6,::1/128,DIRECT,no-resolve",
                   "IP-CIDR6,fc00::/7,DIRECT,no-resolve", "IP-CIDR6,fe80::/10,DIRECT,no-resolve",
                   "IP-CIDR6,ff00::/8,DIRECT,no-resolve", "DOMAIN-SUFFIX,lan,DIRECT", "DOMAIN-SUFFIX,local,DIRECT"]
       // Keep local discovery local; public UDP must not fall through a country DIRECT rule.
@@ -194,7 +194,7 @@ public enum RoutingPolicyService {
     let local = ["IP-CIDR,127.0.0.0/8,DIRECT,no-resolve", "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
       "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve", "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
       "IP-CIDR,100.64.0.0/10,DIRECT,no-resolve", "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
-      "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve", "IP-CIDR6,::1/128,DIRECT,no-resolve",
+      "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve", "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve", "IP-CIDR6,::1/128,DIRECT,no-resolve",
       "IP-CIDR6,fc00::/7,DIRECT,no-resolve", "IP-CIDR6,fe80::/10,DIRECT,no-resolve", "IP-CIDR6,ff00::/8,DIRECT,no-resolve",
       "DOMAIN-SUFFIX,lan,DIRECT", "DOMAIN-SUFFIX,local,DIRECT"]
     let resolvers = ["dns.google", "cloudflare-dns.com", "one.one.one.one", "dns.quad9.net", "doh.opendns.com",

@@ -190,7 +190,7 @@ const EditInfoModal: React.FC<Props> = (props) => {
   }
 
   const selectLocalFile = async (): Promise<void> => {
-    const files = await getFilePath(['yml', 'yaml'])
+    const files = await getFilePath(['yml', 'yaml', 'json'])
     if (!files?.length) return
 
     const file = await readTextFile(files[0])

@@ -709,6 +709,13 @@ public enum SharedStore {
     }
   }
 
+  /// Preserve the original portable source locally; it may contain node credentials.
+  public static func archiveUnifiedProfileSource(_ text: String) throws {
+    try ensureDirectories()
+    let url = try containerURL().appendingPathComponent("imports/unified-\(UUID().uuidString).yaml")
+    try Data(text.utf8).write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+  }
+
   public static func createBackupRecord(
     name: String,
     input: CompatibilityInput,

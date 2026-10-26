@@ -2,13 +2,10 @@ name: Build and release
 
 on:
   push:
-    branches: [smart_core]
+    branches: [smart_core, feature/three-platform-privacy]
     tags: ['v[0-9]*']
     paths-ignore:
       - '**/*.md'
-      - 'apps/ios/**'
-      - 'modules/mihomo-ios-core/**'
-      - '.github/workflows/ios.yml'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/workflows/issues.yml'
   workflow_dispatch:
@@ -171,8 +168,12 @@ jobs:
           if-no-files-found: error
           overwrite: true
 
+  ios:
+    needs: checks
+    uses: ./.github/workflows/ios.yml
+
   publish:
-    needs: [plan, checks, packages]
+    needs: [plan, checks, packages, ios]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -193,5 +194,9 @@ jobs:
           pattern: package-*
           path: release-assets
           merge-multiple: true
+      - uses: actions/download-artifact@v6
+        with:
+          name: ios-unsigned-${{ github.sha }}
+          path: release-assets
       - name: Publish only the complete validated release
         run: node scripts/publish-release.mjs

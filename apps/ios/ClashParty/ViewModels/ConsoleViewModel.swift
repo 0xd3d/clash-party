@@ -3089,6 +3089,20 @@ final class ConsoleViewModel: ObservableObject {
       } catch { lastError = error.localizedDescription }
       return
     }
+    var text = text
+    if kind == .profileYAML {
+      do {
+        if let candidate = try compatibilityService.prepareUnifiedImport(text, current: currentInput()) {
+          _ = try SharedStore.createBackupRecord(name: "Before unified profile import", input: currentInput(), runtimeStatus: runtimeStatus)
+          try SharedStore.archiveUnifiedProfileSource(text)
+          text = candidate.profileYaml
+          appConfigJson = candidate.appConfigJson
+        }
+      } catch {
+        lastError = error.localizedDescription
+        return
+      }
+    }
     activeProfileRecordID = nil
     lastPublishedInput = nil
     resetProxySelectionStateForImportedWorkspace()

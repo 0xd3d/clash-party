@@ -53,7 +53,7 @@ describe('immutable fork releases', () => {
     expect(workflow.permissions).toEqual({ contents: 'read' })
     expect(workflow.jobs.plan.permissions).toEqual({ contents: 'write' })
     expect(workflow.jobs.publish.permissions).toEqual({ contents: 'write' })
-    expect(workflow.jobs.publish.needs).toEqual(['plan', 'checks', 'packages'])
+    expect(workflow.jobs.publish.needs).toEqual(['plan', 'checks', 'packages', 'ios'])
     expect(workflow.jobs.checks.needs).toBe('plan')
     expect(workflow.jobs.packages.needs).toBe('checks')
     expect(workflow.jobs.plan.needs).toBeUndefined()

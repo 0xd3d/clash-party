@@ -13,6 +13,7 @@ on:
       - 'modules/mihomo-ios-core/**'
       - '.github/workflows/ios.yml'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -31,6 +32,13 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify the shared desktop and mobile import contract
+        run: bash scripts/check-unified-profiles.sh
       - uses: actions/setup-go@v6
         with:
           go-version: '1.20.14'
@@ -60,7 +68,8 @@ jobs:
           ditto -c -k --keepParent "$RUNNER_TEMP/ios-device/Build/Products/Debug-iphoneos/ClashParty.app" ios-artifacts/ClashParty-ios-device-unsigned.zip
           ditto -c -k --keepParent "$RUNNER_TEMP/ios-simulator/Build/Products/Debug-iphonesimulator/ClashParty.app" ios-artifacts/ClashParty-ios-simulator-arm64.zip
           printf '%s\n' 'Unsigned build verification artifacts. The device archive is not an installable signed IPA. Signing, App Group and Network Extension provisioning must be supplied privately by the developer. No connected device was accessed.' > ios-artifacts/SIGNING.txt
-          shasum -a 256 ios-artifacts/*.zip > ios-artifacts/SHA256SUMS.txt
+          (cd ios-artifacts && for file in *.zip; do shasum -a 256 "$file" > "$file.sha256"; done)
+          printf '{"commit":"%s","signed":false}\n' "$GITHUB_SHA" > ios-artifacts/ios-build-manifest.json
       - uses: actions/upload-artifact@v6
         with:
           name: ios-unsigned-${{ github.sha }}

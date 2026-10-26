@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { addProfileUpdater } from '../core/profileUpdater'
 import { getOverrideConfig, updateOverrideConfig } from './override'
 import {
+  setProfileStr,
+  parseProfileContent,
   addProfileItem,
   createProfile,
   getProfileConfig,
@@ -714,3 +716,56 @@ describe('plugin subscription validation follow-ups (V7 regressions)', () => {
     })
   })
 })
+
+describe.skipIf(!['darwin', 'win32'].includes(process.platform))(
+  'unified source import transaction',
+  () => {
+    const unified = readFileSync('examples/unified-profile.json', 'utf8')
+    it('does not overwrite the working file with malformed or YAML-encoded envelopes', async () => {
+      for (const source of [
+        '{"format":"clash-party-unified", BROKEN',
+        'format: clash-party-unified\nversion: 1'
+      ]) {
+        await expect(setProfileStr('remote', source)).rejects.toThrow()
+        expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(oldProfile)
+      }
+      expect(mocks.hotReload).not.toHaveBeenCalled()
+    })
+
+    it('adapts the source for runtime without rewriting its common nodes or DNS', async () => {
+      const parsed = await parseProfileContent('remote', unified)
+      expect(parsed.rules?.at(-1)).toBe('MATCH,Overseas')
+      expect(parsed.proxies).toMatchObject([{ name: 'Example' }])
+    })
+    it('retains the source and a private previous version after validation', async () => {
+      await setProfileStr('remote', unified)
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(unified)
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml.previous'), 'utf8')).toBe(
+        oldProfile
+      )
+      expect(mocks.checkProfileConfig).toHaveBeenCalled()
+    })
+    it('keeps the previous source if core validation fails', async () => {
+      mocks.checkProfileConfig.mockRejectedValueOnce(new Error('invalid provider'))
+      await expect(setProfileStr('remote', unified)).rejects.toThrow('invalid provider')
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(oldProfile)
+      expect(mocks.hotReload).not.toHaveBeenCalled()
+    })
+    it('restores the previous source when activation and restart both fail', async () => {
+      mocks.hotReload.mockRejectedValueOnce(new Error('reload failed'))
+      mocks.restartCore.mockRejectedValueOnce(new Error('restart failed'))
+      await expect(setProfileStr('remote', unified)).rejects.toThrow('restart failed')
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(oldProfile)
+      expect(mocks.hotReload).toHaveBeenCalledTimes(2)
+    })
+    it('accepts a remote unified source only after its platform adaptation', async () => {
+      mocks.axiosGet.mockResolvedValue({ status: 200, data: unified, headers: {} })
+      const result = await createProfile({
+        type: 'remote',
+        url: 'https://example.invalid/profile',
+        name: 'Unified'
+      })
+      expect(readFileSync(join(testDir, 'profiles', `${result.id}.yaml`), 'utf8')).toBe(unified)
+    })
+  }
+)

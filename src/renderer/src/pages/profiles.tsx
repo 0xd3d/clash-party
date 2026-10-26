@@ -244,7 +244,7 @@ const Profiles: React.FC = () => {
       if (event.dataTransfer?.files) {
         const file = event.dataTransfer.files[0]
         const name = file?.name.toLowerCase() ?? ''
-        if (name.endsWith('.yml') || name.endsWith('.yaml')) {
+        if (name.endsWith('.yml') || name.endsWith('.yaml') || name.endsWith('.json')) {
           try {
             const path = window.api.webUtils.getPathForFile(file)
             const content = await readTextFile(path)
@@ -520,7 +520,7 @@ const Profiles: React.FC = () => {
                     onAction={async (key) => {
                       if (key === 'open') {
                         try {
-                          const files = await getFilePath(['yml', 'yaml'])
+                          const files = await getFilePath(['yml', 'yaml', 'json'])
                           if (files?.length) {
                             const content = await readTextFile(files[0])
                             const fileName = files[0].split('/').pop()?.split('\\').pop()

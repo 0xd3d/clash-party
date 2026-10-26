@@ -6,6 +6,7 @@ on:
     branches:
       - smart_core
       - main
+      - feature/three-platform-privacy
     paths-ignore:
       - 'README.md'
       - '.github/ISSUE_TEMPLATE/**'

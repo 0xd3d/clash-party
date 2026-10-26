@@ -14,7 +14,7 @@ if (process.env.GH_REPO !== process.env.GITHUB_REPOSITORY)
 const repository = process.env.GH_REPO
 assertReleaseTag(repository, plan)
 const root = 'release-assets'
-const required = []
+const required = ['ClashParty-ios-device-unsigned.zip', 'ClashParty-ios-simulator-arm64.zip']
 for (const arch of ['x64', 'arm64']) {
   required.push(
     `clash-party-windows-${plan.version}-${arch}-setup.exe`,
@@ -22,6 +22,10 @@ for (const arch of ['x64', 'arm64']) {
     `clash-party-macos-${plan.version}-${arch}.pkg`
   )
 }
+const iosManifest = JSON.parse(readFileSync(path.join(root, 'ios-build-manifest.json'), 'utf8'))
+readFileSync(path.join(root, 'SIGNING.txt'), 'utf8')
+if (iosManifest.commit !== plan.commit || iosManifest.signed !== false)
+  throw new Error('Invalid iOS build manifest')
 for (const name of required) {
   const bytes = readFileSync(path.join(root, name))
   const expected = readFileSync(path.join(root, `${name}.sha256`), 'utf8')
@@ -80,6 +84,8 @@ if (existing.status === 0) {
     )
   } else if (
     required.some((name) => !names.has(name) || !names.has(`${name}.sha256`)) ||
+    !names.has('ios-build-manifest.json') ||
+    !names.has('SIGNING.txt') ||
     (!plan.prerelease && !names.has('latest.yml')) ||
     ['win32', 'darwin'].some((platform) =>
       ['x64', 'arm64'].some((arch) => !names.has(`build-manifest-${platform}-${arch}.json`))

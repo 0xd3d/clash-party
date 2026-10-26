@@ -8,6 +8,7 @@ import { tmpdir } from 'os'
 import { app } from 'electron'
 import i18next from 'i18next'
 import axios, { AxiosResponse } from 'axios'
+import { adaptUnifiedProfile, isUnifiedProfile } from '../../shared/unifiedProfile'
 import { parse, stringify } from '../utils/yaml'
 import { defaultProfile } from '../utils/template'
 import { decryptAgeContent } from '../utils/age'
@@ -504,7 +505,11 @@ async function fetchAndValidateSubscription(options: FetchOptions): Promise<Fetc
   }
 
   const decryptedData = await decryptAgeContent(data, options.ageSecretKey, 'subscription')
-  const parsed = parse(decryptedData, { maxAliasCount }) as Record<string, unknown> | null
+  const parsed = adaptUnifiedProfile(
+    decryptedData,
+    parse(decryptedData, { maxAliasCount }),
+    process.platform
+  ) as Record<string, unknown> | null
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     await profileLogger.warn(
       `Remote profile parse failed url=${redactedUrl} mode=${fetchMode} parsedType=${typeof parsed}`
@@ -715,6 +720,49 @@ export async function getProfileStr(id: string | undefined): Promise<string> {
 }
 
 export async function setProfileStr(id: string, content: string): Promise<void> {
+  // Unified sources remain intact on disk. Validate the adapted candidate before
+  // publishing it; retain a private backup and restore the active source on failure.
+  let unified =
+    /^\s*["']?format["']?\s*:\s*["']?clash-party-unified/m.test(content) ||
+    (content.trimStart().startsWith('{') && /"format"\s*:/.test(content))
+  try {
+    unified = unified || isUnifiedProfile(JSON.parse(content))
+  } catch {
+    /* Ordinary YAML/age imports keep their existing path. */
+  }
+  if (unified) {
+    if ((await getAppConfig()).operationMode === 'simple')
+      throw new Error(
+        'Unified profiles require standard mode. Switch to standard mode before importing.'
+      )
+    const item = (await getProfileItem(id)) ?? { id, name: id, type: 'local' as const }
+    await validateProfileCandidate(item, content)
+    const { current } = await getProfileConfig(true)
+    const previous = existsSync(profilePath(id)) ? await getProfileStr(id) : undefined
+    if (previous !== undefined)
+      await atomicWriteFile(`${profilePath(id)}.previous`, previous, {
+        encoding: 'utf8',
+        mode: 0o600
+      })
+    await atomicWriteFile(profilePath(id), content, { encoding: 'utf8', mode: 0o600 })
+    try {
+      if (current === id) await reloadCurrentProfile()
+    } catch (error) {
+      if (previous !== undefined) {
+        await atomicWriteFile(profilePath(id), previous, { encoding: 'utf8', mode: 0o600 })
+        try {
+          await reloadCurrentProfile()
+        } catch (restoreError) {
+          profileLogger.error(
+            'Unified profile rollback could not restart the previous runtime',
+            restoreError
+          )
+        }
+      }
+      throw error
+    }
+    return
+  }
   // 读取最新的配置
   const { current } = await getProfileConfig(true)
   if ((await getAppConfig()).operationMode === 'simple') {
@@ -791,7 +839,11 @@ export async function parseProfileContent(
 
   try {
     const { yamlMaxAliasCount } = await getAppConfig()
-    let result = parse(profile, { maxAliasCount: yamlMaxAliasCount })
+    let result = adaptUnifiedProfile(
+      profile,
+      parse(profile, { maxAliasCount: yamlMaxAliasCount }),
+      process.platform
+    )
     if (typeof result !== 'object') result = {}
     return result as IMihomoConfig
   } catch (e) {
