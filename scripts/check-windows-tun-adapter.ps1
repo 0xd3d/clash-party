@@ -29,10 +29,15 @@ try {
   if ((Get-FileHash -LiteralPath $coreZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $coreHash) {
     throw 'Pinned Mihomo archive hash mismatch.'
   }
-  $coreDirectory = Join-Path $directory 'core'
+  $coreDirectory = Join-Path $directory 'resources/sidecar'
   Expand-Archive -LiteralPath $coreZip -DestinationPath $coreDirectory
   $core = @(Get-ChildItem -LiteralPath $coreDirectory -Filter '*.exe' -File)
   if ($core.Count -ne 1) { throw 'Expected one pinned core executable.' }
+  $corePath = Join-Path $coreDirectory 'mihomo.exe'
+  Move-Item -LiteralPath $core[0].FullName -Destination $corePath
+  $helperDirectory = Join-Path $directory 'resources/files'
+  New-Item -ItemType Directory -Path $helperDirectory | Out-Null
+  Copy-Item -LiteralPath "./build/native/windows/$Arch/party.mihomo.network-guard.exe" -Destination $helperDirectory
   $alias = 'ufw' # Reproduce the reported custom alias on a disposable runner.
   if (Get-NetAdapter -IncludeHidden -Name $alias -ErrorAction SilentlyContinue) {
     throw 'Refusing to reuse a pre-existing CI interface.'
@@ -56,7 +61,7 @@ tun:
 rules:
   - MATCH,REJECT
 "@ | Set-Content -LiteralPath $config -Encoding utf8NoBOM
-  $start = [Diagnostics.ProcessStartInfo]::new($core[0].FullName)
+  $start = [Diagnostics.ProcessStartInfo]::new($corePath)
   $start.UseShellExecute = $false
   $start.CreateNoWindow = $true
   $start.RedirectStandardOutput = $true
@@ -75,6 +80,10 @@ rules:
   & "./build/native/windows/$Arch/adapter-selftest.exe" '--inspect-created-adapter' $alias
   if ($LASTEXITCODE -ne 0) { throw 'Production identity check rejected the actual pinned Mihomo TUN.' }
   Write-Output 'Actual pinned Mihomo TUN identity passed; no default routes, DNS or proxy access enabled.'
+  $physical = @(Get-NetAdapter -IncludeHidden | Where-Object HardwareInterface | Select-Object -First 1)
+  if ($physical.Count -ne 1) { throw 'Physical rejection fixture requires one real hardware adapter.' }
+  & node --experimental-transform-types ./scripts/check-windows-guard-acquisition.ts $directory $coreProcess.Id $alias $physical[0].Name
+  if ($LASTEXITCODE -ne 0) { throw 'Production guard acquisition fixture failed.' }
   & "./build/native/windows/$Arch/adapter-selftest.exe" $dll
   if ($LASTEXITCODE -ne 0) { throw "Actual Wintun identity test failed: $LASTEXITCODE" }
 } finally {

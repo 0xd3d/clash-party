@@ -7,6 +7,7 @@ on:
       - 'integrations/windows-network-guard/**'
       - 'scripts/build-windows-network-guard.mjs'
       - 'scripts/check-windows-tun-adapter.ps1'
+      - 'scripts/check-windows-guard-acquisition.ts'
       - 'scripts/check-windows-token-elevation.ts'
       - 'scripts/check-windows-guard-broker.ts'
       - 'src/main/core/windowsGuardBroker.ts'
@@ -17,6 +18,7 @@ on:
       - 'integrations/windows-network-guard/**'
       - 'scripts/build-windows-network-guard.mjs'
       - 'scripts/check-windows-tun-adapter.ps1'
+      - 'scripts/check-windows-guard-acquisition.ts'
       - 'scripts/check-windows-token-elevation.ts'
       - 'scripts/check-windows-guard-broker.ts'
       - 'src/main/core/windowsGuardBroker.ts'
@@ -52,7 +54,7 @@ jobs:
           architecture: ${{ matrix.arch }}
       - name: Compile and run pure native fixtures
         run: node scripts/build-windows-network-guard.mjs
-      - name: Verify actual Wintun adapter identity and cleanup
+      - name: Verify actual TUN identity, protected acquisition and cleanup
         run: ./scripts/check-windows-tun-adapter.ps1 -Arch '${{ matrix.arch }}'
       - name: Read actual process token and verify error classification
         run: node --experimental-transform-types scripts/check-windows-token-elevation.ts

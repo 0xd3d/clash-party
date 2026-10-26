@@ -97,7 +97,7 @@ describe('Windows guard native build and boundary', () => {
     expect(source).toContain(
       'ng::allowTun(candidate.corePid, candidate.process.valid(), candidate.tun.has_value())'
     )
-    expect(source).toContain('candidate.tun.reset()')
+    expect(source).toContain('ng::prepareTunIdentity(request.operation,')
   })
 
   it.skipIf(process.platform === 'win32')(

@@ -272,9 +272,8 @@ Candidate prepare(const ng::Request& request, const std::wstring& sid) {
   if (!GetFileInformationByHandle(candidate.file.value, &identity)) winCheck(GetLastError(), "Read core identity");
   ng::require((identity.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) == 0,
               "Invalid core executable identity");
-  candidate.tun = resolveTun(candidate.tunName);
+  candidate.tun = ng::prepareTunIdentity(request.operation, [&] { return resolveTun(candidate.tunName); });
   if (request.operation == ng::Operation::Acquire) {
-    ng::require(candidate.tun.has_value(), "The actual Wintun interface is not ready");
     candidate.corePid = request.corePid;
     candidate.process = Handle(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, request.corePid));
     handleCheck(candidate.process, "Open core process");
@@ -282,10 +281,6 @@ Candidate prepare(const ng::Request& request, const std::wstring& sid) {
                     equalPath(processPath(candidate.process.value), candidate.corePath) &&
                     elevatedUser(candidate.process.value) == sid,
                 "Core PID does not match the elevated bundled executable");
-  } else {
-    // An existing interface with the requested alias may belong to an unrelated process.
-    // Arm is deliberately a closed startup barrier; only verified acquisition opens TUN egress.
-    candidate.tun.reset();
   }
   return candidate;
 }

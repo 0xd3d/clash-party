@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -34,6 +35,17 @@ inline bool allowTun(std::uint32_t corePid, bool verifiedProcess, bool verifiedT
 
 inline void require(bool value, const char* message) {
   if (!value) throw std::runtime_error(message);
+}
+
+// Arming is a closed barrier before the new core owns an adapter. Do not inspect
+// stale/same-name interfaces here; only Acquire can select and authorize a TUN.
+template <typename Resolve>
+auto prepareTunIdentity(Operation operation, Resolve&& resolve) -> decltype(resolve()) {
+  if (operation == Operation::Arm) return {};
+  require(operation == Operation::Acquire, "TUN identity requires an acquisition request");
+  auto identity = resolve();
+  require(identity.has_value(), "The actual Wintun interface is not ready");
+  return identity;
 }
 
 inline void validate(const Request& request) {
@@ -154,6 +166,25 @@ inline unsigned selfTest() {
   check(!verifiedTunAdapter(53, true, false, true), "Hardware adapter accepted as Wintun");
   check(!verifiedTunAdapter(53, false, true, true), "Physical connector accepted as Wintun");
   check(!verifiedTunAdapter(53, false, false, false), "Unverified driver accepted as Wintun");
+  unsigned lookups = 0;
+  auto invalidAdapter = [&]() -> std::optional<unsigned> {
+    lookups++;
+    throw std::runtime_error("stale or non-Wintun adapter");
+  };
+  check(!prepareTunIdentity(Operation::Arm, invalidAdapter) && lookups == 0,
+        "Closed startup barrier inspected a stale adapter");
+  bool rejected = false;
+  try { (void)prepareTunIdentity(Operation::Acquire, invalidAdapter); }
+  catch (const std::runtime_error&) { rejected = true; }
+  check(rejected && lookups == 1, "Acquisition ignored an invalid adapter");
+  rejected = false;
+  try { (void)prepareTunIdentity(Operation::Acquire, [] { return std::optional<unsigned>{}; }); }
+  catch (const std::runtime_error&) { rejected = true; }
+  check(rejected, "Acquisition accepted a missing adapter");
+  check(prepareTunIdentity(Operation::Acquire, [] { return std::optional<unsigned>{73}; }) == 73,
+        "Acquisition lost the verified adapter identity");
+  check(!prepareTunIdentity(Operation::Arm, [] { return std::optional<unsigned>{73}; }),
+        "Arm selected an existing adapter without a verified core");
   return cases;
 }
 }  // namespace network_guard
