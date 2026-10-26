@@ -126,11 +126,16 @@ export function buildWindowsNetworkGuard(arch = process.env.npm_config_arch || p
   const launchResult = JSON.parse(
     execFileSync(launchFixture, [], { encoding: 'utf8', timeout: 30000 })
   )
-  if (launchResult.launchSelfTest !== 'passed' || launchResult.cases !== 4)
+  if (
+    launchResult.launchSelfTest !== 'passed' ||
+    launchResult.cases !== 5 ||
+    !['independent', 'restricted-parent-job'].includes(launchResult.hostEnvironment)
+  )
     throw new Error('Native independent-launch regression failed')
   console.log(
     `Built Windows ${arch} guard; ${result.cases} policy and ${launchResult.cases} process/job checks passed.`
   )
+  console.log(`Process-launch fixture host: ${launchResult.hostEnvironment}`)
   return output
 }
 

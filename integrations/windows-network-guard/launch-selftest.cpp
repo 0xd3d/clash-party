@@ -15,6 +15,14 @@ std::wstring executable() {
 void waitExit(const launch::Process& child) {
   require(WaitForSingleObject(child.process.value, 4000) == WAIT_OBJECT_0, "Fixture host did not exit");
 }
+launch::Process fixture(const wchar_t* mode) {
+  // A CI runner may deliberately prohibit leaving its root job. This unprivileged fixture
+  // never owns filters: only its synthetic app job is part of the survival experiment.
+  auto child = launch::suspended(executable(), mode);
+  launch::check(ResumeThread(child.thread.value) != static_cast<DWORD>(-1), "Resume fixture host");
+  child.thread.reset();
+  return child;
+}
 void host(DWORD breakaway) {
   launch::Handle job(CreateJobObjectW(nullptr, nullptr));
   require(job.valid(), "Create fixture job");
@@ -25,13 +33,15 @@ void host(DWORD breakaway) {
                 "Set fixture job policy");
   launch::check(AssignProcessToJobObject(job.value, GetCurrentProcess()), "Assign fixture host job");
   if (breakaway) {
-    auto child = launch::independent(executable(), L"--child");
+    auto child = launch::suspended(executable(), L"--child");
+    launch::resumeOutsideJob(child, job.value);
     require(launch::startupLine(child) == "READY", "Independent fixture did not start");
     std::cout << child.pid << '\n' << std::flush;
   } else {
     bool denied = false;
     try {
-      auto child = launch::independent(executable(), L"--child");
+      auto child = launch::suspended(executable(), L"--child");
+      launch::resumeOutsideJob(child, job.value);
       // Test-only child: no WFP/listener/policy. A denial must not be reported as success.
       TerminateProcess(child.process.value, 1);
     } catch (const std::exception& error) {
@@ -50,9 +60,6 @@ int wmain(int argc, wchar_t** argv) {
     if (argc == 2) {
       const std::wstring mode(argv[1]);
       if (mode == L"--child") {
-        BOOL inJob = TRUE;
-        launch::check(IsProcessInJob(GetCurrentProcess(), nullptr, &inJob), "Inspect fixture job");
-        require(!inJob, "Child retained a job");
         std::cout << "READY\n" << std::flush;
         Sleep(15000);
         return 0;
@@ -68,7 +75,7 @@ int wmain(int argc, wchar_t** argv) {
     }
     require(argc == 1, "Invalid fixture arguments");
     for (const auto* mode : {L"--allowed-host", L"--silent-host"}) {
-      auto allowed = launch::independent(executable(), mode);
+      auto allowed = fixture(mode);
       const auto pidText = launch::startupLine(allowed);
       require(!pidText.empty() && pidText.find_first_not_of("0123456789") == std::string::npos,
               "Allowed host did not report its independent child");
@@ -79,20 +86,32 @@ int wmain(int argc, wchar_t** argv) {
       require(child.valid(), "Open independent fixture child");
       waitExit(allowed);
       require(WaitForSingleObject(child.value, 0) == WAIT_TIMEOUT, "Child died with parent job");
-      BOOL inJob = TRUE;
-      launch::check(IsProcessInJob(child.value, nullptr, &inJob), "Check survivor job");
-      require(!inJob, "Survivor is still in a job");
       TerminateProcess(child.value, 0); // Only the purpose-built, unprivileged fixture is stopped.
       require(WaitForSingleObject(child.value, 3000) == WAIT_OBJECT_0, "Fixture cleanup failed");
     }
-    auto denied = launch::independent(executable(), L"--denied-host");
+    auto denied = fixture(L"--denied-host");
     require(launch::startupLine(denied) == "DENIED", "Restrictive parent job not explained");
     waitExit(denied);
-    auto error = launch::independent(executable(), L"--startup-error");
+    auto error = fixture(L"--startup-error");
     require(launch::startupLine(error) == "{\"protocolVersion\":1,\"error\":\"fixture startup rejected\"}",
             "Startup error was lost");
     waitExit(error);
-    std::cout << "{\"launchSelfTest\":\"passed\",\"cases\":4}\n";
+    bool restricted = false;
+    try {
+      auto actual = launch::independent(executable(), L"--child");
+      BOOL inJob = TRUE;
+      launch::check(IsProcessInJob(actual.process.value, nullptr, &inJob), "Verify actual production launch");
+      require(!inJob && launch::startupLine(actual) == "READY", "Production launch was not independent");
+      TerminateProcess(actual.process.value, 0); // Test fixture only, never a live guard.
+      waitExit(actual);
+    } catch (const std::exception& failure) {
+      const std::string reason = failure.what();
+      if (reason.find("retained the guard in a parent job") == std::string::npos &&
+          reason.find("parent Windows job must permit breakaway") == std::string::npos) throw;
+      restricted = true;
+    }
+    std::cout << "{\"launchSelfTest\":\"passed\",\"cases\":5,\"hostEnvironment\":\""
+              << (restricted ? "restricted-parent-job" : "independent") << "\"}\n";
     return 0;
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';

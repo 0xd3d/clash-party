@@ -46,10 +46,10 @@ class Attributes {
   Attributes(const Attributes&) = delete;
   Attributes& operator=(const Attributes&) = delete;
 };
-struct Process { Handle process; Handle output; DWORD pid; };
+struct Process { Handle process; Handle thread; Handle output; DWORD pid; };
 
 // Only callers' fixed internal commands are passed here, never profile text or IPC arguments.
-inline Process independent(const std::wstring& executable, const wchar_t* command) {
+inline Process suspended(const std::wstring& executable, const wchar_t* command) {
   if (executable.empty() || executable.find(L'"') != std::wstring::npos)
     throw std::runtime_error("Invalid independent helper executable");
   SECURITY_ATTRIBUTES security{sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
@@ -88,20 +88,30 @@ inline Process independent(const std::wstring& executable, const wchar_t* comman
                              &startup.StartupInfo, &info);
   }
   check(created, "Start independent guard; parent Windows job must permit breakaway");
-  Handle process(info.hProcess), thread(info.hThread);
+  write.reset();
+  return {Handle(info.hProcess), Handle(info.hThread), std::move(read), info.dwProcessId};
+}
+
+// Runtime uses nullptr to inspect membership in ANY job. The fixture also verifies escape
+// from a known synthetic job while a hosted CI runner may retain its own restrictive ancestor.
+inline void resumeOutsideJob(Process& child, HANDLE forbiddenJob = nullptr) {
   try {
     BOOL inJob = TRUE;
-    check(IsProcessInJob(process.value, nullptr, &inJob), "Verify independent guard job");
+    check(IsProcessInJob(child.process.value, forbiddenJob, &inJob), "Verify independent guard job");
     if (inJob) throw std::runtime_error("Windows retained the guard in a parent job; protection was not started");
-    check(ResumeThread(thread.value) != static_cast<DWORD>(-1), "Resume independent guard");
+    check(ResumeThread(child.thread.value) != static_cast<DWORD>(-1), "Resume independent guard");
   } catch (...) {
     // Only this newly created, still-suspended process can be terminated here. It has no rules.
-    TerminateProcess(process.value, 1);
-    WaitForSingleObject(process.value, 3000);
+    TerminateProcess(child.process.value, 1);
+    WaitForSingleObject(child.process.value, 3000);
     throw;
   }
-  write.reset();
-  return {std::move(process), std::move(read), info.dwProcessId};
+  child.thread.reset();
+}
+inline Process independent(const std::wstring& executable, const wchar_t* command) {
+  auto child = suspended(executable, command);
+  resumeOutsideJob(child); // Never permit a production guard to inherit ANY ancestor job.
+  return child;
 }
 
 inline std::string startupLine(Process& child) {
