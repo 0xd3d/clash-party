@@ -27,7 +27,7 @@ try {
 } finally {
   rmSync(fakeDirectory, { recursive: true })
 }
-for (const providerJob of [false, true]) {
+for (const ambientJob of [false, true]) {
   let fixturePid: number | undefined
   try {
     const command = windowsGuardBrokerCommand(helper, process.env.SystemRoot)
@@ -36,9 +36,20 @@ for (const providerJob of [false, true]) {
     let script = Buffer.from(encoded, 'base64').toString('utf16le')
     // Keep the calling launcher alive until its private kill-on-close Job is destroyed.
     script = script.replace('      exit 0', '      Start-Sleep -Seconds 60; exit 0')
-    // Reproduce a WMI-managed Job independently of CI host policy. Production still asks
-    // for breakaway, but trusts only verified WMI provenance if Windows retains a Job.
-    if (providerJob) script = script.replace('16777216 -bor 134217728', '134217728')
+    // Keep real WMI provenance while deterministically modelling a non-app Job. Removing
+    // WMI breakaway is rejected with return 21 by hosted Windows, so create suspended and
+    // let the separate test-only fixture assign an unrelated Job before resuming the guard.
+    if (ambientJob) {
+      script = script.replace('16777216 -bor 134217728', '16777216 -bor 134217728 -bor 4')
+      const fixture64 = Buffer.from(fixture, 'utf8').toString('base64')
+      script = script.replace(
+        '  $process = [Diagnostics.Process]::GetProcessById',
+        `  $fixture = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${fixture64}'))
+  $assignment = (& $fixture --add-ambient-job $result.ProcessId | Out-String)
+  if ($LASTEXITCODE -ne 0 -or !(($assignment | ConvertFrom-Json).ambientJobAssigned)) { throw 'Ambient fixture assignment failed' }
+  $process = [Diagnostics.Process]::GetProcessById`
+      )
+    }
     const run = spawnSync(
       fixture,
       ['--run-launcher', command.file, Buffer.from(script, 'utf16le').toString('base64')],
@@ -55,14 +66,14 @@ for (const providerJob of [false, true]) {
       state.launchOrigin !== 'local-wmi' ||
       state.active ||
       state.filterCount !== 0 ||
-      (providerJob && !state.jobMember)
+      (ambientJob && !state.jobMember)
     )
       throw new Error('Guard did not survive forced app-Job termination with expected WMI origin')
     process.stdout.write(
       JSON.stringify({
         brokerLaunchIntegration: 'passed',
         launcherJobTerminated: true,
-        providerJobRequested: providerJob,
+        ambientJobRequested: ambientJob,
         jobMember: state.jobMember,
         creatorPid: state.creatorPid,
         active: state.active,

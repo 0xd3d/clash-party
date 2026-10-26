@@ -1,6 +1,8 @@
 // Windows CI fixture only. No WFP, core, DNS or permanent OS changes.
 #include "process-launch.h"
 #include <iostream>
+#include <tlhelp32.h>
+#include <limits>
 namespace launch = network_guard::launch;
 void require(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
 launch::Handle restrictiveJob() {
@@ -22,8 +24,50 @@ void resume(launch::Process& child, HANDLE job) {
     throw;
   }
 }
+void addAmbientJob(const std::wstring& pidText) {
+  require(!pidText.empty() && pidText.find_first_not_of(L"0123456789") == std::wstring::npos,
+          "Invalid fixture guard PID");
+  const auto value = std::stoull(pidText);
+  require(value > 0 && value <= std::numeric_limits<DWORD>::max(), "Invalid fixture guard PID range");
+  const auto pid = static_cast<DWORD>(value);
+  launch::Handle process(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SET_QUOTA | PROCESS_TERMINATE | SYNCHRONIZE,
+                                    FALSE, pid));
+  require(process.valid() && WaitForSingleObject(process.value, 0) == WAIT_TIMEOUT, "Missing suspended fixture guard");
+  std::wstring actual(32768, L'\0'), own(32768, L'\0');
+  DWORD actualSize = static_cast<DWORD>(actual.size());
+  launch::check(QueryFullProcessImageNameW(process.value, 0, actual.data(), &actualSize), "Read fixture guard path");
+  actual.resize(actualSize);
+  const auto ownSize = GetModuleFileNameW(nullptr, own.data(), static_cast<DWORD>(own.size()));
+  require(ownSize > 0 && ownSize < own.size(), "Read fixture path");
+  own.resize(ownSize);
+  const auto expected = own.substr(0, own.find_last_of(L"\\") + 1) + L"party.mihomo.network-guard.exe";
+  require(CompareStringOrdinal(actual.c_str(), -1, expected.c_str(), -1, TRUE) == CSTR_EQUAL,
+          "Refusing to assign an unrelated process to the fixture Job");
+  launch::Handle job(CreateJobObjectW(nullptr, nullptr));
+  require(job.valid(), "Create ambient fixture Job");
+  launch::check(AssignProcessToJobObject(job.value, process.value), "Assign non-app fixture Job");
+  launch::Handle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0));
+  require(snapshot.valid(), "Snapshot suspended fixture thread");
+  THREADENTRY32 entry{}; entry.dwSize = sizeof(entry);
+  launch::check(Thread32First(snapshot.value, &entry), "Read suspended fixture thread");
+  DWORD threadId = 0;
+  do {
+    if (entry.th32OwnerProcessID == pid) {
+      require(threadId == 0, "Fixture guard already has more than its suspended startup thread");
+      threadId = entry.th32ThreadID;
+    }
+  } while (Thread32Next(snapshot.value, &entry));
+  require(threadId != 0, "Missing suspended fixture thread");
+  launch::Handle thread(OpenThread(THREAD_SUSPEND_RESUME, FALSE, threadId));
+  require(thread.valid(), "Open suspended fixture thread");
+  require(ResumeThread(thread.value) == 1, "Fixture guard was not suspended exactly once");
+  // No KILL_ON_JOB_CLOSE: associated processes retain this Job after the fixture exits.
+  // It represents a non-app lifetime and is never installed on a user application.
+  std::cout << "{\"ambientJobAssigned\":true}\n";
+}
 int wmain(int argc, wchar_t** argv) {
   try {
+    if (argc == 3 && std::wstring(argv[1]) == L"--add-ambient-job") { addAmbientJob(argv[2]); return 0; }
     if (argc == 3 && std::wstring(argv[1]) == L"--reject-origin") {
       for (const auto* command : {L"serve", L"serve-wmi"}) {
         auto job = restrictiveJob();
