@@ -1,5 +1,5 @@
 // Windows CI only. Starts UNARMED helpers: no WFP, DNS, firewall or core changes.
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import {
@@ -39,12 +39,14 @@ for (const providerJob of [false, true]) {
     // Reproduce a WMI-managed Job independently of CI host policy. Production still asks
     // for breakaway, but trusts only verified WMI provenance if Windows retains a Job.
     if (providerJob) script = script.replace('16777216 -bor 134217728', '134217728')
-    const output = execFileSync(
+    const run = spawnSync(
       fixture,
       ['--run-launcher', command.file, Buffer.from(script, 'utf16le').toString('base64')],
       { encoding: 'utf8', timeout: 45000 }
     )
-    const result = JSON.parse(output)
+    if (run.error || run.status !== 0)
+      throw new Error(run.stderr || run.error?.message || 'Broker lifetime fixture failed')
+    const result = JSON.parse(run.stdout)
     fixturePid = parseWindowsGuardBrokerResult(JSON.stringify(result.broker))
     const state = status()
     if (

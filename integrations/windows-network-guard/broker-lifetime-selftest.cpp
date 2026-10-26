@@ -53,6 +53,8 @@ int wmain(int argc, wchar_t** argv) {
     resume(child, job.value);
     const auto result = launch::startupLine(child, 30000);
     require(!result.empty() && result.front() == '{', "Broker did not return JSON");
+    if (result.find("\"error\":") != std::string::npos)
+      throw std::runtime_error("Broker fixture response: " + result);
     require(WaitForSingleObject(child.process.value, 0) == WAIT_TIMEOUT,
             "Launcher exited before the crash-survival experiment");
     // The PS launcher intentionally remains alive. Closing the only handle forcibly kills
