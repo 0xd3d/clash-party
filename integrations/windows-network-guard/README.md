@@ -8,7 +8,7 @@ The feature is opt-in. Nothing in this source or build process changes a current
 
 `party.mihomo.network-guard.exe` supports only:
 
-- `start`: launch this exact executable with `CreateProcessW` and explicit job breakaway, support explicit/silent breakaway and verify the suspended child belongs to no job, then resume and confirm readiness through authenticated IPC. Only startup standard handles are inherited. A host job prohibiting breakaway is an explicit startup error; no service, scheduled task, policy relaxation or existing-guard termination is used. Native startup errors are returned directly.
+- `start`: launch this exact executable with `CreateProcessW` and explicit job breakaway, support explicit/silent breakaway and verify the suspended child belongs to no job, then resume and confirm readiness through authenticated IPC. Only startup standard handles are inherited. A host job prohibiting breakaway is an explicit native startup error. The desktop app can then use a temporary same-user Task Scheduler task to run this same fixed `start` command outside the app Job; the guard must still pass the unchanged all-ancestor Job check. No service, policy relaxation or existing-guard termination is used. Native startup errors are returned directly.
 - `serve`: run the foreground server (used internally by `start`), emit `READY` after reserving ownership and creating the command pipe. A helper inheriting a Windows job refuses to serve instead of claiming crash survival. Running `serve` directly from Windows Terminal may therefore fail; use `start`.
 - `status`: report the existing server's state. Only an absent pipe means inactive; authorization, identity, busy and timeout failures return an error.
 - `arm --core-path <absolute exe> --tun-name <applied virtual alias>`: install the guard before core startup. The PID and TUN identity are null. No interface permit is installed, even if a matching interface already exists; public egress remains blocked until verified acquisition.
@@ -40,6 +40,12 @@ The helper derives its local message-pipe name from its SID and Windows session.
 Core exceptions are restricted to `resources/sidecar/mihomo.exe`, `mihomo-alpha.exe` or `mihomo-smart.exe` beside this helper's own `resources/files` directory. Canonical paths and a held file handle prevent replacing the whitelisted file during a guard session. Core updates therefore require explicit guard release first. Acquisition also checks the process image, user, elevation and live process handle. A reused numeric PID cannot silently replace that held process identity.
 
 TUN lookup uses the configured alias, obtains its actual LUID/index, requires `IF_TYPE_PROP_VIRTUAL`, rejects hardware/connector interfaces, and matches the adapter GUID to the `Wintun` device service. A profile cannot substitute a Wi-Fi/Ethernet alias. No physical interface name or index is hardcoded.
+
+## Desktop fallback for restrictive parent Jobs
+
+When native `start` specifically rejects inherited Job ownership, the app registers one uniquely named on-demand task (`ClashParty-NetworkGuard-<UUID>`) with the current elevated user's interactive token and current session. It invokes only the bundled helper's fixed `start` command. There are no automatic triggers, stored passwords, SYSTEM-account execution, or user-supplied commands. The temporary task's DACL permits only administrators and SYSTEM; registration uses create-only, never replacement. The launcher registration is deleted after completion or failure, without stopping a running guard. A launch timeout preserves any already-running protection.
+
+Task completion is followed by the existing authenticated `status` protocol before arming. Scheduler failure, blocked Job escape, failed cleanup, absent helper or peer mismatch remain startup failures. No `serve` exception or relaxation of native Job checks is used. App/core launch errors are written to the application log as well as shown in the UI. CI additionally exercises this path with an unarmed helper, checks it survives its launcher exiting and then recovers only that fixture; it does not open WFP or change network settings.
 
 ## Filtering and recovery
 

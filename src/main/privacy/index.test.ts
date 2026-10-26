@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock('fs/promises', () => ({ access: mocks.access, cp: mocks.cp, mkdir: mocks.mkdir }))
 vi.mock('electron', () => ({ app: mocks.app, dialog: { showOpenDialog: mocks.showOpenDialog } }))
+vi.mock('../utils/logger', () => ({ managerLogger: { info: vi.fn(), error: vi.fn() } }))
 vi.mock('../config', () => ({ getAppConfig: mocks.getAppConfig }))
 vi.mock('../core/manager', () => ({
   getAppliedCoreConfig: mocks.getAppliedCoreConfig,

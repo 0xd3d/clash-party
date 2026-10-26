@@ -947,7 +947,14 @@ async function startCoreInternal(
   ensureNotShuttingDown()
   if (detached && (await getAppConfig()).networkProtection)
     throw new Error('Release network protection before switching to an unmonitored detached core')
-  const config = await prepareCore(detached, skipStop, forceStop)
+  let config: CoreConfig
+  try {
+    await managerLogger.info('Preparing core configuration and native protection')
+    config = await prepareCore(detached, skipStop, forceStop)
+  } catch (error) {
+    await managerLogger.error('Core preparation failed before process launch', error)
+    throw error
+  }
   ensureNotShuttingDown()
   const hookWaiter = config.startupHook ? createCoreHookWaiter(config.startupHook) : undefined
   const proc = spawnCoreProcess(config)

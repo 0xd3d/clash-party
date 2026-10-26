@@ -7,6 +7,7 @@ import {
   type NetworkGuardStatus
 } from './networkGuard'
 vi.mock('electron', () => ({ app: { isPackaged: false, getAppPath: () => '/mock/app' } }))
+vi.mock('../utils/logger', () => ({ managerLogger: { info: vi.fn(), error: vi.fn() } }))
 function adapter(): NetworkGuardAdapter {
   return {
     arm: vi.fn().mockResolvedValue({ active: true, corePid: null }),
@@ -186,12 +187,50 @@ describe('Windows independent helper startup', () => {
       .fn()
       .mockResolvedValueOnce(absent)
       .mockRejectedValueOnce(
-        new Error('Network protection: parent Windows job must permit breakaway failed (5)')
+        new Error('Network protection: Create private local command pipe failed (5)')
       )
     await expect(armWindowsNetworkGuard('/core', 'virtual', call)).rejects.toThrow(
-      'must permit breakaway'
+      'Create private local command pipe'
     )
     expect(call.mock.calls.map(([args]) => args[0])).toEqual(['status', 'start'])
+  })
+  it('uses the scheduler only for a confirmed inherited-job failure then authenticates the guard', async () => {
+    const call = vi
+      .fn()
+      .mockResolvedValueOnce(absent)
+      .mockRejectedValueOnce(
+        new Error(
+          'Network protection: Windows retained the guard in a parent job; protection was not started'
+        )
+      )
+      .mockResolvedValueOnce(ready)
+      .mockResolvedValueOnce(armed)
+    const schedule = vi.fn().mockResolvedValue(undefined)
+    await expect(armWindowsNetworkGuard('/core', 'virtual', call, schedule)).resolves.toEqual(armed)
+    expect(schedule).toHaveBeenCalledOnce()
+    expect(call.mock.calls.map(([args]) => args[0])).toEqual(['status', 'start', 'status', 'arm'])
+  })
+  it('does not arm after scheduler failure or a missing authenticated guard', async () => {
+    for (const taskFails of [true, false]) {
+      const call = vi
+        .fn()
+        .mockResolvedValueOnce(absent)
+        .mockRejectedValueOnce(
+          new Error(
+            'Network protection: Start independent guard; parent Windows job must permit breakaway failed (5)'
+          )
+        )
+        .mockResolvedValue(absent)
+      const schedule = taskFails
+        ? vi.fn().mockRejectedValue(new Error('Task Scheduler unavailable'))
+        : vi.fn().mockResolvedValue(undefined)
+      await expect(armWindowsNetworkGuard('/core', 'virtual', call, schedule)).rejects.toThrow(
+        taskFails ? 'Task Scheduler unavailable' : 'startup was not confirmed'
+      )
+      expect(call.mock.calls.some(([args]) => args[0] === 'arm' || args[0] === 'release')).toBe(
+        false
+      )
+    }
   })
   it('rejects unconfirmed startup without arming or disabling protection', async () => {
     const call = vi.fn().mockResolvedValue(absent)

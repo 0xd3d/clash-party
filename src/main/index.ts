@@ -366,6 +366,7 @@ app
         }
         coreStarted = true
       } catch (e) {
+        await mainLogger.error('Automatic core startup failed', e)
         safeShowErrorBox('mihomo.error.coreStartFailed', `${e}`)
       } finally {
         // 安全检查通过后，即使自动启动失败，也允许用户手动重试。
