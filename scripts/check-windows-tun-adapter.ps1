@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true' -or !$env:RUNNER_TEMP) {
   throw 'This integration test creates a temporary adapter and is restricted to isolated CI runners.'
 }
+$coreProcess = $null
 $directory = Join-Path $env:RUNNER_TEMP ('clash-wintun-' + [Guid]::NewGuid())
 New-Item -ItemType Directory -Path $directory | Out-Null
 try {
@@ -18,8 +19,70 @@ try {
   if ((Get-AuthenticodeSignature -LiteralPath $dll).Status -ne 'Valid') {
     throw 'Pinned Wintun DLL signature did not validate.'
   }
+  # Exercise the shipped stable core as well as the standalone official driver.
+  $coreName = if ($Arch -eq 'x64') { 'amd64-compatible' } else { 'arm64' }
+  $coreHash = if ($Arch -eq 'x64') {
+    '7aaf636a4f2172dcd8ec34ac4f52797b059195e5afd6409508c963e545f8864d'
+  } else { 'a2a26869a14634c49f3fbcecc593b498ed8591fbdd7616b24475b3d60b148da3' }
+  $coreZip = Join-Path $directory 'mihomo.zip'
+  Invoke-WebRequest -Uri "https://github.com/MetaCubeX/mihomo/releases/download/v1.19.33/mihomo-windows-$coreName-v1.19.33.zip" -OutFile $coreZip
+  if ((Get-FileHash -LiteralPath $coreZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $coreHash) {
+    throw 'Pinned Mihomo archive hash mismatch.'
+  }
+  $coreDirectory = Join-Path $directory 'core'
+  Expand-Archive -LiteralPath $coreZip -DestinationPath $coreDirectory
+  $core = @(Get-ChildItem -LiteralPath $coreDirectory -Filter '*.exe' -File)
+  if ($core.Count -ne 1) { throw 'Expected one pinned core executable.' }
+  $alias = 'ufw' # Reproduce the reported custom alias on a disposable runner.
+  if (Get-NetAdapter -IncludeHidden -Name $alias -ErrorAction SilentlyContinue) {
+    throw 'Refusing to reuse a pre-existing CI interface.'
+  }
+  $config = Join-Path $directory 'test.yaml'
+  @"
+mode: rule
+log-level: info
+ipv6: false
+mixed-port: 0
+dns:
+  enable: false
+tun:
+  enable: true
+  device: '$alias'
+  stack: mixed
+  auto-route: false
+  strict-route: false
+  auto-detect-interface: true
+  dns-hijack: []
+rules:
+  - MATCH,REJECT
+"@ | Set-Content -LiteralPath $config -Encoding utf8NoBOM
+  $start = [Diagnostics.ProcessStartInfo]::new($core[0].FullName)
+  $start.UseShellExecute = $false
+  $start.CreateNoWindow = $true
+  $start.RedirectStandardOutput = $true
+  $start.RedirectStandardError = $true
+  foreach ($argument in @('-d', $directory, '-f', $config)) { $start.ArgumentList.Add($argument) }
+  $coreProcess = [Diagnostics.Process]::Start($start)
+  $stdout = $coreProcess.StandardOutput.ReadToEndAsync()
+  $stderr = $coreProcess.StandardError.ReadToEndAsync()
+  $deadline = [DateTime]::UtcNow.AddSeconds(20)
+  $ready = $false
+  while ([DateTime]::UtcNow -lt $deadline -and !$coreProcess.HasExited) {
+    if (Get-NetAdapter -IncludeHidden -Name $alias -ErrorAction SilentlyContinue) { $ready = $true; break }
+    Start-Sleep -Milliseconds 200
+  }
+  if (!$ready) { throw 'Pinned Mihomo did not create its isolated TUN.' }
+  & "./build/native/windows/$Arch/adapter-selftest.exe" '--inspect-created-adapter' $alias
+  if ($LASTEXITCODE -ne 0) { throw 'Production identity check rejected the actual pinned Mihomo TUN.' }
+  Write-Output 'Actual pinned Mihomo TUN identity passed; no default routes, DNS or proxy access enabled.'
   & "./build/native/windows/$Arch/adapter-selftest.exe" $dll
   if ($LASTEXITCODE -ne 0) { throw "Actual Wintun identity test failed: $LASTEXITCODE" }
 } finally {
+  if ($coreProcess) {
+    if (!$coreProcess.HasExited) { $coreProcess.Kill(); $coreProcess.WaitForExit(10000) | Out-Null }
+    if ($stdout) { Write-Output $stdout.GetAwaiter().GetResult() }
+    if ($stderr) { Write-Output $stderr.GetAwaiter().GetResult() }
+    $coreProcess.Dispose()
+  }
   Remove-Item -LiteralPath $directory -Recurse -Force
 }

@@ -29,6 +29,13 @@ template <typename T> T procedure(HMODULE library, const char* name) {
 }
 int wmain(int argc, wchar_t** argv) {
   try {
+    if (argc == 3 && std::wstring(argv[1]) == L"--inspect-created-adapter") {
+      const auto snapshot = ng::inspectTun(argv[2]);
+      ng::require(snapshot.has_value(), "Mihomo adapter not yet visible");
+      std::cout << "Observed Mihomo TUN: " << ng::adapterDiagnostic(*snapshot) << std::endl;
+      ng::require(ng::resolveTun(argv[2]).has_value(), "Mihomo adapter identity missing");
+      return 0;
+    }
     ng::require(argc == 2, "Expected absolute CI Wintun DLL path");
     Fixture fixture;
     fixture.library = LoadLibraryExW(argv[1], nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
