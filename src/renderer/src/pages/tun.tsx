@@ -18,6 +18,7 @@ import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { MdDeleteForever } from 'react-icons/md'
 import { useTranslation } from 'react-i18next'
 import PrivacyCheck from '@renderer/components/privacy/privacy-check'
+import ProtectionSetup from '@renderer/components/privacy/protection-setup'
 import { DEFAULT_MIHOMO_TUN_CONFIG, getDefaultMihomoTunDevice } from '../../../shared/appConfig'
 
 const Tun: React.FC = () => {
@@ -103,6 +104,23 @@ const Tun: React.FC = () => {
     routeExcludeAddress,
     mtu: Math.min(Math.max(mtu || 1500, 1), 65535)
   })
+  useEffect(() => {
+    if (changed) return
+    const saved = tun ?? {}
+    originSetValues({
+      device: saved.device ?? getDefaultMihomoTunDevice(platform),
+      stack: saved.stack ?? DEFAULT_MIHOMO_TUN_CONFIG.stack,
+      autoRoute: saved['auto-route'] ?? DEFAULT_MIHOMO_TUN_CONFIG['auto-route'],
+      autoRedirect: saved['auto-redirect'] ?? DEFAULT_MIHOMO_TUN_CONFIG['auto-redirect'],
+      autoDetectInterface:
+        saved['auto-detect-interface'] ?? DEFAULT_MIHOMO_TUN_CONFIG['auto-detect-interface'],
+      dnsHijack: saved['dns-hijack'] ?? DEFAULT_MIHOMO_TUN_CONFIG['dns-hijack'],
+      strictRoute: saved['strict-route'] ?? DEFAULT_MIHOMO_TUN_CONFIG['strict-route'],
+      routeExcludeAddress:
+        saved['route-exclude-address'] ?? DEFAULT_MIHOMO_TUN_CONFIG['route-exclude-address'],
+      mtu: Math.min(Math.max(saved.mtu || 1500, 1), 65535)
+    })
+  }, [tun, changed])
   const setValues = (v: typeof values): void => {
     originSetValues(v)
     setChanged(true)
@@ -190,6 +208,9 @@ const Tun: React.FC = () => {
           )
         }
       >
+        {(platform === 'darwin' || platform === 'win32') && (
+          <ProtectionSetup onApplied={() => setChanged(false)} />
+        )}
         <PrivacyCheck />
         {(platform === 'darwin' || platform === 'win32') && (
           <SettingCard>

@@ -38,6 +38,9 @@ let runtimeConfigStr: string = ''
 let runtimeConfig: IMihomoConfig = {} as IMihomoConfig
 
 interface GenerateProfileOptions {
+  // Hypothetical app settings for read-only setup compilation; never persisted here.
+  appConfig?: IAppConfig
+
   profileId?: string
   baseProfile?: IMihomoConfig
   ageSecretKey?: string
@@ -139,7 +142,7 @@ export async function generateProfile(
   pendingControledMihomoConfig?: Partial<IMihomoConfig>,
   options: GenerateProfileOptions = {}
 ): Promise<GenerateProfileResult> {
-  const selectedAppConfig = await getAppConfig()
+  const selectedAppConfig = options.appConfig ?? (await getAppConfig())
   if (selectedAppConfig.operationMode === 'simple') {
     const result = await compileSimpleRuntime()
     if (result.errors.length > 0) {
@@ -163,7 +166,10 @@ export async function generateProfile(
     }
   }
   // 第一阶段：并行读取互不依赖的配置（强制重读 profileConfig 完成后再进入第二阶段，保证缓存一致）。
-  const [profileConfig, appConfig] = await Promise.all([getProfileConfig(true), getAppConfig()])
+  const [profileConfig, appConfig] = await Promise.all([
+    getProfileConfig(true),
+    Promise.resolve(selectedAppConfig)
+  ])
   const { current } = profileConfig
   const profileId = options.profileId ?? current
   // 第二阶段：仅依赖 profileId 的读取并行执行。

@@ -53,3 +53,13 @@ An external app that hardcodes a LAN DNS server can bypass the normal TUN route 
 Privacy inspection now checks the applied configuration revision as well as process identity, rejecting a report that spans an in-place hot reload. Windows startup cleanup never terminates an unknown-path process based only on its name. Packaged native modules always prefer their own resources over a source checkout in the working directory.
 
 See [network validation](network-validation.md) for independent tests and proof limits.
+
+## One-click protection setup
+
+On macOS and Windows the TUN page now offers **Preview protection setup**. It compiles a hypothetical standard/rule-mode configuration with TUN, strict/automatic routing, both DNS hijacks, loopback-only proxy listening, native traffic protection and public UDP proxying. macOS also enables the existing system DNS lifecycle. The preview uses a bounded configuration test and its own temporary work/cache directory; it does not persist settings, reload the running core or arm a native guard.
+
+The selected imported profile remains the owner of nodes, encrypted upstreams, independent literal-IP bootstrap, domestic routing and exact QQ Music DNS exceptions. The setup adds no server or DNS provider defaults and does not edit source profile/override files. Incomplete or unsafe profiles fail preflight instead of silently inventing a provider or accepting a DIRECT fallback.
+
+Confirmation consumes a short-lived preview token, recompiles and rejects changed configurations, checks privileges, writes a private local backup, saves app/control settings without intermediate hot patches, then reconnects the core once through the existing manager. Settings already applied to a live verified core do not trigger another restart. A settings-write failure can roll back before startup; a failed native arm/start retains protection intent and never silently releases a barrier. The existing explicit recovery action remains available.
+
+Preview/compile success is not Windows or macOS packet containment verification. The result checks the applied native guard; browser, interface switching and crash scenarios remain independent runtime tests. This feature is user initiated and never runs automatically on import, installation or build.

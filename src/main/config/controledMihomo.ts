@@ -1,4 +1,5 @@
 import { readFile } from 'fs/promises'
+import { isDeepStrictEqual } from 'node:util'
 import { existsSync } from 'fs'
 import { controledMihomoConfigPath } from '../utils/dirs'
 import { parse, stringify } from '../utils/yaml'
@@ -202,4 +203,23 @@ export async function writeSimpleSharedConfig(shared: SimpleSharedConfig): Promi
   }
   await atomicWriteFile(controledMihomoConfigPath(), stringify(next), { encoding: 'utf8' })
   controledMihomoConfig = next
+}
+
+/** Persist a prevalidated setup transaction without patching/restarting the running core. */
+export async function persistProtectionSetupControl(
+  next: Partial<IMihomoConfig>,
+  expected: Partial<IMihomoConfig>
+): Promise<void> {
+  await controledMihomoWriteQueue.run(async () => {
+    if (!isDeepStrictEqual(controledMihomoConfig, expected))
+      throw new Error('Protection settings changed; preview the setup again')
+    await atomicWriteFile(controledMihomoConfigPath(), stringify(next), { encoding: 'utf8' })
+    controledMihomoConfig = structuredClone(next)
+  })
+}
+
+/** Standard backing store, including when the UI currently displays simple-mode modules. */
+export async function getStoredControledMihomoConfig(): Promise<Partial<IMihomoConfig>> {
+  if (!controledMihomoConfig) await getControledMihomoConfig()
+  return structuredClone(controledMihomoConfig)
 }

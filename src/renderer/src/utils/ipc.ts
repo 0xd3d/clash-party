@@ -1,4 +1,5 @@
 import { TitleBarOverlayOptions } from 'electron'
+import type { ProtectionSetupPreview, ProtectionSetupResult } from '../../../shared/protectionSetup'
 import type { PrivacyProtectionReport } from '../../../shared/privacyAudit'
 import type {
   TrafficUsageAggregate,
@@ -22,6 +23,8 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 
 // IPC API 类型定义
 interface IpcApi {
+  previewProtectionSetup: () => Promise<ProtectionSetupPreview>
+  applyProtectionSetup: (token: string) => Promise<ProtectionSetupResult>
   configureNetworkProtection: (settings: {
     enabled: boolean
     proxyGroup?: string
@@ -292,6 +295,8 @@ const ipc = new Proxy({} as IpcApi, {
 export const {
   inspectPrivacyProtection,
   configureNetworkProtection,
+  previewProtectionSetup,
+  applyProtectionSetup,
   exportWebRTCGuard,
   // Mihomo API
   mihomoVersion,

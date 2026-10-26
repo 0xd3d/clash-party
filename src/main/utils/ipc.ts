@@ -3,6 +3,7 @@ import v8 from 'v8'
 import { readFile } from 'fs/promises'
 import { app, ipcMain } from 'electron'
 import i18next from 'i18next'
+import { previewProtectionSetup, applyProtectionSetup } from '../privacy/setup'
 import {
   mihomoChangeProxy,
   mihomoCloseAllConnections,
@@ -264,6 +265,8 @@ async function setTitleBarOverlay(overlay: Electron.TitleBarOverlayOptions): Pro
 
 const asyncHandlers: Record<string, AsyncFn> = {
   inspectPrivacyProtection,
+  previewProtectionSetup,
+  applyProtectionSetup,
   configureNetworkProtection,
   exportWebRTCGuard,
   // Mihomo API
