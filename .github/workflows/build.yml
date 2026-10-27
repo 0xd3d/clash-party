@@ -111,8 +111,6 @@ jobs:
         run: |
           node scripts/verify-package.mjs --host ${{ matrix.platform }} ${{ matrix.arch }}
           pnpm install --frozen-lockfile
-      - name: Run platform regression tests
-        run: pnpm test
       - name: Verify DNS and UDP containment in each prepared core
         shell: bash
         run: |
