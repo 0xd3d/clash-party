@@ -842,6 +842,37 @@ describe('ordinary JSON and companion cleanup regressions', () => {
     ])
   })
 
+  it('serializes source and tunnel writes for one profile', async () => {
+    const profile = join(testDir, 'profiles', 'remote.yaml')
+    let release!: () => void
+    let entered!: () => void
+    const writeGate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const firstWrite = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    let blocked = false
+    mocks.beforeWrite.mockImplementation(async (path: string) => {
+      if (!blocked && path === profile) {
+        blocked = true
+        entered()
+        await writeGate
+      }
+    })
+
+    const tunnelUpdate = setProfileTunnels('remote', [
+      { network: ['tcp'], address: '127.0.0.1:12345', target: 'example.com:443' }
+    ])
+    await firstWrite
+    const sourceUpdate = setProfileStr('remote', newProfile)
+    await Promise.resolve()
+    expect(readFileSync(profile, 'utf8')).toBe(oldProfile)
+    release()
+    await Promise.all([tunnelUpdate, sourceUpdate])
+    expect(readFileSync(profile, 'utf8')).toBe(newProfile)
+  })
+
   it('rejects malformed tunnel entries before changing the source', async () => {
     const previous = readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')
     await expect(

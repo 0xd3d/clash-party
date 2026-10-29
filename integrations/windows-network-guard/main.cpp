@@ -282,7 +282,7 @@ Candidate prepare(const ng::Request& request, const std::wstring& sid) {
   const auto core = fs::path(candidate.corePath);
   const auto directory = bundledCoreDirectory();
   const auto filename = core.filename().wstring();
-  ng::require(equalPath(core.parent_path().wstring(), directory.wstring()) &&
+  ng::require(equalPath(core.parent_path().wstring(), directory) &&
                   (equalPath(filename, L"mihomo.exe") || equalPath(filename, L"mihomo-alpha.exe") ||
                    equalPath(filename, L"mihomo-smart.exe")),
               "Only bundled sibling sidecar executables may receive a core exception");
