@@ -709,11 +709,27 @@ public enum SharedStore {
     }
   }
 
-  /// Preserve the original portable source locally; it may contain node credentials.
+  /// Preserve a bounded number of portable sources locally; they may contain node credentials.
   public static func archiveUnifiedProfileSource(_ text: String) throws {
     try ensureDirectories()
-    let url = try containerURL().appendingPathComponent("imports/unified-\(UUID().uuidString).yaml")
-    try Data(text.utf8).write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    let data = Data(text.utf8)
+    guard data.count <= 8 * 1024 * 1024 else {
+      throw SharedStoreError.invalidUnifiedProfile("source exceeds 8 MiB")
+    }
+    let imports = try containerURL().appendingPathComponent("imports", isDirectory: true)
+    let url = imports.appendingPathComponent("unified-\(UUID().uuidString).yaml")
+    try data.write(to: url, options: [.atomic, .completeFileProtection])
+    let archived = try fileManager.contentsOfDirectory(
+      at: imports,
+      includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
+      options: [.skipsHiddenFiles]
+    ).filter { $0.lastPathComponent.hasPrefix("unified-") && $0.pathExtension == "yaml" }
+      .sorted { (lhs, rhs) in
+        let l = (try? lhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+        let r = (try? rhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+        return l > r
+      }
+    for stale in archived.dropFirst(3) { try? fileManager.removeItem(at: stale) }
   }
 
   public static func createBackupRecord(
@@ -1084,6 +1100,7 @@ public enum SharedStoreError: LocalizedError {
   case missingAppGroupContainer
   case invalidTextEncoding(String)
   case fileLockUnavailable(String, Int32)
+  case invalidUnifiedProfile(String)
 
   public var errorDescription: String? {
     switch self {
@@ -1105,6 +1122,8 @@ public enum SharedStoreError: LocalizedError {
         path,
         code
       )
+    case .invalidUnifiedProfile(let reason):
+      return "Unified profile archive rejected: \(reason)"
     }
   }
 }

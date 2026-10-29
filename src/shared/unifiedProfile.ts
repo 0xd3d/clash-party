@@ -63,7 +63,19 @@ export function desktopUnifiedPlatform(platform: string): UnifiedPlatform {
   fail(`platform ${platform} is not supported by this profile format`)
 }
 export function isUnifiedProfile(value: unknown): boolean {
-  return !!value && typeof value === 'object' && 'format' in value
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    (value as { format?: unknown }).format === UNIFIED_PROFILE_FORMAT
+  )
+}
+
+function matchTarget(rule: string): string | undefined {
+  const fields = rule.split(',')
+  if (fields.length !== 2 || fields[0].trim().toUpperCase() !== 'MATCH') return undefined
+  const target = fields[1].trim()
+  return target || undefined
 }
 export function compileUnifiedProfile(value: unknown, platform: UnifiedPlatform): ObjectValue {
   if (!unifiedPlatforms.includes(platform)) fail('unknown platform')
@@ -121,10 +133,8 @@ export function compileUnifiedProfile(value: unknown, platform: UnifiedPlatform)
     if (typeof rule !== 'string' || !rule.trim() || /[\r\n]/.test(rule)) fail('invalid rule text')
     if (applies) rules.push(rule)
   }
-  if (
-    !rules.at(-1)?.startsWith('MATCH,') ||
-    rules.slice(0, -1).some((rule) => rule.startsWith('MATCH,'))
-  )
+  const lastRule = rules.at(-1)
+  if (!lastRule || !matchTarget(lastRule) || rules.slice(0, -1).some((rule) => matchTarget(rule)))
     fail(`${platform} must have exactly one final MATCH rule`)
   const profile = JSON.parse(JSON.stringify(common)) as ObjectValue
   const variant = variants[platform] as ObjectValue | undefined
@@ -146,7 +156,7 @@ export function compileUnifiedProfile(value: unknown, platform: UnifiedPlatform)
       if (!providerNames.has(match[1])) fail(`missing rule provider: ${match[1]}`)
     }
   if (platform === 'ios') {
-    if (rules.some((rule) => /(?:^|[,(])PROCESS-(?:NAME|PATH|NAME-REGEX|PATH-REGEX),/.test(rule)))
+    if (rules.some((rule) => /(?:^|[,(])PROCESS-(?:NAME|PATH|NAME-REGEX|PATH-REGEX),/i.test(rule)))
       fail('iOS cannot apply process rules; declare their desktop platforms explicitly')
     for (const provider of Object.values(object(profile['rule-providers'] ?? {}, 'rule-providers')))
       if (object(provider, 'rule provider').format === 'mrs')

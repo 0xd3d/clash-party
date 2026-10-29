@@ -30,6 +30,14 @@ describe('fixed-purpose native DNS guard transport', () => {
     ])
       expect(() => guard.parseMacDNSGuardStatus(raw, 501)).toThrow()
   })
+  it('preserves the native tun device used for traffic protection', () => {
+    expect(
+      guard.parseMacDNSGuardStatus(
+        '{"active":true,"ownerUid":501,"corePid":4321,"trafficLease":true,"tunDevice":"utun7"}',
+        501
+      )
+    ).toMatchObject({ trafficLease: true, tunDevice: 'utun7' })
+  })
   it('only invokes a fixed helper with structured PID arguments and a minimal environment', async () => {
     mocks.exec.mockImplementation((_file, _args, _options, callback) => {
       callback(null, { stdout: '{"active":true,"ownerUid":501,"corePid":4321}', stderr: '' })

@@ -111,6 +111,24 @@ std::wstring processPath(HANDLE process) {
   result.resize(size);
   return canonicalPath(result);
 }
+std::wstring bundledCoreDirectory() {
+  const fs::path helper = selfPath();
+  const fs::path helperDirectory = helper.parent_path();
+  // Packaged Electron resources place the helper in resources/files and the cores
+  // beside it in resources/sidecar.  Development runs keep the freshly built helper
+  // under build/native/windows/<arch> while prepare.mjs keeps cores in extra/sidecar.
+  if (equalPath(helperDirectory.filename().wstring(), L"files"))
+    return canonicalPath((helperDirectory.parent_path() / L"sidecar").wstring());
+
+  const fs::path windowsDirectory = helperDirectory.parent_path();
+  const fs::path nativeDirectory = windowsDirectory.parent_path();
+  const fs::path buildDirectory = nativeDirectory.parent_path();
+  ng::require(equalPath(windowsDirectory.filename().wstring(), L"windows") &&
+                  equalPath(nativeDirectory.filename().wstring(), L"native") &&
+                  equalPath(buildDirectory.filename().wstring(), L"build"),
+              "Helper is not in a recognized resource layout");
+  return canonicalPath((buildDirectory.parent_path() / L"extra" / L"sidecar").wstring());
+}
 std::wstring elevatedUser(HANDLE process) {
   Handle token;
   if (!OpenProcessToken(process, TOKEN_QUERY, &token.value)) winCheck(GetLastError(), "Open process token");
@@ -262,7 +280,7 @@ Candidate prepare(const ng::Request& request, const std::wstring& sid) {
   handleCheck(candidate.file, "Lock core executable identity");
   candidate.corePath = canonicalHandlePath(candidate.file.value);
   const auto core = fs::path(candidate.corePath);
-  const auto directory = fs::path(selfPath()).parent_path().parent_path() / L"sidecar";
+  const auto directory = bundledCoreDirectory();
   const auto filename = core.filename().wstring();
   ng::require(equalPath(core.parent_path().wstring(), directory.wstring()) &&
                   (equalPath(filename, L"mihomo.exe") || equalPath(filename, L"mihomo-alpha.exe") ||
@@ -373,7 +391,13 @@ class Guard {
                   std::vector<UINT64>& ids) {
     auto application = condition(FWPM_CONDITION_ALE_APP_ID, FWP_BYTE_BLOB_TYPE);
     application.conditionValue.byteBlob = app;
-    add(layer, FWP_ACTION_PERMIT, 15, {application}, ids);
+    // The core must reach its proxy endpoint over the physical interface, but its
+    // own cleartext DNS must still be blocked. Exclude remote port 53 from this
+    // high-priority application permit so it cannot outrank the DNS block below.
+    auto nonDnsPort = condition(FWPM_CONDITION_IP_REMOTE_PORT, FWP_UINT16);
+    nonDnsPort.matchType = FWP_MATCH_NOT_EQUAL;
+    nonDnsPort.conditionValue.uint16 = 53;
+    add(layer, FWP_ACTION_PERMIT, 15, {application, nonDnsPort}, ids);
     auto loopback = condition(FWPM_CONDITION_FLAGS, FWP_UINT32);
     loopback.matchType = FWP_MATCH_FLAGS_ALL_SET;
     loopback.conditionValue.uint32 = FWP_CONDITION_FLAG_IS_LOOPBACK;

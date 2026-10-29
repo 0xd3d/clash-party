@@ -83,8 +83,15 @@ public enum UnifiedProfile {
             !rule.contains("\n"), !rule.contains("\r") else { throw fail("invalid rule text") }
       if applies { rules.append(rule) }
     }
-    guard rules.last?.hasPrefix("MATCH,") == true,
-          !rules.dropLast().contains(where: { $0.hasPrefix("MATCH,") }) else {
+    func matchTarget(_ rule: String) -> String? {
+      let fields = rule.split(separator: ",", omittingEmptySubsequences: false)
+      guard fields.count == 2,
+            fields[0].trimmingCharacters(in: .whitespaces).uppercased() == "MATCH" else { return nil }
+      let target = fields[1].trimmingCharacters(in: .whitespaces)
+      return target.isEmpty ? nil : target
+    }
+    guard let last = rules.last, matchTarget(last) != nil,
+          !rules.dropLast().contains(where: { matchTarget($0) != nil }) else {
       throw fail("\(platform) must have exactly one final MATCH rule")
     }
     if let variant = variants[platform] as? [String: Any] {
@@ -106,7 +113,7 @@ public enum UnifiedProfile {
     }
     if platform == "ios" {
       guard !rules.contains(where: {
-        $0.range(of: "(?:^|[,(])PROCESS-(?:NAME|PATH|NAME-REGEX|PATH-REGEX),", options: .regularExpression) != nil
+        $0.range(of: "(?:^|[,(])PROCESS-(?:NAME|PATH|NAME-REGEX|PATH-REGEX),", options: [.regularExpression, .caseInsensitive]) != nil
       }) else { throw fail("iOS cannot apply process rules; declare their desktop platforms explicitly") }
       for value in try object(result["rule-providers"] ?? [String: Any](), "rule-providers").values {
         guard try object(value, "rule provider")["format"] as? String != "mrs" else {

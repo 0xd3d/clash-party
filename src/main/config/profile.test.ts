@@ -43,7 +43,8 @@ const mocks = vi.hoisted(() => ({
   restartCore: vi.fn(),
   yamlMaxAliasCount: 100,
   operationMode: 'standard',
-  beforeRemove: vi.fn()
+  beforeRemove: vi.fn(),
+  decryptAgeContent: vi.fn()
 }))
 
 vi.mock('electron', () => ({ app: { getVersion: () => '2.0.0' } }))
@@ -87,7 +88,7 @@ vi.mock('../core/factory', async () => {
 vi.mock('i18next', () => ({ default: { t: (key: string) => key } }))
 vi.mock('axios', () => ({ default: { get: mocks.axiosGet } }))
 vi.mock('../utils/age', () => ({
-  decryptAgeContent: (content: string) => Promise.resolve(content)
+  decryptAgeContent: mocks.decryptAgeContent
 }))
 vi.mock('../utils/dirs', () => ({
   mihomoCorePath: () => join(testDir, 'mihomo'),
@@ -182,6 +183,8 @@ beforeEach(async () => {
   mocks.yamlMaxAliasCount = 100
   mocks.operationMode = 'standard'
   mocks.beforeRemove.mockReset()
+  mocks.decryptAgeContent.mockReset()
+  mocks.decryptAgeContent.mockImplementation((content: string) => Promise.resolve(content))
   // the plugin record the schedule is read from at write time
   mocks.getPluginItem.mockResolvedValue({ id: 'pg', interval: 60, autoUpdate: true })
   // the module caches must match the freshly written files (all real writes go through the queue and keep them in sync)
@@ -756,6 +759,17 @@ describe.skipIf(!['darwin', 'win32'].includes(process.platform))(
       )
       expect(mocks.checkProfileConfig).toHaveBeenCalled()
     })
+    it('detects unified format after decrypting an encrypted source', async () => {
+      const encrypted = '-----BEGIN AGE ENCRYPTED FILE-----\nencrypted\n'
+      mocks.decryptAgeContent.mockImplementation(async (content: string) =>
+        content === encrypted ? unified : content
+      )
+      await setProfileStr('remote', encrypted)
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(encrypted)
+      expect(readFileSync(join(testDir, 'profiles', 'remote.yaml.previous'), 'utf8')).toBe(
+        oldProfile
+      )
+    })
     it('keeps the previous source if core validation fails', async () => {
       mocks.checkProfileConfig.mockRejectedValueOnce(new Error('invalid provider'))
       await expect(setProfileStr('remote', unified)).rejects.toThrow('invalid provider')
@@ -819,6 +833,35 @@ describe('ordinary JSON and companion cleanup regressions', () => {
     expect((await getProfile('remote')).tunnels).toHaveLength(1)
     await setProfileTunnels('remote', [])
     expect(await getProfile('remote')).toEqual(original)
+  })
+
+  it('keeps Mihomo string tunnel entries compatible with the editor API', async () => {
+    await setProfileTunnels('remote', ['tcp/udp,127.0.0.1:12345,example.com:443,DIRECT'])
+    expect((await getProfile('remote')).tunnels).toEqual([
+      'tcp/udp,127.0.0.1:12345,example.com:443,DIRECT'
+    ])
+  })
+
+  it('rejects malformed tunnel entries before changing the source', async () => {
+    const previous = readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')
+    await expect(
+      setProfileTunnels('remote', [
+        { network: ['tcp'], address: '127.0.0.1:12345', target: 'example.com:443', dns: true }
+      ])
+    ).rejects.toThrow('unsupported field dns')
+    expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(previous)
+  })
+
+  it('removes a stale unified companion when switching to an ordinary source', async () => {
+    const companion = join(testDir, 'profiles', 'remote.yaml.local.yaml')
+    const previous = join(testDir, 'profiles', 'remote.yaml.previous')
+    writeFileSync(companion, 'tunnels: []\n')
+    writeFileSync(previous, oldProfile)
+    const ordinary = `${oldProfile}rules:\n  - MATCH,DIRECT\n`
+    await setProfileStr('remote', ordinary)
+    expect(readFileSync(join(testDir, 'profiles', 'remote.yaml'), 'utf8')).toBe(ordinary)
+    expect(existsSync(companion)).toBe(false)
+    expect(existsSync(previous)).toBe(false)
   })
 })
 
@@ -890,6 +933,23 @@ describe.skipIf(!['darwin', 'win32'].includes(process.platform))(
         'tunnels: []\ndns: {nameserver: [192.0.2.53]}'
       )
       await expect(getProfile('remote')).rejects.toThrow('Invalid local profile settings')
+    })
+    it('bounds companion size before parsing it', async () => {
+      await setProfileStr('remote', source)
+      writeFileSync(
+        join(testDir, 'profiles', 'remote.yaml.local.yaml'),
+        `tunnels: []\ncomment: ${'x'.repeat(8 * 1024 * 1024)}\n`
+      )
+      await expect(getProfile('remote')).rejects.toThrow('exceed 8 MiB')
+    })
+    it('applies the configured alias limit to companion YAML', async () => {
+      await setProfileStr('remote', source)
+      mocks.yamlMaxAliasCount = 1
+      writeFileSync(
+        join(testDir, 'profiles', 'remote.yaml.local.yaml'),
+        'base: &base\n  network: [tcp]\ntunnels:\n  - <<: *base\n    address: 127.0.0.1:12345\n    target: example.com:443\n'
+      )
+      await expect(getProfile('remote')).rejects.toThrow()
     })
   }
 )

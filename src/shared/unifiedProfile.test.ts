@@ -30,4 +30,28 @@ describe('portable configuration contract', () => {
       adaptUnifiedProfile(JSON.stringify(cases[0].input), cases[0].input, 'linux')
     ).toThrow('platform linux')
   })
+  it('does not treat an ordinary config format field as a unified envelope', () => {
+    const ordinary = { format: 'yaml', proxies: [] }
+    expect(adaptUnifiedProfile(JSON.stringify(ordinary), ordinary, 'darwin')).toBe(ordinary)
+  })
+  it.each(['MATCH,', 'MATCH,,foo'])('rejects malformed final MATCH rules: %s', (match) => {
+    const input = {
+      format: 'clash-party-unified',
+      version: 1,
+      revision: 'test',
+      common: {},
+      rules: [match]
+    }
+    expect(() => compileUnifiedProfile(input, 'macos')).toThrow('final MATCH')
+  })
+  it('rejects process rules case-insensitively on iOS', () => {
+    const input = {
+      format: 'clash-party-unified',
+      version: 1,
+      revision: 'test',
+      common: {},
+      rules: ['process-name,Example.exe,DIRECT', 'MATCH,Overseas']
+    }
+    expect(() => compileUnifiedProfile(input, 'ios')).toThrow('process rules')
+  })
 })

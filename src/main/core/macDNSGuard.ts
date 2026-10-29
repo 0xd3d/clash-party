@@ -29,6 +29,9 @@ export function parseMacDNSGuardStatus(raw: string, expectedUid: number): MacDNS
     (state.reason !== undefined && typeof state.reason !== 'string') ||
     (state.dnsLease !== undefined && typeof state.dnsLease !== 'boolean') ||
     (state.trafficLease !== undefined && typeof state.trafficLease !== 'boolean') ||
+    (state.tunDevice !== undefined &&
+      state.tunDevice !== null &&
+      typeof state.tunDevice !== 'string') ||
     (state.protection !== undefined &&
       !['traffic', 'dns', 'none'].includes(String(state.protection)))
   )
@@ -42,6 +45,9 @@ export function parseMacDNSGuardStatus(raw: string, expectedUid: number): MacDNS
       : {}),
     ...(typeof state.dnsLease === 'boolean' ? { dnsLease: state.dnsLease } : {}),
     ...(typeof state.trafficLease === 'boolean' ? { trafficLease: state.trafficLease } : {}),
+    ...(state.tunDevice === null || typeof state.tunDevice === 'string'
+      ? { tunDevice: state.tunDevice as string | null }
+      : {}),
     ...(typeof state.reason === 'string' ? { reason: state.reason.slice(0, 160) } : {})
   }
 }

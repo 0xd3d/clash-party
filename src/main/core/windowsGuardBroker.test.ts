@@ -19,6 +19,10 @@ describe('local Windows guard broker', () => {
     expect(script).toContain('$state.guardPid -ne $result.ProcessId')
     expect(script).toContain("$state.launchOrigin -ne 'local-wmi'")
     expect(script).toContain('$process.HasExited')
+    expect(script).toContain('$process.Kill()')
+    expect(script).toContain('$process.WaitForExit(3000)')
+    expect(script).toContain('$failure = $_')
+    expect(script).toContain('reused PID cannot be terminated')
     expect(script).not.toMatch(
       /Schedule.Service|RegisterTask|Stop-Process|ExecutionPolicy|netsh|recover|Invoke-Expression/
     )

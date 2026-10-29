@@ -94,6 +94,11 @@ describe('Windows guard native build and boundary', () => {
     expect(source).not.toMatch(/netsh|MpsSvc|Set-NetFirewallProfile/)
     expect(source).toContain('PIPE_REJECT_REMOTE_CLIENTS')
     expect(source).toContain('FILE_FLAG_FIRST_PIPE_INSTANCE')
+    expect(source).toContain('bundledCoreDirectory')
+    expect(source).toContain('buildDirectory.parent_path() / L"extra" / L"sidecar"')
+    expect(source).toContain('nonDnsPort.matchType = FWP_MATCH_NOT_EQUAL')
+    expect(source).toContain('nonDnsPort.conditionValue.uint16 = 53')
+    expect(source).toContain('add(layer, FWP_ACTION_PERMIT, 15, {application, nonDnsPort}, ids)')
     expect(source).toContain(
       'ng::allowTun(candidate.corePid, candidate.process.valid(), candidate.tun.has_value())'
     )

@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile, rm, unlink } from 'fs/promises'
+import { access, mkdtemp, readFile, rm, stat, unlink } from 'fs/promises'
 import { constants, existsSync } from 'fs'
 import { execFile } from 'child_process'
 import { isAbsolute, join, relative, resolve } from 'path'
@@ -8,7 +8,11 @@ import { tmpdir } from 'os'
 import { app } from 'electron'
 import i18next from 'i18next'
 import axios, { AxiosResponse } from 'axios'
-import { adaptUnifiedProfile, isUnifiedProfile } from '../../shared/unifiedProfile'
+import {
+  adaptUnifiedProfile,
+  isUnifiedProfile,
+  UNIFIED_PROFILE_LIMIT
+} from '../../shared/unifiedProfile'
 import { parse, stringify } from '../utils/yaml'
 import { defaultProfile } from '../utils/template'
 import { decryptAgeContent } from '../utils/age'
@@ -44,9 +48,38 @@ let changeProfileQueue: Promise<void> = Promise.resolve()
 // 并发去重
 const inflightRemoteFetches = new Map<string, Promise<IProfileItem>>()
 
+// A profile source and its device-local companion are one logical document. Keep
+// their writes and reloads in order so a source edit cannot race a tunnel edit.
+const profileUpdateQueues = new Map<string, Promise<void>>()
+
+function withProfileUpdateQueue<T>(id: string, operation: () => Promise<T>): Promise<T> {
+  const previous = profileUpdateQueues.get(id) ?? Promise.resolve()
+  const task = previous.catch(() => {}).then(operation)
+  const marker = task.then(
+    () => undefined,
+    () => undefined
+  )
+  profileUpdateQueues.set(id, marker)
+  return task.finally(() => {
+    if (profileUpdateQueues.get(id) === marker) profileUpdateQueues.delete(id)
+  })
+}
+
 function isPermissionError(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException)?.code
   return code === 'EACCES' || code === 'EPERM'
+}
+
+function assertUnifiedSourceSize(text: string, context: string): void {
+  const trimmed = text.trimStart()
+  // Unified documents are JSON transport, with a YAML-compatible `format:`
+  // fallback. Check their raw bytes before YAML/JSON parsing so the bounded
+  // contract is not defeated by an oversized input.
+  if (
+    (trimmed.startsWith('{') || /^format\s*:/i.test(trimmed)) &&
+    Buffer.byteLength(text, 'utf8') > UNIFIED_PROFILE_LIMIT
+  )
+    throw new Error(`${context} exceeds 8 MiB`)
 }
 
 function assertInsideWorkDir(targetPath: string): void {
@@ -309,12 +342,14 @@ const deletingProfiles = new Set<string>()
 // 顺序：先让核心不再使用它（切走 current + 重启），再删订阅文件与工作目录，最后删记录。任何一步失败都抛出、
 // 定时器装回，而记录仍在列表里可以重试——不会出现"记录没了、含节点凭据的文件还在"的无主残留（R2-ISS-067）。
 async function removeProfileItemCore(id: string): Promise<IProfileItem | undefined> {
-  deletingProfiles.add(id)
-  try {
-    return await removeProfileItemSteps(id)
-  } finally {
-    deletingProfiles.delete(id)
-  }
+  return withProfileUpdateQueue(id, async () => {
+    deletingProfiles.add(id)
+    try {
+      return await removeProfileItemSteps(id)
+    } finally {
+      deletingProfiles.delete(id)
+    }
+  })
 }
 
 function nextCurrentAfter(config: IProfileConfig, removing: string): string | undefined {
@@ -507,6 +542,7 @@ async function fetchAndValidateSubscription(options: FetchOptions): Promise<Fetc
   }
 
   const decryptedData = await decryptAgeContent(data, options.ageSecretKey, 'subscription')
+  assertUnifiedSourceSize(decryptedData, 'Unified subscription')
   const parsed = adaptUnifiedProfile(
     decryptedData,
     parse(decryptedData, { maxAliasCount }),
@@ -726,114 +762,273 @@ export async function getProfileStr(id: string | undefined): Promise<string> {
   }
 }
 
-export async function setProfileStr(id: string, content: string): Promise<void> {
-  // Unified sources remain intact on disk. Validate the adapted candidate before
-  // publishing it; retain a private backup and restore the active source on failure.
+const MAX_PROFILE_TUNNELS = 1024
+const MAX_TUNNEL_TEXT_LENGTH = 2048
+const TUNNEL_FIELDS = new Set(['network', 'address', 'target', 'proxy'])
+
+type ProfileTunnel = Record<string, unknown>
+
+function isSafeTunnelText(value: string): boolean {
+  return (
+    value.length > 0 &&
+    value.length <= MAX_TUNNEL_TEXT_LENGTH &&
+    !/[\r\n]/.test(value) &&
+    !value.includes('\u0000')
+  )
+}
+
+function isValidTunnelEndpoint(
+  value: string,
+  allowEmptyHost: boolean,
+  allowUnbracketedIPv6: boolean
+): boolean {
+  const trimmed = value.trim()
+  const separator = trimmed.lastIndexOf(':')
+  if (separator < 0) return false
+  const host = trimmed.slice(0, separator).trim()
+  const port = trimmed.slice(separator + 1)
+  if (!/^\d+$/.test(port)) return false
+  const portNumber = Number(port)
+  if (!Number.isInteger(portNumber) || portNumber < 1 || portNumber > 65535) return false
+  if (!host && allowEmptyHost) return true
+  if (host.startsWith('[') || host.endsWith(']')) {
+    return host.startsWith('[') && host.endsWith(']') && host.length > 2 && host.includes(':')
+  }
+  if (host.includes(':')) return allowUnbracketedIPv6
+  return /^[A-Za-z0-9][A-Za-z0-9._%~-]*$/.test(host)
+}
+
+function validateProfileTunnels(tunnels: unknown[], context = 'tunnels'): void {
+  if (tunnels.length > MAX_PROFILE_TUNNELS) {
+    throw new Error(`${context} must contain at most ${MAX_PROFILE_TUNNELS} entries`)
+  }
+  tunnels.forEach((value, index) => {
+    if (typeof value === 'string') {
+      const parts = value.split(',').map((part) => part.trim())
+      if (parts.length !== 3 && parts.length !== 4) {
+        throw new Error(`${context}[${index}] string form must have 3 or 4 fields`)
+      }
+      value = {
+        network: parts[0].split('/'),
+        address: parts[1],
+        target: parts[2],
+        ...(parts.length === 4 ? { proxy: parts[3] } : {})
+      }
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error(`${context}[${index}] must be an object`)
+    }
+    const tunnel = value as ProfileTunnel
+    for (const key of Object.keys(tunnel)) {
+      if (!TUNNEL_FIELDS.has(key)) {
+        throw new Error(`${context}[${index}] has unsupported field ${key}`)
+      }
+    }
+    if (
+      !Array.isArray(tunnel.network) ||
+      tunnel.network.length === 0 ||
+      tunnel.network.length > 2 ||
+      tunnel.network.some(
+        (network) => typeof network !== 'string' || !['tcp', 'udp'].includes(network)
+      ) ||
+      new Set(tunnel.network).size !== tunnel.network.length
+    ) {
+      throw new Error(`${context}[${index}].network must contain unique tcp/udp values`)
+    }
+    for (const field of ['address', 'target'] as const) {
+      const value = tunnel[field]
+      if (typeof value !== 'string' || !isSafeTunnelText(value)) {
+        throw new Error(`${context}[${index}].${field} must be a nonempty string`)
+      }
+    }
+    if (!isValidTunnelEndpoint(tunnel.address as string, true, true)) {
+      throw new Error(`${context}[${index}].address is invalid`)
+    }
+    if (!isValidTunnelEndpoint(tunnel.target as string, false, false)) {
+      throw new Error(`${context}[${index}].target is invalid`)
+    }
+    if (
+      tunnel.proxy !== undefined &&
+      (typeof tunnel.proxy !== 'string' ||
+        tunnel.proxy.length > MAX_TUNNEL_TEXT_LENGTH ||
+        /[\r\n]/.test(tunnel.proxy) ||
+        tunnel.proxy.includes('\u0000'))
+    ) {
+      throw new Error(`${context}[${index}].proxy must be a string`)
+    }
+  })
+}
+
+async function readOptionalUtf8(path: string): Promise<string | undefined> {
+  try {
+    return await readFile(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
+async function restoreOptionalFile(path: string, content: string | undefined): Promise<void> {
+  if (content === undefined) await rm(path, { force: true })
+  else await atomicWriteFile(path, content, { encoding: 'utf8', mode: 0o600 })
+}
+
+async function readUnifiedCompanion(
+  id: string | undefined,
+  yamlMaxAliasCount: number | undefined
+): Promise<unknown> {
+  const path = `${profilePath(id || 'default')}.local.yaml`
+  let metadata
+  try {
+    metadata = await stat(path)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+  if (metadata.size > UNIFIED_PROFILE_LIMIT) {
+    throw new Error('Local profile settings exceed 8 MiB')
+  }
+  const content = await readFile(path, 'utf8')
+  if (Buffer.byteLength(content, 'utf8') > UNIFIED_PROFILE_LIMIT) {
+    throw new Error('Local profile settings exceed 8 MiB')
+  }
+  return parse(content, { maxAliasCount: yamlMaxAliasCount })
+}
+
+async function parseSourceForUpdate(
+  id: string,
+  content: string,
+  item: IProfileItem
+): Promise<{ parsed: unknown; decrypted: string }> {
+  const decrypted = await decryptAgeContent(content, item.ageSecretKey, `profile "${id}"`)
+  assertUnifiedSourceSize(decrypted, `Profile "${id}"`)
   const { yamlMaxAliasCount } = await getAppConfig()
-  const unified = isUnifiedProfile(parse(content, { maxAliasCount: yamlMaxAliasCount }))
+  return { parsed: parse(decrypted, { maxAliasCount: yamlMaxAliasCount }), decrypted }
+}
+
+async function setProfileStrCore(id: string, content: string): Promise<void> {
+  // Unified sources remain intact on disk. Decrypt before detecting the format so
+  // encrypted unified profiles follow the same validation and activation path.
+  const item = (await getProfileItem(id)) ?? { id, name: id, type: 'local' as const }
+  const { parsed } = await parseSourceForUpdate(id, content, item)
+  const unified = isUnifiedProfile(parsed)
   if (unified) {
     if ((await getAppConfig()).operationMode === 'simple')
       throw new Error(
         'Unified profiles require standard mode. Switch to standard mode before importing.'
       )
-    const item = (await getProfileItem(id)) ?? { id, name: id, type: 'local' as const }
     await validateProfileCandidate(item, content)
     const { current } = await getProfileConfig(true)
-    const previous = existsSync(profilePath(id)) ? await getProfileStr(id) : undefined
+    const path = profilePath(id)
+    const previous = await readOptionalUtf8(path)
     if (previous !== undefined)
-      await atomicWriteFile(`${profilePath(id)}.previous`, previous, {
+      await atomicWriteFile(`${path}.previous`, previous, {
         encoding: 'utf8',
         mode: 0o600
       })
-    await atomicWriteFile(profilePath(id), content, { encoding: 'utf8', mode: 0o600 })
+    await atomicWriteFile(path, content, { encoding: 'utf8', mode: 0o600 })
     try {
       if (current === id) await reloadCurrentProfile()
     } catch (error) {
-      if (previous !== undefined) {
-        await atomicWriteFile(profilePath(id), previous, { encoding: 'utf8', mode: 0o600 })
-        try {
-          await reloadCurrentProfile()
-        } catch (restoreError) {
-          profileLogger.error(
-            'Unified profile rollback could not restart the previous runtime',
-            restoreError
-          )
-        }
+      try {
+        await restoreOptionalFile(path, previous)
+        if (current === id) await reloadCurrentProfile()
+      } catch (restoreError) {
+        profileLogger.error(
+          'Unified profile rollback could not restart the previous runtime',
+          restoreError
+        )
       }
       throw error
     }
     return
   }
-  // 读取最新的配置
+
   const { current } = await getProfileConfig(true)
-  if ((await getAppConfig()).operationMode === 'simple') {
+  const operationMode = (await getAppConfig()).operationMode
+  let reload: (() => Promise<void>) | undefined
+  if (operationMode === 'simple') {
     const { getSimpleState } = await import('../simple/store')
     const state = await getSimpleState()
     const linked = state.published.sources.some((source) => source.profileId === id)
-    const item = await getProfileItem(id)
-    if (linked && item) {
+    if (linked) {
       await validateProfileCandidate(item, content)
-      const previous = await getProfileStr(id)
-      await atomicWriteFile(profilePath(id), content, { encoding: 'utf8' })
-      try {
-        await mihomoHotReloadConfig()
-      } catch (error) {
-        await atomicWriteFile(profilePath(id), previous, { encoding: 'utf8' })
-        try {
-          await mihomoHotReloadConfig()
-        } catch (restoreError) {
-          profileLogger.error('Failed to restore simple subscription config', restoreError)
-        }
-        throw error
-      }
-      return
+      reload = mihomoHotReloadConfig
     }
-    await atomicWriteFile(profilePath(id), content, { encoding: 'utf8' })
-    return
+  } else if (current === id) {
+    reload = reloadCurrentProfile
   }
-  await atomicWriteFile(profilePath(id), content, { encoding: 'utf8' })
-  if (current === id) await reloadCurrentProfile()
+
+  const path = profilePath(id)
+  const companionPath = `${path}.local.yaml`
+  const previousPath = `${path}.previous`
+  const previous = await readOptionalUtf8(path)
+  const previousCompanion = await readOptionalUtf8(companionPath)
+  const previousBackup = await readOptionalUtf8(previousPath)
+  await atomicWriteFile(path, content, { encoding: 'utf8' })
+  try {
+    // Normal profiles do not consume unified local settings. Remove stale
+    // companion data only after the new source is on disk.
+    await rm(companionPath, { force: true })
+    if (reload) await reload()
+    await rm(previousPath, { force: true })
+  } catch (error) {
+    try {
+      await restoreOptionalFile(path, previous)
+      await restoreOptionalFile(companionPath, previousCompanion)
+      await restoreOptionalFile(previousPath, previousBackup)
+      if (reload) await reload()
+    } catch (restoreError) {
+      profileLogger.error('Failed to restore profile source and local settings', restoreError)
+    }
+    throw error
+  }
+}
+
+export async function setProfileStr(id: string, content: string): Promise<void> {
+  return withProfileUpdateQueue(id, () => setProfileStrCore(id, content))
 }
 
 /** Port-forward listeners are device-local and must never rewrite a shared source. */
-export async function setProfileTunnels(id: string, tunnels: unknown[]): Promise<void> {
-  if (!Array.isArray(tunnels)) throw new Error('Expected a tunnels array')
+async function setProfileTunnelsCore(id: string, tunnels: unknown[]): Promise<void> {
+  validateProfileTunnels(tunnels)
   const item = await getProfileItem(id)
   if (!item) throw new Error('Profile not found')
   const content = await getProfileStr(id)
-  const { yamlMaxAliasCount } = await getAppConfig()
-  const parsed = parse(content, { maxAliasCount: yamlMaxAliasCount })
+  const { parsed, decrypted } = await parseSourceForUpdate(id, content, item)
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
     throw new Error('Profile is not a YAML mapping')
   if (!isUnifiedProfile(parsed)) {
+    if (decrypted !== content) {
+      throw new Error('Encrypted ordinary profiles cannot edit tunnels')
+    }
     const next: Record<string, unknown> = { ...parsed }
     if (tunnels.length) next.tunnels = tunnels
     else delete next.tunnels
-    await setProfileStr(id, stringify(next))
+    await setProfileStrCore(id, stringify(next))
     return
   }
   await validateProfileCandidate(item, content, { localTunnels: tunnels })
   const path = `${profilePath(id)}.local.yaml`
-  let previous: string | undefined
-  try {
-    previous = await readFile(path, 'utf8')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-  }
+  const previous = await readOptionalUtf8(path)
   await atomicWriteFile(path, stringify({ tunnels }), { encoding: 'utf8', mode: 0o600 })
   const { current } = await getProfileConfig(true)
   try {
     if (current === id) await reloadCurrentProfile()
   } catch (error) {
-    if (previous === undefined) await rm(path, { force: true })
-    else await atomicWriteFile(path, previous, { encoding: 'utf8', mode: 0o600 })
     try {
-      await reloadCurrentProfile()
+      await restoreOptionalFile(path, previous)
+      if (current === id) await reloadCurrentProfile()
     } catch (restoreError) {
       profileLogger.error('Failed to restore local tunnel settings', restoreError)
     }
     throw error
   }
+}
+
+export async function setProfileTunnels(id: string, tunnels: unknown[]): Promise<void> {
+  if (!Array.isArray(tunnels)) throw new Error('Expected a tunnels array')
+  return withProfileUpdateQueue(id, () => setProfileTunnelsCore(id, tunnels))
 }
 
 // 当前订阅的内容已替换：热加载，失败则回退到重启核心
@@ -866,6 +1061,7 @@ export async function parseProfileContent(
   localTunnels?: unknown[]
 ): Promise<IMihomoConfig> {
   const profile = await decryptAgeContent(content, ageSecretKey, `profile "${id || 'default'}"`)
+  assertUnifiedSourceSize(profile, `Profile "${id || 'default'}"`)
 
   // 检测是否为 HTML 内容（订阅返回错误页面）
   const trimmed = profile.trim()
@@ -886,13 +1082,7 @@ export async function parseProfileContent(
     let result = adaptUnifiedProfile(profile, parsed, process.platform)
     if (isUnifiedProfile(parsed)) {
       let local: unknown = localTunnels === undefined ? undefined : { tunnels: localTunnels }
-      if (local === undefined) {
-        try {
-          local = parse(await readFile(`${profilePath(id || 'default')}.local.yaml`, 'utf8'))
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-        }
-      }
+      if (local === undefined) local = await readUnifiedCompanion(id, yamlMaxAliasCount)
       if (local !== undefined) {
         if (
           !local ||
@@ -902,6 +1092,7 @@ export async function parseProfileContent(
           !Array.isArray((local as { tunnels?: unknown }).tunnels)
         )
           throw new Error('Invalid local profile settings; expected only a tunnels array')
+        validateProfileTunnels((local as { tunnels: unknown[] }).tunnels, 'local profile settings')
         result = {
           ...(result as IMihomoConfig),
           tunnels: (local as { tunnels: unknown[] }).tunnels
@@ -1090,6 +1281,18 @@ export async function upsertPluginProfile(
 // 落盘（profile 写队列内，同一临界区）：核对 override 集合 → 查预算 → 写订阅文件 → 更新 item。
 // 订阅文件一旦写下，item 写入必须完成（§0.4 唯一的持久化提交；半截提交比迟到的提交更糟）。
 async function commitPluginProfile(
+  meta: { profileId: string; pluginId: string; name: string },
+  owned: IProfileItem,
+  content: string,
+  validatedKey: string,
+  signal?: AbortSignal
+): Promise<void> {
+  return withProfileUpdateQueue(meta.profileId, () =>
+    commitPluginProfileCore(meta, owned, content, validatedKey, signal)
+  )
+}
+
+async function commitPluginProfileCore(
   meta: { profileId: string; pluginId: string; name: string },
   owned: IProfileItem,
   content: string,

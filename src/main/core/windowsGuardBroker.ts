@@ -22,6 +22,7 @@ export function windowsGuardBrokerCommand(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$process = $null
 try {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
   $principal = [Security.Principal.WindowsPrincipal]::new($identity)
@@ -58,7 +59,22 @@ try {
     Start-Sleep -Milliseconds 100
   } while ($true)
 } catch {
-  [Console]::WriteLine((@{ protocolVersion = 1; error = $_.Exception.Message } | ConvertTo-Json -Compress))
+  $failure = $_
+  # The WMI call creates a new helper before readiness is authenticated.  Never leave
+  # that unarmed process behind after a timeout, protocol mismatch, or identity error.
+  # Keep the Process handle from GetProcessById so a reused PID cannot be terminated.
+  if ($null -ne $process) {
+    try {
+      if (!$process.HasExited) {
+        $process.Kill()
+        $null = $process.WaitForExit(3000)
+      }
+    } catch {
+      # Preserve the original readiness error; the next status call will still expose
+      # any helper that could not be terminated.
+    }
+  }
+  [Console]::WriteLine((@{ protocolVersion = 1; error = $failure.Exception.Message } | ConvertTo-Json -Compress))
   exit 1
 }
 `

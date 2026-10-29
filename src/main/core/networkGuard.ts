@@ -143,10 +143,22 @@ async function launchWindowsGuardBroker(): Promise<number> {
       }
     }
     // Do not include the full encoded PowerShell command in logs or user-facing errors.
-    const detail =
-      error && typeof error === 'object' && 'code' in error ? String(error.code) : 'unconfirmed'
+    const details: string[] = []
+    if (error && typeof error === 'object') {
+      if ('code' in error && error.code) details.push(`code=${String(error.code).slice(0, 64)}`)
+      if ('signal' in error && error.signal)
+        details.push(`signal=${String(error.signal).slice(0, 32)}`)
+      if ('stderr' in error && typeof error.stderr === 'string') {
+        const stderr = error.stderr
+          .replace(/[\r\n\t]+/g, ' ')
+          .trim()
+          .slice(0, 256)
+        if (stderr) details.push(`stderr=${stderr}`)
+      }
+    }
+    if (!details.length) details.push('unconfirmed')
     throw new Error(
-      `Windows guard launch broker could not be confirmed (${detail}); existing protection was preserved`
+      `Windows guard launch broker could not be confirmed (${details.join('; ')}); existing protection was preserved`
     )
   }
 }
