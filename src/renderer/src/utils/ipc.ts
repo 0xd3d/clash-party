@@ -1,6 +1,7 @@
 import { TitleBarOverlayOptions } from 'electron'
 import type { ProtectionSetupPreview, ProtectionSetupResult } from '../../../shared/protectionSetup'
 import type { PrivacyProtectionReport } from '../../../shared/privacyAudit'
+import type { UnifiedProfileExportResult } from '../../../shared/unifiedProfile'
 import type {
   TrafficUsageAggregate,
   TrafficUsageBreakdownQuery,
@@ -167,6 +168,7 @@ interface IpcApi {
   exportSimpleConfig: () => Promise<
     import('../../../shared/simple-config').SimplePreview & { path?: string }
   >
+  exportUnifiedProfile: () => Promise<UnifiedProfileExportResult>
   importSimpleSubscription: (input: {
     name: string
     url?: string
@@ -388,6 +390,7 @@ export const {
   previewSimpleConfig,
   publishSimpleConfig,
   exportSimpleConfig,
+  exportUnifiedProfile,
   importSimpleSubscription,
   refreshSimpleSource,
   removeSimpleSource,

@@ -1,6 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { adaptUnifiedProfile, compileUnifiedProfile, unifiedPlatforms } from './unifiedProfile'
+import {
+  adaptUnifiedProfile,
+  compileUnifiedProfile,
+  createUnifiedProfile,
+  unifiedPlatforms
+} from './unifiedProfile'
 const cases = JSON.parse(readFileSync('tests/fixtures/unified-profiles.json', 'utf8')) as {
   name: string
   input: unknown
@@ -53,5 +58,33 @@ describe('portable configuration contract', () => {
       rules: ['process-name,Example.exe,DIRECT', 'MATCH,Overseas']
     }
     expect(() => compileUnifiedProfile(input, 'ios')).toThrow('process rules')
+  })
+  it('exports the effective policy without device-local settings', () => {
+    const exported = createUnifiedProfile(
+      {
+        proxies: [{ name: 'Overseas', type: 'direct' }],
+        'proxy-groups': [{ name: 'Overseas', type: 'select', proxies: ['Overseas'] }],
+        dns: { listen: '127.0.0.1:1053', nameserver: ['https://1.1.1.1/dns-query'] },
+        rules: [
+          'PROCESS-NAME,QQMusic.exe,DIRECT',
+          'DOMAIN-SUFFIX,example.com,Overseas',
+          'MATCH,Overseas'
+        ],
+        tun: { enable: true, device: 'utun1500' },
+        'external-controller': '127.0.0.1:9090'
+      },
+      'test-export'
+    )
+    expect(exported.common).not.toHaveProperty('tun')
+    expect(exported.common).not.toHaveProperty('external-controller')
+    expect(exported.common.dns).toEqual({ nameserver: ['https://1.1.1.1/dns-query'] })
+    expect(exported.rules[0]).toEqual({
+      rule: 'PROCESS-NAME,QQMusic.exe,DIRECT',
+      platforms: ['macos', 'windows']
+    })
+    expect(compileUnifiedProfile(exported, 'ios').rules).toEqual([
+      'DOMAIN-SUFFIX,example.com,Overseas',
+      'MATCH,Overseas'
+    ])
   })
 })

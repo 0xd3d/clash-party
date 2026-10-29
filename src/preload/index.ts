@@ -95,6 +95,7 @@ const validInvokeChannels = [
   'previewSimpleConfig',
   'publishSimpleConfig',
   'exportSimpleConfig',
+  'exportUnifiedProfile',
   'importSimpleSubscription',
   'refreshSimpleSource',
   'removeSimpleSource',

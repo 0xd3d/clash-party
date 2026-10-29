@@ -600,6 +600,8 @@
   "profiles.title": "Profile Management",
   "profiles.input.placeholder": "Enter your subscription URL",
   "profiles.updateAll": "Update All Profiles",
+  "profiles.exportUnified.title": "Export unified config for macOS, Windows and iOS (private credentials)",
+  "profiles.exportUnified.success": "Unified profile exported; distribute it only through a private path",
   "profiles.useProxy": "Proxy",
   "profiles.import": "Import",
   "profiles.open": "Open",

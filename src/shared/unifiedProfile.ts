@@ -17,6 +17,12 @@ export interface UnifiedProfile {
   rules: (string | UnifiedRule)[]
   platforms?: Partial<Record<UnifiedPlatform, { 'rule-providers': ObjectValue }>>
 }
+export interface UnifiedProfileExportResult {
+  path?: string
+  canceled: boolean
+  revision?: string
+  warnings: string[]
+}
 const commonKeys = new Set([
   'mode',
   'ipv6',
@@ -69,6 +75,63 @@ export function isUnifiedProfile(value: unknown): boolean {
     !Array.isArray(value) &&
     (value as { format?: unknown }).format === UNIFIED_PROFILE_FORMAT
   )
+}
+
+function cloneValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
+function isProcessRule(rule: string): boolean {
+  return /(?:^|[,(])PROCESS-(?:NAME|PATH|NAME-REGEX|PATH-REGEX),/i.test(rule)
+}
+
+/**
+ * Project an effective Mihomo configuration into the portable three-platform
+ * envelope. Device-local TUN/listener/controller settings are deliberately
+ * ignored. Desktop process rules are retained with an explicit platform
+ * annotation so iOS does not reject the document or silently interpret them.
+ * Rule providers must already be portable (for example inline/YAML rather
+ * than MRS); the main-process exporter performs that conversion before calling
+ * this function.
+ */
+export function createUnifiedProfile(config: unknown, revision: string): UnifiedProfile {
+  const source = object(config, 'source configuration')
+  if (!revision.trim() || revision.length > 128)
+    fail('revision must be a nonempty string of at most 128 characters')
+
+  const common: ObjectValue = {}
+  for (const key of commonKeys) {
+    if (!(key in source)) continue
+    if (source[key] === undefined) continue
+    const value = cloneValue(source[key])
+    if (key === 'dns' && value && typeof value === 'object' && !Array.isArray(value)) {
+      delete (value as ObjectValue).listen
+    }
+    common[key] = value
+  }
+
+  if (!Array.isArray(common.proxies) && !common['proxy-providers'])
+    fail('active configuration has no portable proxies or proxy-providers')
+  if (!Array.isArray(source.rules) || source.rules.length === 0)
+    fail('active configuration has no rules')
+
+  const rules: (string | UnifiedRule)[] = source.rules.map((entry, index) => {
+    if (typeof entry !== 'string' || !entry.trim() || /[\r\n]/.test(entry))
+      fail(`rule ${index + 1} is invalid`)
+    return isProcessRule(entry)
+      ? { rule: entry, platforms: ['macos', 'windows'] as UnifiedPlatform[] }
+      : entry
+  })
+
+  const document: UnifiedProfile = {
+    format: UNIFIED_PROFILE_FORMAT,
+    version: UNIFIED_PROFILE_VERSION,
+    revision,
+    common,
+    rules
+  }
+  for (const platform of unifiedPlatforms) compileUnifiedProfile(document, platform)
+  return document
 }
 
 function matchTarget(rule: string): string | undefined {

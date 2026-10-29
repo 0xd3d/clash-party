@@ -600,6 +600,8 @@
   "profiles.title": "订阅管理",
   "profiles.input.placeholder": "请输入您的订阅网址",
   "profiles.updateAll": "更新全部订阅",
+  "profiles.exportUnified.title": "导出三端通用配置（含节点凭据，仅限私下使用）",
+  "profiles.exportUnified.success": "三端通用配置已导出；请仅通过私有路径分发",
   "profiles.useProxy": "代理",
   "profiles.import": "导入",
   "profiles.open": "打开",

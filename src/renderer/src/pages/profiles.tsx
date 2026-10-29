@@ -27,11 +27,12 @@ import {
   readTextFile,
   subStoreCollections,
   subStoreSubs,
-  updatePluginProfile
+  updatePluginProfile,
+  exportUnifiedProfile
 } from '@renderer/utils/ipc'
 import type { KeyboardEvent } from 'react'
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdContentPaste, MdUnfoldMore, MdUnfoldLess } from 'react-icons/md'
+import { MdContentPaste, MdUnfoldMore, MdUnfoldLess, MdFileDownload } from 'react-icons/md'
 import { TbPuzzle } from 'react-icons/tb'
 import {
   DndContext,
@@ -81,6 +82,7 @@ const Profiles: React.FC = () => {
   const [subStoreImporting, setSubStoreImporting] = useState(false)
   const [importing, setImporting] = useState(false)
   const [updating, setUpdating] = useState(false)
+  const [exportingUnified, setExportingUnified] = useState(false)
   const [fileOver, setFileOver] = useState(false)
   const [url, setUrl] = useState('')
   const [, setNow] = useState(new Date())
@@ -176,6 +178,20 @@ const Profiles: React.FC = () => {
     setUserAgent('')
     setAgeSecretKey('')
     setImporting(false)
+  }
+  const handleExportUnified = async (): Promise<void> => {
+    if (!current || exportingUnified) return
+    setExportingUnified(true)
+    try {
+      const result = await exportUnifiedProfile()
+      if (result.canceled) return
+      toast.success(t('profiles.exportUnified.success'))
+      for (const warning of result.warnings) toast.warning(warning)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    } finally {
+      setExportingUnified(false)
+    }
   }
   const pageRef = useRef<HTMLDivElement>(null)
 
@@ -292,6 +308,20 @@ const Profiles: React.FC = () => {
       header={
         showSubscriptions ? (
           <>
+            <Tooltip content={t('profiles.exportUnified.title')} placement="bottom">
+              <Button
+                size="sm"
+                title={t('profiles.exportUnified.title')}
+                isIconOnly
+                variant="light"
+                className="app-nodrag"
+                isLoading={exportingUnified}
+                isDisabled={!current || exportingUnified}
+                onPress={handleExportUnified}
+              >
+                <MdFileDownload className="text-lg" />
+              </Button>
+            </Tooltip>
             <Button
               size="sm"
               title={t('plugins.title')}

@@ -168,6 +168,7 @@ import {
   removeSimpleSource
 } from '../simple/service'
 import { setOperationMode } from '../simple/mode'
+import { exportUnifiedProfile } from '../config/unifiedExport'
 import { inspectPrivacyProtection, exportWebRTCGuard } from '../privacy'
 import { getImageDataURL } from './image'
 import { get as httpGet } from './chromeRequest'
@@ -358,6 +359,7 @@ const asyncHandlers: Record<string, AsyncFn> = {
   previewSimpleConfig,
   publishSimpleConfig,
   exportSimpleConfig,
+  exportUnifiedProfile,
   importSimpleSubscription,
   refreshSimpleSource,
   removeSimpleSource,
