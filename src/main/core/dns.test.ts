@@ -548,6 +548,20 @@ describe('system DNS platform boundary', () => {
     expect(mocks.atomicWriteFile).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it('does not block Windows startup on the macOS DNS protection latch', async () => {
+    Object.defineProperty(process, 'platform', { configurable: true, value: 'win32' })
+    await expect(
+      dns.assertSystemDNSProtection(
+        { tun: { enable: true }, dns: { enable: true, listen: '127.0.0.1:53' } } as IMihomoConfig,
+        corePid,
+        15000
+      )
+    ).resolves.toBeUndefined()
+    await startMonitoring()
+    expect(mocks.probeSystemDNS).not.toHaveBeenCalled()
+    expect(mocks.acquireGuard).not.toHaveBeenCalled()
+  })
 })
 
 describe('native DNS bypass guard lifecycle', () => {

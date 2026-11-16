@@ -435,8 +435,12 @@ describe('vault lock', () => {
     })
     const ac = new AbortController()
     const read = readVault('slow', ac.signal)
-    await new Promise((r) => setTimeout(r, 10))
-    expect(decryptCalls).toBe(1) // inside the lock, decrypting
+    await vi.waitFor(
+      () => {
+        expect(decryptCalls).toBe(1)
+      },
+      { timeout: 2000, interval: 5 }
+    ) // inside the lock, decrypting
     let mutated = false
     const queued = updateVault('slow', (v) => {
       mutated = true
