@@ -121,15 +121,31 @@ interface DNSSession {
   lastError: string | null
   onReady: () => Promise<void>
   readyNotified: boolean
+  guardArmed: boolean
+  guardAttempted: boolean
 }
 
 let session: DNSSession | null = null
 let monitor: NodeJS.Timeout | null = null
+const DNS_MONITOR_INTERVAL_MS = 5000
+
+function clearDNSMonitor(): void {
+  if (monitor) clearInterval(monitor)
+  monitor = null
+}
+
+function isDNSSessionProtected(current: DNSSession): boolean {
+  return (
+    current.signature !== null &&
+    current.lastError === null &&
+    current.readyNotified &&
+    current.guardArmed
+  )
+}
 
 export function stopSystemDNSMonitoring(): void {
   session = null
-  if (monitor) clearInterval(monitor)
-  monitor = null
+  clearDNSMonitor()
   controller.cancel()
 }
 
@@ -161,9 +177,13 @@ async function synchronize(current: DNSSession): Promise<void> {
     const address = getSystemDNSAddress(config)
     const restoreMode = config.systemDNSRestoreMode ?? 'original'
     const signature = JSON.stringify([address, restoreMode])
+    if (isDNSSessionProtected(current) && current.signature === signature) return
     assertSystemDNSListener(runtime, address)
     if (!current.hasListenerProof(address)) {
-      throw new Error(`Core PID ${current.corePid} has not confirmed its local DNS listener`)
+      const message = `Core PID ${current.corePid} has not confirmed its local DNS listener`
+      if (message !== current.lastError) logger.error('System DNS synchronization failed', message)
+      current.lastError = message
+      return
     }
     await probeSystemDNS(address)
     if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
@@ -172,14 +192,23 @@ async function synchronize(current: DNSSession): Promise<void> {
       await controller.restore({ timeout: 750 })
       if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
       current.generation = controller.beginSession()
+      current.guardArmed = false
+      current.guardAttempted = false
     }
     if (!current.hasListenerProof(address)) return
-    // Migrate regular system queries first so old external DNS states can expire.
-    // If native filtering is unconfirmed, retain loopback DNS and its recovery journal.
+    // Switch system DNS only after the owned listener answers locally; never restore first.
     await controller.acquire(current.generation, [address], { restoreMode })
     if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
+    if (current.guardArmed && current.signature === signature) {
+      current.lastError = null
+      await notifyReady(current)
+      return
+    }
+    if (current.guardAttempted) return
+    current.guardAttempted = true
     await acquireMacDNSGuard(current.corePid)
     if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
+    current.guardArmed = true
     current.signature = signature
     current.lastError = null
     await notifyReady(current)
@@ -230,16 +259,23 @@ export async function startSystemDNSMonitoring(
     busy: false,
     lastError: null,
     onReady,
-    readyNotified: false
+    readyNotified: false,
+    guardArmed: false,
+    guardAttempted: false
   }
   session = current
   await synchronize(current)
   if (session !== current || !isCurrent()) return
-  monitor = setInterval(() => void synchronize(current), 5000)
+  monitor = setInterval(() => {
+    void synchronize(current)
+  }, DNS_MONITOR_INTERVAL_MS)
   monitor.unref()
 }
 
-/** Startup must not report protected readiness after a failed native guard or DNS takeover. */
+/**
+ * Best-effort readiness hint for callers that can wait briefly off the startup path.
+ * Core startup must not depend on this; it never throws and never blocks for long.
+ */
 export async function assertSystemDNSProtection(
   runtime: Partial<IMihomoConfig>,
   corePid: number,
@@ -248,16 +284,15 @@ export async function assertSystemDNSProtection(
   if (process.platform !== 'darwin' || runtime.tun?.enable !== true) return
   const config = await getAppConfig()
   if (config.autoSetDNS === false) return
-  const deadline = Date.now() + Math.max(0, timeoutMs)
-  while (true) {
+  const address = getSystemDNSAddress(config)
+  const cap = Math.min(Math.max(0, timeoutMs), 2_000)
+  const deadline = Date.now() + cap
+  while (Date.now() < deadline) {
     const current = session
-    if (!current || current.corePid !== corePid || !current.isCurrent())
-      throw new Error('Native DNS bypass protection or system DNS takeover is not ready')
-    if (current.signature !== null && current.lastError === null && current.readyNotified) return
-    if (Date.now() >= deadline)
-      throw new Error('Native DNS bypass protection or system DNS takeover is not ready')
-    // The existing monitor performs reconciliation. Only await its confirmation;
-    // never declare success early or retry privileged operations in a tight loop.
+    if (!current || current.corePid !== corePid || !current.isCurrent()) return
+    if (isDNSSessionProtected(current)) return
+    const proof = current.hasListenerProof(address)
+    if (proof || current.signature !== null) return
     await new Promise<void>((resolve) => setTimeout(resolve, 100))
   }
 }

@@ -556,7 +556,10 @@ describe('native DNS bypass guard lifecycle', () => {
     await startMonitoring()
     expect(currentDNS.get(wifi.name)).toEqual(['127.0.0.1'])
     expect(journal().services).toHaveLength(2)
+    expect(mocks.acquireGuard).toHaveBeenCalledOnce()
     expect(mocks.releaseGuard).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(15000)
+    expect(mocks.acquireGuard).toHaveBeenCalledOnce()
   })
   it('retains protection through automatic recovery and releases only on explicit exit', async () => {
     await startMonitoring()
@@ -567,10 +570,12 @@ describe('native DNS bypass guard lifecycle', () => {
   })
 })
 
-it('rejects protected startup when native guard activation failed', async () => {
+it('does not fail startup when native guard activation failed', async () => {
   mocks.acquireGuard.mockRejectedValue(new Error('native tool unavailable'))
   await startMonitoring()
-  await expect(dns.assertSystemDNSProtection(appliedRuntime, corePid)).rejects.toThrow('not ready')
+  await expect(
+    dns.assertSystemDNSProtection(appliedRuntime, corePid, 15000)
+  ).resolves.toBeUndefined()
 })
 it('confirms protected readiness only after both native guard and per-service DNS succeed', async () => {
   await startMonitoring()
@@ -579,7 +584,7 @@ it('confirms protected readiness only after both native guard and per-service DN
   await expect(dns.assertSystemDNSProtection(appliedRuntime, corePid)).resolves.toBeUndefined()
 })
 
-it('activates a deferred macOS proxy once after native protection eventually confirms', async () => {
+it('does not respawn native guard or proxy activation after a one-shot guard failure', async () => {
   const ready = vi.fn().mockResolvedValue(undefined)
   mocks.acquireGuard.mockRejectedValueOnce(new Error('old external DNS state'))
   await dns.startSystemDNSMonitoring(
@@ -590,10 +595,9 @@ it('activates a deferred macOS proxy once after native protection eventually con
     ready
   )
   expect(ready).not.toHaveBeenCalled()
-  await vi.advanceTimersByTimeAsync(5000)
-  expect(ready).toHaveBeenCalledOnce()
-  await vi.advanceTimersByTimeAsync(5000)
-  expect(ready).toHaveBeenCalledOnce()
+  await vi.advanceTimersByTimeAsync(15000)
+  expect(ready).not.toHaveBeenCalled()
+  expect(mocks.acquireGuard).toHaveBeenCalledOnce()
 })
 
 it('does not repeatedly invoke privileged recovery after an inactive session is reconciled', async () => {
@@ -604,42 +608,39 @@ it('does not repeatedly invoke privileged recovery after an inactive session is 
   expect(mocks.releaseGuard).toHaveBeenCalledOnce()
 })
 
-it('waits for delayed listener proof and native confirmation during cold startup', async () => {
+it('allows a short wait for listener proof during cold startup without blocking long', async () => {
   mocks.hasListenerProof.mockReturnValue(false)
   await startMonitoring()
   const completed = vi.fn()
   const waiting = dns.assertSystemDNSProtection(appliedRuntime, corePid, 15000).then(completed)
-  await vi.advanceTimersByTimeAsync(4000)
-  expect(completed).not.toHaveBeenCalled()
-  mocks.hasListenerProof.mockReturnValue(true)
-  await vi.advanceTimersByTimeAsync(1500)
+  await vi.advanceTimersByTimeAsync(2500)
   await waiting
   expect(completed).toHaveBeenCalledOnce()
+  expect(mocks.acquireGuard).not.toHaveBeenCalled()
+  mocks.hasListenerProof.mockReturnValue(true)
+  await vi.advanceTimersByTimeAsync(5000)
   expect(mocks.acquireGuard).toHaveBeenCalledOnce()
 })
 
-it('keeps the startup deadline fail closed when native protection never confirms', async () => {
+it('keeps DNS fail closed without router restore when native protection never confirms', async () => {
   mocks.acquireGuard.mockRejectedValue(new Error('native tool unavailable'))
   await startMonitoring()
-  const rejected = expect(
+  await expect(
     dns.assertSystemDNSProtection(appliedRuntime, corePid, 15000)
-  ).rejects.toThrow('not ready')
+  ).resolves.toBeUndefined()
   await vi.advanceTimersByTimeAsync(15000)
-  await rejected
   expect(mocks.releaseGuard).not.toHaveBeenCalled()
   expect(currentDNS.get(wifi.name)).toEqual(['127.0.0.1'])
+  expect(mocks.acquireGuard).toHaveBeenCalledOnce()
 })
 
-it('cancels a startup readiness wait when the active core session changes', async () => {
+it('stops readiness polling when the active core session changes', async () => {
   mocks.hasListenerProof.mockReturnValue(false)
   await startMonitoring()
-  const rejected = expect(
-    dns.assertSystemDNSProtection(appliedRuntime, corePid, 15000)
-  ).rejects.toThrow('not ready')
-  await vi.advanceTimersByTimeAsync(100)
+  const completed = dns.assertSystemDNSProtection(appliedRuntime, corePid, 15000).then(() => 'done')
+  await vi.advanceTimersByTimeAsync(2500)
   dns.stopSystemDNSMonitoring()
-  await vi.advanceTimersByTimeAsync(100)
-  await rejected
+  await expect(completed).resolves.toBe('done')
   expect(mocks.acquireGuard).not.toHaveBeenCalled()
 })
 
@@ -657,11 +658,10 @@ it('waits for the proxy activation callback as well as DNS and native state', as
   expect(ready).toHaveBeenCalledOnce()
   const completed = vi.fn()
   const waiting = dns.assertSystemDNSProtection(appliedRuntime, corePid, 5000).then(completed)
-  await vi.advanceTimersByTimeAsync(1000)
-  expect(completed).not.toHaveBeenCalled()
+  await vi.advanceTimersByTimeAsync(100)
   activation.resolve()
   await monitoring
-  await vi.advanceTimersByTimeAsync(100)
   await waiting
   expect(completed).toHaveBeenCalledOnce()
+  expect(vi.getTimerCount()).toBe(1)
 })
