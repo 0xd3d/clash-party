@@ -38,7 +38,15 @@ export const DOMESTIC_MEDIA_CHAT_PROCESSES = [
 for (const name of DOMESTIC_MEDIA_CHAT_PROCESSES) {
   if (/[,()&#\r\n]/.test(name)) throw new Error(`Unsafe domestic media process name: ${name}`)
 }
-export const DOMESTIC_MEDIA_CHAT_DIRECT_RULE = `AND,((OR,(${DOMESTIC_MEDIA_CHAT_PROCESSES.map((name) => `(PROCESS-NAME,${name})`).join(',')})),(OR,((RULE-SET,cn-domain),(RULE-SET,cn-ip,no-resolve)))),DIRECT`
+const domesticProcessMatch = `(OR,(${DOMESTIC_MEDIA_CHAT_PROCESSES.map((name) => `(PROCESS-NAME,${name})`).join(',')}))`
+/** Chinese destinations only. Anything else from these apps uses domesticMediaChatProxyRule. */
+export const DOMESTIC_MEDIA_CHAT_DIRECT_RULE = `AND,(${domesticProcessMatch},(OR,((RULE-SET,cn-domain),(RULE-SET,cn-ip,no-resolve)))),DIRECT`
+/** Default for the same apps once the Chinese whitelist misses. Placed before later DIRECT rules. */
+export function domesticMediaChatProxyRule(target: string): string {
+  if (!target || /[,&#\r\n]/.test(target))
+    throw new Error('Unsafe protection target in domestic media rule')
+  return `AND,(${domesticProcessMatch}),${target}`
+}
 export { LOCAL_NETWORKS } from '../../shared/privacyRouting'
 
 export const ENCRYPTED_DNS_DOMAINS = [
@@ -263,6 +271,8 @@ export function applyNetworkProtectionPolicy(profile: IMihomoConfig, settings: S
     'DOMAIN-SUFFIX,lan,DIRECT',
     ...[3478, 5349].map((port) => `DST-PORT,${port},${target}`),
     DOMESTIC_MEDIA_CHAT_DIRECT_RULE,
+    // Whitelist miss: these apps go to the proxy before any later DIRECT rule, including GEOIP,CN.
+    domesticMediaChatProxyRule(target),
     ...(settings.networkProtectionPublicUDP !== false ? [`NETWORK,UDP,${target}`] : [])
   ]
   const guardedPrefix = prefix.flatMap((rule) => {

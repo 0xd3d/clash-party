@@ -4,6 +4,7 @@ import {
   DOMESTIC_MEDIA_CHAT_DIRECT_RULE,
   DOMESTIC_MEDIA_CHAT_PROCESSES,
   QQ_MUSIC_DNS_EXCEPTION,
+  domesticMediaChatProxyRule,
   protectionTarget
 } from './networkProtectionPolicy'
 
@@ -72,9 +73,13 @@ describe('protected runtime policy', () => {
     applyNetworkProtectionPolicy(value, enabled)
     const rules = value.rules as unknown as string[]
     expect(rules.indexOf('NETWORK,UDP,Protected')).toBeLessThan(rules.indexOf('GEOIP,CN,DIRECT'))
-    expect(rules.indexOf(DOMESTIC_MEDIA_CHAT_DIRECT_RULE)).toBe(
-      rules.indexOf('NETWORK,UDP,Protected') - 1
-    )
+    const directAt = rules.indexOf(DOMESTIC_MEDIA_CHAT_DIRECT_RULE)
+    const proxyRule = domesticMediaChatProxyRule('Protected')
+    expect(rules[directAt + 1]).toBe(proxyRule)
+    expect(rules[directAt + 2]).toBe(proxyRule.replace(/,Protected$/, ',REJECT'))
+    expect(rules[directAt + 3]).toBe('NETWORK,UDP,Protected')
+    expect(directAt).toBeLessThan(rules.indexOf('DOMAIN-SUFFIX,qq.com,DIRECT'))
+    expect(rules.indexOf(proxyRule)).toBeLessThan(rules.indexOf('GEOIP,CN,DIRECT'))
     expect(rules.filter((rule) => rule === DOMESTIC_MEDIA_CHAT_DIRECT_RULE)).toHaveLength(1)
     for (const name of [
       'QQMusic',
@@ -190,7 +195,11 @@ describe('protected runtime policy', () => {
     value.dns.nameserver = ['https://dns.google/dns-query?x=1#h3=true']
     applyNetworkProtectionPolicy(value, { ...enabled, networkProtectionPublicUDP: false })
     expect(value.dns.nameserver).toEqual(['https://dns.google/dns-query?x=1#h3=true&Protected'])
-    expect(value.rules as unknown as string[]).not.toContain('NETWORK,UDP,Protected')
-    expect(value.rules as unknown as string[]).toContain('DST-PORT,3478,Protected')
+    const rules = value.rules as unknown as string[]
+    expect(rules).not.toContain('NETWORK,UDP,Protected')
+    expect(rules).toContain('DST-PORT,3478,Protected')
+    const proxyRule = domesticMediaChatProxyRule('Protected')
+    expect(rules.indexOf(DOMESTIC_MEDIA_CHAT_DIRECT_RULE)).toBe(rules.indexOf(proxyRule) - 1)
+    expect(rules.indexOf(proxyRule)).toBeLessThan(rules.indexOf('GEOIP,CN,DIRECT'))
   })
 })
