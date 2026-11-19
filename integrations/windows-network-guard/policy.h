@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace network_guard {
@@ -90,9 +89,12 @@ inline Request decode(const std::vector<std::uint8_t>& data) {
   request.operation = static_cast<Operation>(read32(data, 8));
   request.corePid = read32(data, 12);
   std::size_t offset = 24;
-  for (auto entry : {std::make_pair(&request.corePath, pathLength), std::make_pair(&request.tunName, tunLength)}) {
-    for (std::uint32_t index = 0; index < entry.second; index++, offset += 2) {
-      entry.first->push_back(static_cast<char16_t>(data[offset] | (std::uint16_t(data[offset + 1]) << 8)));
+  // A temporary initializer_list trips GCC -Wdangling-reference under -Werror.
+  std::u16string* const fields[] = {&request.corePath, &request.tunName};
+  const std::uint32_t lengths[] = {pathLength, tunLength};
+  for (std::size_t field = 0; field < 2; field++) {
+    for (std::uint32_t index = 0; index < lengths[field]; index++, offset += 2) {
+      fields[field]->push_back(static_cast<char16_t>(data[offset] | (std::uint16_t(data[offset + 1]) << 8)));
     }
   }
   validate(request);
