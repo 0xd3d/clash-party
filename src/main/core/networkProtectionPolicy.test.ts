@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyNetworkProtectionPolicy,
+  DOMESTIC_MEDIA_CHAT_DIRECT_RULE,
+  DOMESTIC_MEDIA_CHAT_PROCESSES,
   QQ_MUSIC_DNS_EXCEPTION,
   protectionTarget
 } from './networkProtectionPolicy'
@@ -21,6 +23,10 @@ function profile(): IMihomoConfig & { dns: IMihomoDNSConfig } {
       'nameserver-policy': {
         'aqqmusic.tc.qq.com': [QQ_MUSIC_DNS_EXCEPTION],
         '+.stream.qqmusic.qq.com': QQ_MUSIC_DNS_EXCEPTION,
+        'music.163.com': [QQ_MUSIC_DNS_EXCEPTION],
+        '+.music.163.com': QQ_MUSIC_DNS_EXCEPTION,
+        '+.music.126.net': [QQ_MUSIC_DNS_EXCEPTION],
+        'httpdns.n.netease.com': QQ_MUSIC_DNS_EXCEPTION,
         '+.other.test': ['https://doh.pub/dns-query#DIRECT']
       }
     }
@@ -66,6 +72,32 @@ describe('protected runtime policy', () => {
     applyNetworkProtectionPolicy(value, enabled)
     const rules = value.rules as unknown as string[]
     expect(rules.indexOf('NETWORK,UDP,Protected')).toBeLessThan(rules.indexOf('GEOIP,CN,DIRECT'))
+    expect(rules.indexOf(DOMESTIC_MEDIA_CHAT_DIRECT_RULE)).toBe(
+      rules.indexOf('NETWORK,UDP,Protected') - 1
+    )
+    expect(rules.filter((rule) => rule === DOMESTIC_MEDIA_CHAT_DIRECT_RULE)).toHaveLength(1)
+    for (const name of [
+      'QQMusic',
+      'QQMusic.exe',
+      'QQ',
+      'QQ.exe',
+      'QQ Helper',
+      'QQEXDOC',
+      'QQEXDOC Helper',
+      'WeChat',
+      'WeChat.exe',
+      'Weixin.exe',
+      'WeChatAppEx',
+      'WeChatAppEx Helper',
+      'NeteaseMusic',
+      'NeteaseMusic Helper',
+      'cloudmusic.exe'
+    ]) {
+      expect(DOMESTIC_MEDIA_CHAT_PROCESSES).toContain(name)
+    }
+    expect(DOMESTIC_MEDIA_CHAT_DIRECT_RULE).toContain('(RULE-SET,cn-domain)')
+    expect(DOMESTIC_MEDIA_CHAT_DIRECT_RULE).toContain('(RULE-SET,cn-ip,no-resolve)')
+    expect(DOMESTIC_MEDIA_CHAT_DIRECT_RULE.endsWith(',DIRECT')).toBe(true)
     expect(rules).toContain('IP-CIDR,127.0.0.0/8,DIRECT,no-resolve')
     expect(rules.indexOf('DST-PORT,53,Protected')).toBeLessThan(
       rules.indexOf('IP-CIDR,192.168.0.0/16,DIRECT,no-resolve')
@@ -86,6 +118,14 @@ describe('protected runtime policy', () => {
     expect(value.dns?.['nameserver-policy']?.['+.stream.qqmusic.qq.com']).toEqual([
       QQ_MUSIC_DNS_EXCEPTION
     ])
+    for (const key of [
+      'music.163.com',
+      '+.music.163.com',
+      '+.music.126.net',
+      'httpdns.n.netease.com'
+    ]) {
+      expect(value.dns?.['nameserver-policy']?.[key]).toEqual([QQ_MUSIC_DNS_EXCEPTION])
+    }
     expect(value.dns?.['nameserver-policy']?.['+.other.test']).toEqual([
       'https://doh.pub/dns-query#Protected'
     ])
@@ -134,11 +174,15 @@ describe('protected runtime policy', () => {
     expect(() => applyNetworkProtectionPolicy(value, enabled)).toThrow('literal IP')
     value.dns['default-nameserver'] = ['https://1.1.1.1/dns-query']
     value.dns['nameserver-policy'] = {
-      'aqqmusic.tc.qq.com': 'https://another.test/dns-query#DIRECT'
+      'aqqmusic.tc.qq.com': 'https://another.test/dns-query#DIRECT',
+      'music.163.com': 'https://doh.pub/dns-query#DIRECT&extra'
     }
     applyNetworkProtectionPolicy(value, enabled)
     expect(value.dns['nameserver-policy']['aqqmusic.tc.qq.com']).toEqual([
       'https://another.test/dns-query#Protected'
+    ])
+    expect(value.dns['nameserver-policy']['music.163.com']).toEqual([
+      'https://doh.pub/dns-query#Protected'
     ])
   })
   it('preserves DNS URL query/options and supports deliberately retaining domestic UDP', () => {
