@@ -2,7 +2,51 @@ import { isIP } from 'node:net'
 import { LOCAL_NETWORKS } from '../../shared/privacyRouting'
 
 export const QQ_MUSIC_DNS_KEYS = new Set(['aqqmusic.tc.qq.com', '+.stream.qqmusic.qq.com'])
+export const NETEASE_MUSIC_DNS_KEYS = new Set([
+  'music.163.com',
+  '+.music.163.com',
+  '+.music.126.net',
+  'httpdns.n.netease.com'
+])
 export const QQ_MUSIC_DNS_EXCEPTION = 'https://doh.pub/dns-query#DIRECT'
+const PRESERVED_DIRECT_DNS_KEYS = new Set([...QQ_MUSIC_DNS_KEYS, ...NETEASE_MUSIC_DNS_KEYS])
+
+/**
+ * QQ Music, QQ, and WeChat stay direct only for Chinese domains or IPs.
+ * Names are the Mac processes this core actually attributed, plus the Windows
+ * executables. Commas and parentheses are mihomo AND syntax, so they cannot
+ * appear in a name (Chromium helper titles such as "QQ Helper (Renderer)" are
+ * omitted; the logged parent helper names are the ones that connected).
+ */
+export const DOMESTIC_MEDIA_CHAT_PROCESSES = [
+  'NeteaseMusic',
+  'NeteaseMusic Helper',
+  'cloudmusic.exe',
+  'QQMusic',
+  'QQMusic.exe',
+  'QQ',
+  'QQ.exe',
+  'QQ Helper',
+  'QQEXDOC',
+  'QQEXDOC Helper',
+  'WeChat',
+  'WeChat.exe',
+  'Weixin.exe',
+  'WeChatAppEx',
+  'WeChatAppEx Helper'
+] as const
+for (const name of DOMESTIC_MEDIA_CHAT_PROCESSES) {
+  if (/[,()&#\r\n]/.test(name)) throw new Error(`Unsafe domestic media process name: ${name}`)
+}
+const domesticProcessMatch = `(OR,(${DOMESTIC_MEDIA_CHAT_PROCESSES.map((name) => `(PROCESS-NAME,${name})`).join(',')}))`
+/** Chinese destinations only. Anything else from these apps uses domesticMediaChatProxyRule. */
+export const DOMESTIC_MEDIA_CHAT_DIRECT_RULE = `AND,(${domesticProcessMatch},(OR,((RULE-SET,cn-domain),(RULE-SET,cn-ip,no-resolve)))),DIRECT`
+/** Default for the same apps once the Chinese whitelist misses. Placed before later DIRECT rules. */
+export function domesticMediaChatProxyRule(target: string): string {
+  if (!target || /[,&#\r\n]/.test(target))
+    throw new Error('Unsafe protection target in domestic media rule')
+  return `AND,(${domesticProcessMatch}),${target}`
+}
 export { LOCAL_NETWORKS } from '../../shared/privacyRouting'
 
 export const ENCRYPTED_DNS_DOMAINS = [
@@ -182,7 +226,7 @@ export function applyNetworkProtectionPolicy(profile: IMihomoConfig, settings: S
   for (const [key, raw] of Object.entries(dns['nameserver-policy'] ?? {})) {
     const values = typeof raw === 'string' ? [raw] : raw
     policy[key] = values.map((server) =>
-      QQ_MUSIC_DNS_KEYS.has(key) && server === QQ_MUSIC_DNS_EXCEPTION
+      PRESERVED_DIRECT_DNS_KEYS.has(key) && server === QQ_MUSIC_DNS_EXCEPTION
         ? server
         : bindDNS(server, target)
     )
@@ -226,6 +270,9 @@ export function applyNetworkProtectionPolicy(profile: IMihomoConfig, settings: S
     'DOMAIN-SUFFIX,local,DIRECT',
     'DOMAIN-SUFFIX,lan,DIRECT',
     ...[3478, 5349].map((port) => `DST-PORT,${port},${target}`),
+    DOMESTIC_MEDIA_CHAT_DIRECT_RULE,
+    // Whitelist miss: these apps go to the proxy before any later DIRECT rule, including GEOIP,CN.
+    domesticMediaChatProxyRule(target),
     ...(settings.networkProtectionPublicUDP !== false ? [`NETWORK,UDP,${target}`] : [])
   ]
   const guardedPrefix = prefix.flatMap((rule) => {
