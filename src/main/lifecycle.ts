@@ -155,9 +155,8 @@ export function setupAppLifecycle(): void {
     app.exit()
   })
 
-  // 唤醒后的恢复统一由 sys/resume.ts 的 initResumeRecovery() 处理：等网络回来后
-  // 按实际故障分别处置（内核失联则重启、TUN 网卡消失则重建、其余情况热重载配置），
-  // 并重新下发系统代理。此处不再单独注册监听器，否则多个 resume 处理器会互相叠加。
+  // 合盖和睡眠不拆 TUN、不把系统 DNS 还给路由器。卡住的 mihomo 由 macOS stall monitor
+  // 单独重启核心。此处不再注册 resume，避免和 sys/resume.ts 叠加重启。
 
   app.on('will-quit', () => {
     if (!sysProxyDisabled) {

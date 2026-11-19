@@ -19,6 +19,7 @@ import {
 } from './core/manager'
 import { createTray } from './resolve/tray'
 import { init, initBasic, safeShowErrorBox, startSubStoreServices } from './utils/init'
+import { startInstalledCoreStallMonitor } from './core/coreStallMonitor'
 import { initShortcut } from './resolve/shortcut'
 import { initProfileUpdater } from './core/profileUpdater'
 import { startMonitor } from './resolve/trafficMonitor'
@@ -327,6 +328,8 @@ app
       .then(async (canContinue) => {
         if (!canContinue) return
         await init()
+        // Returns immediately on Windows; the macOS stall watch is not awaited.
+        startInstalledCoreStallMonitor()
       })
       .catch((error) => {
         mainLogger.error('Failed to initialize background services', error)

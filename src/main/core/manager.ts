@@ -70,6 +70,7 @@ import {
   recoverDNS,
   updateSystemDNSRuntime
 } from './dns'
+import { shouldRecoverDNSBeforeCoreStart, shouldRestoreSystemDNS } from './coreStall'
 import { SystemDNSListenerProof } from './systemDNSRuntime'
 import { activateWindowsCoreProxy } from './startupProxy'
 import { shutdownProtectedCore } from './protectedShutdown'
@@ -530,7 +531,7 @@ async function prepareCore(
   forceStop = false
 ): Promise<CoreConfig> {
   await ensureRuntimeFiles()
-  if (!hasCoreProcess() && !skipStop && !forceStop) {
+  if (shouldRecoverDNSBeforeCoreStart({ hasCore: hasCoreProcess(), skipStop, forceStop })) {
     try {
       await recoverDNS({ force: true, timeout: 750 })
     } catch (error) {
@@ -1044,7 +1045,8 @@ async function stopCoreInternal(
   // A delayed readiness continuation must not create a new DNS session after this barrier.
   if (child) dnsIneligibleProcesses.add(child)
   stopSystemDNSMonitoring()
-  if (!force && process.platform === 'darwin') {
+  // A forced restart is the stalled-core path: leave 127.0.0.1 in place so lookups fail closed.
+  if (shouldRestoreSystemDNS(force, process.platform)) {
     try {
       await recoverDNS({ releaseGuard })
     } catch (error) {
