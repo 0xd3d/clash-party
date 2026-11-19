@@ -8,6 +8,41 @@ import os from 'node:os'
 import { stringify } from 'yaml'
 import { applyNetworkProtectionPolicy } from '../src/main/core/networkProtectionPolicy'
 
+const domesticRuleProviderFiles = {
+  'cn-domain': 'cn-domain.yaml',
+  'cn-ip': 'cn-ip.yaml'
+} as const
+
+function attachDomesticRuleProviders(profile: Record<string, unknown>): void {
+  const existing = (profile['rule-providers'] as Record<string, unknown> | undefined) ?? {}
+  profile['rule-providers'] = {
+    'cn-domain': {
+      type: 'file',
+      behavior: 'domain',
+      format: 'yaml',
+      path: domesticRuleProviderFiles['cn-domain']
+    },
+    'cn-ip': {
+      type: 'file',
+      behavior: 'ipcidr',
+      format: 'yaml',
+      path: domesticRuleProviderFiles['cn-ip']
+    },
+    ...existing
+  }
+}
+
+async function writeDomesticRuleProviderFiles(workDir: string): Promise<void> {
+  await writeFile(
+    path.join(workDir, domesticRuleProviderFiles['cn-domain']),
+    'payload:\n  - "+.fixture.cn"\n'
+  )
+  await writeFile(
+    path.join(workDir, domesticRuleProviderFiles['cn-ip']),
+    'payload:\n  - "192.0.2.0/24"\n'
+  )
+}
+
 // Unprivileged, isolated loopback protocol fixtures. Never changes the running app,
 // system DNS/routes/firewall or TUN. Only these prepared sidecars may be selected.
 const allowedCores = ['mihomo', 'mihomo-alpha', 'mihomo-smart']
@@ -158,6 +193,10 @@ async function launch(profile: Record<string, unknown>, name: string): Promise<F
   // are open. Give every case its own directory and also stop it before the next case.
   const workDir = path.join(folder, name)
   await mkdir(workDir)
+  const providers = profile['rule-providers'] as Record<string, unknown> | undefined
+  if (providers?.['cn-domain'] && providers?.['cn-ip']) {
+    await writeDomesticRuleProviderFiles(workDir)
+  }
   const target = path.join(workDir, 'config.yaml')
   const rules = [
     `AND,((NETWORK,TCP),(DST-PORT,${readinessPort})),DIRECT`,
@@ -310,6 +349,7 @@ try {
   })
   const safe = base()
   safe.tun = { enable: true, device: 'fixture' }
+  attachDomesticRuleProviders(safe)
   applyNetworkProtectionPolicy(safe as unknown as IMihomoConfig, {
     networkProtection: true,
     networkProtectionPublicUDP: true,
@@ -335,6 +375,7 @@ try {
     assert(directDNS > before, 'Empty-group DIRECT positive-control did not reproduce')
   })
   empty.tun = { enable: true, device: 'fixture' }
+  attachDomesticRuleProviders(empty)
   applyNetworkProtectionPolicy(empty as unknown as IMihomoConfig, {
     networkProtection: true,
     autoSetDNS: true
