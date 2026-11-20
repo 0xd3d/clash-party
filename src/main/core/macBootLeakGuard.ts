@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { getAppConfig, getControledMihomoConfig } from '../config'
-import { getRuntimeConfig } from './factory'
+import { DEFAULT_MIHOMO_PORTS } from '../../shared/appConfig'
 import { dataDir } from '../utils/dirs'
 import { atomicWriteFile } from '../utils/safeFile'
 import {
@@ -9,7 +9,7 @@ import {
   parseBootLeakPolicyFile,
   type BootLeakPolicySnapshot
 } from './bootLeakPolicy'
-import { DEFAULT_MIHOMO_PORTS } from '../../shared/appConfig'
+import { getRuntimeConfig } from './factory'
 
 const policyFileName = 'boot-leak-policy.json'
 
