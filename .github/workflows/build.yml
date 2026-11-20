@@ -143,6 +143,7 @@ jobs:
         run: node scripts/verify-package.mjs ${{ matrix.platform }} ${{ matrix.arch }}
       - name: Verify the PKG installation on the disposable macOS runner
         if: matrix.platform == 'darwin'
+        timeout-minutes: 12
         shell: bash
         run: |
           # Installs helpers and the private core identity, but never launches the
@@ -157,7 +158,10 @@ jobs:
           /usr/bin/codesign --verify --deep --strict '/Applications/Clash Party.app'
       - name: Generate checksums
         run: pnpm run checksum .pkg setup.exe portable.7z
-      - uses: actions/upload-artifact@v6
+      - name: Upload package artifact
+        id: upload_pkg
+        uses: actions/upload-artifact@v6
+        continue-on-error: true
         with:
           name: package-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
@@ -170,6 +174,27 @@ jobs:
           retention-days: 3
           if-no-files-found: error
           overwrite: true
+      - name: Retry package artifact upload
+        id: upload_pkg_retry
+        if: steps.upload_pkg.outcome == 'failure'
+        uses: actions/upload-artifact@v6
+        with:
+          name: package-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/*.pkg
+            dist/*setup.exe
+            dist/*portable.7z
+            dist/*.sha256
+            dist/build-manifest-*.json
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
+          overwrite: true
+      - name: Require successful package upload
+        if: steps.upload_pkg.outcome == 'failure' && steps.upload_pkg_retry.outcome == 'failure'
+        run: |
+          echo "Package artifact upload failed after retry (often a transient ENOTFOUND on artifact storage)."
+          exit 1
 
   publish:
     needs: [plan, checks, packages]
