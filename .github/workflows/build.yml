@@ -161,7 +161,6 @@ jobs:
       - name: Upload package artifact
         id: upload_pkg
         uses: actions/upload-artifact@v6
-        continue-on-error: true
         with:
           name: package-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
@@ -174,9 +173,12 @@ jobs:
           retention-days: 3
           if-no-files-found: error
           overwrite: true
+      - name: Wait before artifact upload retry
+        if: failure() && steps.upload_pkg.conclusion == 'failure'
+        run: sleep 45
       - name: Retry package artifact upload
         id: upload_pkg_retry
-        if: steps.upload_pkg.outcome == 'failure'
+        if: failure() && steps.upload_pkg.conclusion == 'failure'
         uses: actions/upload-artifact@v6
         with:
           name: package-${{ matrix.platform }}-${{ matrix.arch }}
@@ -190,11 +192,6 @@ jobs:
           retention-days: 3
           if-no-files-found: error
           overwrite: true
-      - name: Require successful package upload
-        if: steps.upload_pkg.outcome == 'failure' && steps.upload_pkg_retry.outcome == 'failure'
-        run: |
-          echo "Package artifact upload failed after retry (often a transient ENOTFOUND on artifact storage)."
-          exit 1
 
   publish:
     needs: [plan, checks, packages]
