@@ -30,6 +30,7 @@ interface IpcApi {
     proxyGroup?: string
     protectPublicUDP?: boolean
   }) => Promise<void>
+  syncBootLeakPolicy: () => Promise<void>
   inspectPrivacyProtection: () => Promise<PrivacyProtectionReport>
   exportWebRTCGuard: () => Promise<string | null>
   // Mihomo API
@@ -295,6 +296,7 @@ const ipc = new Proxy({} as IpcApi, {
 export const {
   inspectPrivacyProtection,
   configureNetworkProtection,
+  syncBootLeakPolicy,
   previewProtectionSetup,
   applyProtectionSetup,
   exportWebRTCGuard,

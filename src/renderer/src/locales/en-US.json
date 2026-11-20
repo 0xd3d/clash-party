@@ -989,6 +989,8 @@
   "privacy.finding.windowsDnsMode.error": "System DNS interception is disabled.",
   "privacy.finding.macDNSGuard.pass": "Native DNS containment status is confirmed.",
   "privacy.finding.macDNSGuard.warning": "Native DNS containment is unconfirmed.",
+  "tun.bootLeakGuard.title": "Boot leak guard",
+  "tun.bootLeakGuard.hint": "Arms a system LaunchDaemon at boot: loopback DNS and PF egress deny until Mihomo listens. Turning this off is the only way to disarm it across quits; it never restores ISP or router DNS.",
   "tun.protection.title": "Block public traffic after a tunnel failure",
   "tun.protection.hint": "Requires an installed native guard and a proxy-only target. Public traffic remains blocked after a core failure; LAN stays available. Enabling interrupts existing public and old plaintext DNS connections. Enabling or releasing reconnects the core.",
   "tun.protection.target": "Protected proxy target",

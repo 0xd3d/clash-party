@@ -357,6 +357,8 @@ interface IAppConfig {
   networkProtectionProxyGroup?: string
   networkProtectionPublicUDP?: boolean
   autoSetDNS?: boolean
+  /** macOS only: boot LaunchDaemon blocks pre-login leaks; disable explicitly in TUN settings. */
+  macBootLeakGuard?: boolean
   systemDNSAddress?: string
   systemDNSRestoreMode?: 'original' | 'automatic'
   originDNS?: string

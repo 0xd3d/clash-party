@@ -989,6 +989,8 @@
   "privacy.finding.windowsDnsMode.error": "系统 DNS 拦截已禁用。",
   "privacy.finding.macDNSGuard.pass": "原生 DNS 防旁路状态已确认。",
   "privacy.finding.macDNSGuard.warning": "尚未确认原生 DNS 防旁路已生效。",
+  "tun.bootLeakGuard.title": "启动期防泄漏",
+  "tun.bootLeakGuard.hint": "登录前由系统 LaunchDaemon 接管：核心就绪前将系统 DNS 固定为 127.0.0.1，并用 PF 阻断非白名单出网。关闭此开关是跨退出解除防护的唯一方式；不会恢复运营商或路由器 DNS。",
   "tun.protection.title": "隧道异常后的公网断网保护",
   "tun.protection.hint": "需安装专用防护组件并使用无直连回退的代理出口。内核异常后保持公网阻断，局域网仍可用。开启会中断已有公网及旧明文 DNS 连接；启用或解除会重新连接内核。",
   "tun.protection.target": "保护使用的代理出口",

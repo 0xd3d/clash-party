@@ -95,6 +95,28 @@ DNS_GUARD_REPLACED=1
 /usr/bin/install -o root -g wheel -m 4755 "$DNS_GUARD_SOURCE" "$DNS_GUARD_PATH"
 log "Installed fixed-purpose DNS guard; existing PF policy and recovery state preserved"
 
+BOOT_GUARD_SOURCE="$APP_PATH/Contents/Resources/files/party.mihomo.boot-guard"
+BOOT_GUARD_PATH="/Library/PrivilegedHelperTools/party.mihomo.boot-guard"
+BOOT_GUARD_PLIST_SOURCE="$APP_PATH/Contents/Resources/files/party.mihomo.boot-guard.plist"
+BOOT_GUARD_LAUNCH_DAEMON="/Library/LaunchDaemons/party.mihomo.boot-guard.plist"
+if [ ! -f "$BOOT_GUARD_SOURCE" ] || [ ! -f "$BOOT_GUARD_PLIST_SOURCE" ]; then
+    log "Error: Boot leak guard artifacts missing from package"
+    exit 1
+fi
+/usr/bin/codesign --verify --strict "$BOOT_GUARD_SOURCE"
+/usr/bin/install -o root -g wheel -m 755 "$BOOT_GUARD_SOURCE" "$BOOT_GUARD_PATH"
+/usr/bin/install -o root -g wheel -m 644 "$BOOT_GUARD_PLIST_SOURCE" "$BOOT_GUARD_LAUNCH_DAEMON"
+mkdir -p /private/var/db/party.mihomo.boot-guard
+chown root:wheel /private/var/db/party.mihomo.boot-guard
+chmod 700 /private/var/db/party.mihomo.boot-guard
+launchctl bootout system "$BOOT_GUARD_LAUNCH_DAEMON" 2>/dev/null || true
+launchctl enable system/party.mihomo.boot-guard 2>/dev/null || true
+if ! launchctl bootstrap system "$BOOT_GUARD_LAUNCH_DAEMON"; then
+    log "Warning: boot leak guard bootstrap failed; administrator may need to load it manually"
+else
+    log "Boot leak guard LaunchDaemon loaded"
+fi
+
 # 创建并配置 LaunchDaemon
 log "Configuring LaunchDaemon..."
 mkdir -p "/Library/LaunchDaemons"

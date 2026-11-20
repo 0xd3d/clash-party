@@ -88,6 +88,7 @@ export const defaultConfig: IAppConfig = {
   networkProtection: false,
   networkProtectionProxyGroup: '',
   networkProtectionPublicUDP: true,
+  macBootLeakGuard: true,
   systemDNSAddress: '127.0.0.1',
   systemDNSRestoreMode: 'original',
   useHotReloadProfile: false,

@@ -60,12 +60,17 @@ mac:
     - pkg
   binaries:
     - 'Contents/Resources/files/party.mihomo.dns-guard'
+    - 'Contents/Resources/files/party.mihomo.boot-guard'
     - 'Contents/Resources/sidecar/mihomo'
     - 'Contents/Resources/sidecar/mihomo-alpha'
     - 'Contents/Resources/sidecar/mihomo-smart'
   extraResources:
     - from: './build/native/party.mihomo.dns-guard'
       to: 'files/party.mihomo.dns-guard'
+    - from: './build/native/party.mihomo.boot-guard'
+      to: 'files/party.mihomo.boot-guard'
+    - from: './build/pkg-scripts/party.mihomo.boot-guard.plist'
+      to: 'files/party.mihomo.boot-guard.plist'
     - from: './integrations/macos-dns-guard/'
       to: 'integrations/macos-dns-guard'
     - from: './build/pkg-scripts/party.mihomo.helper.plist'

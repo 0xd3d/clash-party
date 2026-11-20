@@ -75,6 +75,7 @@ import { SystemDNSListenerProof } from './systemDNSRuntime'
 import { activateWindowsCoreProxy } from './startupProxy'
 import { shutdownProtectedCore } from './protectedShutdown'
 import { releaseMacDNSGuard } from './macDNSGuard'
+import { syncBootLeakPolicy } from './macBootLeakGuard'
 import { armNetworkGuard, bindNetworkGuard, releaseNetworkGuard } from './networkGuard'
 import { applyNetworkProtectionPolicy } from './networkProtectionPolicy'
 import {
@@ -988,6 +989,13 @@ async function startCoreInternal(
           mainWindow?.webContents.send('appConfigUpdated')
         }
       )
+      if (process.platform === 'darwin') {
+        try {
+          await syncBootLeakPolicy()
+        } catch (error) {
+          managerLogger.warn('Boot leak policy sync failed', error)
+        }
+      }
     }
     // API 就绪后同步本次 DNS 保护结果。
     try {
