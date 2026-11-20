@@ -6,6 +6,7 @@ const validInvokeChannels = [
   'previewProtectionSetup',
   'applyProtectionSetup',
   'configureNetworkProtection',
+  'syncBootLeakPolicy',
   'exportWebRTCGuard',
   // Mihomo API
   'mihomoVersion',

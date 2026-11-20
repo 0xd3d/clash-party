@@ -60,7 +60,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (platform === 'darwin')
       binaries.push(
         path.join(resources, 'files/party.mihomo.helper'),
-        path.join(resources, 'files/party.mihomo.dns-guard')
+        path.join(resources, 'files/party.mihomo.dns-guard'),
+        path.join(resources, 'files/party.mihomo.boot-guard')
       )
     if (platform === 'win32')
       binaries.push(path.join(resources, 'files/party.mihomo.network-guard.exe'))

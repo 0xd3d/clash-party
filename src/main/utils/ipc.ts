@@ -80,6 +80,7 @@ import {
   showTunPermissionDialog,
   showErrorDialog
 } from '../core/manager'
+import { syncBootLeakPolicy } from '../core/macBootLeakGuard'
 import { triggerSysProxy } from '../sys/sysproxy'
 import { checkUpdate, downloadAndInstallUpdate } from '../resolve/autoUpdater'
 import {
@@ -268,6 +269,7 @@ const asyncHandlers: Record<string, AsyncFn> = {
   previewProtectionSetup,
   applyProtectionSetup,
   configureNetworkProtection,
+  syncBootLeakPolicy,
   exportWebRTCGuard,
   // Mihomo API
   mihomoVersion,

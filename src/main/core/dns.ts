@@ -301,6 +301,8 @@ export async function recoverDNS(
   options: { force?: boolean; timeout?: number; releaseGuard?: boolean } = {}
 ): Promise<void> {
   if (process.platform !== 'darwin') return
+  const config = await getAppConfig()
+  if (config.macBootLeakGuard !== false) return
   stopSystemDNSMonitoring()
   await controller.restore({ timeout: options.timeout ?? 750 })
   if (options.releaseGuard) await releaseMacDNSGuard()

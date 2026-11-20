@@ -7,6 +7,7 @@ import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-c
 import {
   grantTunPermissions,
   configureNetworkProtection,
+  syncBootLeakPolicy,
   restartCore,
   setupFirewall,
   mihomoHotReloadConfig
@@ -30,6 +31,7 @@ const Tun: React.FC = () => {
     networkProtectionProxyGroup = '',
     networkProtectionPublicUDP = true,
     autoSetDNS = true,
+    macBootLeakGuard = true,
     systemDNSAddress = '127.0.0.1',
     systemDNSRestoreMode = 'original'
   } = appConfig || {}
@@ -212,6 +214,25 @@ const Tun: React.FC = () => {
           <ProtectionSetup onApplied={() => setChanged(false)} />
         )}
         <PrivacyCheck />
+        {platform === 'darwin' && (
+          <SettingCard>
+            <SettingItem title={t('tun.bootLeakGuard.title')} divider>
+              <Switch
+                size="sm"
+                isSelected={macBootLeakGuard !== false}
+                onValueChange={async (enabled) => {
+                  try {
+                    await patchAppConfig({ macBootLeakGuard: enabled })
+                    await syncBootLeakPolicy()
+                  } catch (e) {
+                    showErrorSync(e)
+                  }
+                }}
+              />
+            </SettingItem>
+            <p className="text-xs text-default-500">{t('tun.bootLeakGuard.hint')}</p>
+          </SettingCard>
+        )}
         {(platform === 'darwin' || platform === 'win32') && (
           <SettingCard>
             <SettingItem title={t('tun.protection.title')} divider>

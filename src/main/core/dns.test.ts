@@ -84,7 +84,7 @@ beforeEach(async () => {
   vi.resetAllMocks()
   vi.useFakeTimers()
   Object.defineProperty(process, 'platform', { configurable: true, value: 'darwin' })
-  config = { autoSetDNS: true }
+  config = { autoSetDNS: true, macBootLeakGuard: false }
   journalText = undefined
   currentDNS = new Map([
     [wifi.name, []],

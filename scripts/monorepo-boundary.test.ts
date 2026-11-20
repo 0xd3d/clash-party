@@ -12,7 +12,8 @@ describe('native source and signing boundaries', () => {
       'apps/ios/ClashParty/Resources/GeoResources/geosite.dat',
       'apps/ios/ClashPartyTunnel/Resources/GeoResources/geosite.dat',
       'apps/ios/ClashPartyTunnel/Resources/GeoResources/country.mmdb',
-      'build/native/party.mihomo.dns-guard'
+      'build/native/party.mihomo.dns-guard',
+      'build/native/party.mihomo.boot-guard'
     ])
       expect(() =>
         execFileSync('git', ['check-ignore', '--quiet', '--no-index', '--', file])
