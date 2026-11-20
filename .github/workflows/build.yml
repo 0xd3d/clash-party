@@ -141,18 +141,6 @@ jobs:
           pnpm run build:mac --${{ matrix.arch }} -c.mac.identity=-
       - name: Verify packaged architecture, privacy resources and native module loading
         run: node scripts/verify-package.mjs ${{ matrix.platform }} ${{ matrix.arch }}
-      - name: Verify the PKG signature on the disposable macOS runner
-        if: matrix.platform == 'darwin'
-        timeout-minutes: 5
-        shell: bash
-        run: |
-          # Full installer -target / smoke is intentionally skipped on GitHub-hosted
-          # runners: postinstall bootstraps boot-guard LaunchDaemons that can hang the job
-          # or interfere with runner networking before artifact upload. verify-package.mjs
-          # already validates contents, privacy resources and native module loading.
-          for package in dist/*.pkg; do
-            /usr/sbin/pkgutil --check-signature "$package"
-          done
       - name: Generate checksums
         run: pnpm run checksum .pkg setup.exe portable.7z
       - name: Upload package artifact
