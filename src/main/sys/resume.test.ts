@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => ({
   restartCore: vi.fn(),
   patchMihomoConfig: vi.fn(),
   recoverDNS: vi.fn(),
-  mihomoHotReloadConfig: vi.fn()
+  mihomoHotReloadConfig: vi.fn(),
+  handleSystemResume: vi.fn(),
+  cancelSystemResumeReload: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -20,7 +22,9 @@ vi.mock('electron', () => ({
 
 vi.mock('../core/manager', () => ({
   hasCoreProcess: () => true,
-  restartCore: mocks.restartCore
+  restartCore: mocks.restartCore,
+  handleSystemResume: mocks.handleSystemResume,
+  cancelSystemResumeReload: mocks.cancelSystemResumeReload
 }))
 
 vi.mock('../core/mihomoApi', () => ({
@@ -44,6 +48,8 @@ describe('lid sleep', () => {
     mocks.patchMihomoConfig.mockReset()
     mocks.recoverDNS.mockReset()
     mocks.mihomoHotReloadConfig.mockReset()
+    mocks.handleSystemResume.mockReset()
+    mocks.cancelSystemResumeReload.mockReset()
   })
 
   it('does not drop TUN or restore DNS when the lid sleeps', () => {
@@ -59,10 +65,13 @@ describe('lid sleep', () => {
     expect(mocks.recoverDNS).not.toHaveBeenCalled()
   })
 
-  it('keeps TUN up across suspend and resume', () => {
+  it('keeps TUN up across suspend and resume', async () => {
     initResumeRecovery()
     handlers.suspend()
+    await vi.waitFor(() => expect(mocks.cancelSystemResumeReload).toHaveBeenCalledTimes(1))
+    expect(mocks.handleSystemResume).not.toHaveBeenCalled()
     handlers.resume()
+    await vi.waitFor(() => expect(mocks.handleSystemResume).toHaveBeenCalledTimes(1))
     expect(mocks.restartCore).not.toHaveBeenCalled()
     expect(mocks.patchMihomoConfig).not.toHaveBeenCalled()
     expect(mocks.mihomoHotReloadConfig).not.toHaveBeenCalled()

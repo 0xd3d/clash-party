@@ -24,9 +24,14 @@ export function initResumeRecovery(): void {
   powerMonitor.on('suspend', () => {
     resumeLogger.info('System sleep or lid close: keeping TUN up and leaving DNS fail-closed')
     recoverAfterResume()
+    void import('../core/manager').then(({ cancelSystemResumeReload }) =>
+      cancelSystemResumeReload()
+    )
   })
   powerMonitor.on('resume', () => {
     resumeLogger.info('System resumed: keeping TUN up and leaving DNS fail-closed')
     recoverAfterResume()
+    // Rebuild TUN/DNS hijack after wake (manager delays until the default route is stable).
+    void import('../core/manager').then(({ handleSystemResume }) => handleSystemResume())
   })
 }
