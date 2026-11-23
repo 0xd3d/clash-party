@@ -489,9 +489,10 @@ export async function ensureRuntimeFiles(): Promise<void> {
 
 export async function initSystemProxy(): Promise<void> {
   const { sysProxy } = await getAppConfig()
+  if (!sysProxy?.enable) return
   try {
-    if (sysProxy.enable) await startPacServer()
-    await triggerSysProxy(sysProxy.enable)
+    await startPacServer()
+    await triggerSysProxy(true)
   } catch {
     // A failed proxy activation must not prevent the settings window from opening.
   }
