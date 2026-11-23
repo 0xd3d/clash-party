@@ -155,6 +155,35 @@ afterEach(() => {
 })
 
 describe('system DNS integration', () => {
+  it('drops duplicate journal rows that target the same device', () => {
+    expect(
+      dns.compactJournal({
+        version: 1,
+        services: [
+          {
+            service: { name: 'iPhone USB', device: 'en9' },
+            original: ['192.0.2.1'],
+            applied: ['127.0.0.1']
+          },
+          {
+            service: { name: 'iPhone USB USB', device: 'en9' },
+            original: [],
+            applied: ['127.0.0.1']
+          }
+        ]
+      })
+    ).toEqual({
+      version: 1,
+      services: [
+        {
+          service: { name: 'iPhone USB', device: 'en9' },
+          original: ['192.0.2.1'],
+          applied: ['127.0.0.1']
+        }
+      ]
+    })
+  })
+
   it('selects enabled en and bridge services and excludes disabled services and VPN devices', () => {
     const order = [
       serviceOrder,
@@ -251,7 +280,7 @@ describe('system DNS integration', () => {
     expect(mocks.atomicWriteFile).not.toHaveBeenCalled()
     expect(mocks.post).not.toHaveBeenCalled()
     expect(mocks.logger.error).toHaveBeenCalledOnce()
-    await vi.advanceTimersByTimeAsync(5000)
+    await vi.advanceTimersByTimeAsync(10000)
     expect(mocks.post).toHaveBeenCalledTimes(2)
   })
 

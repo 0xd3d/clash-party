@@ -82,7 +82,10 @@ export class SystemDNSController {
   acquire(
     generation: number,
     target: string[],
-    options: { restoreMode?: 'original' | 'automatic' } = {}
+    options: {
+      restoreMode?: 'original' | 'automatic'
+      onlyDevices?: ReadonlySet<string>
+    } = {}
   ): Promise<void> {
     const applied = [...target]
     const restoreMode = options.restoreMode ?? 'original'
@@ -98,6 +101,7 @@ export class SystemDNSController {
 
       for (const discoveredService of services) {
         if (!isCurrent()) return
+        if (options.onlyDevices && !options.onlyDevices.has(discoveredService.device)) continue
         const service = { ...discoveredService }
         let current: string[]
         try {

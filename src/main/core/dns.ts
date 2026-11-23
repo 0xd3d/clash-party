@@ -40,11 +40,60 @@ export function parsePhysicalDNSServices(order: string): SystemDNSService[] {
   return services
 }
 
+let cachedServiceOrder: { fingerprint: string; services: SystemDNSService[]; at: number } | null =
+  null
+const SERVICE_ORDER_CACHE_MS = 3000
+
 async function listServices(): Promise<SystemDNSService[]> {
   const { stdout } = await execFilePromise('/usr/sbin/networksetup', ['-listnetworkserviceorder'], {
     timeout: 1000
   })
-  return parsePhysicalDNSServices(stdout)
+  const now = Date.now()
+  if (
+    cachedServiceOrder &&
+    cachedServiceOrder.fingerprint === stdout &&
+    now - cachedServiceOrder.at < SERVICE_ORDER_CACHE_MS
+  ) {
+    return cachedServiceOrder.services.map((service) => ({ ...service }))
+  }
+  const services = parsePhysicalDNSServices(stdout)
+  try {
+    const device = await getDefaultDevice()
+    services.sort((left, right) => {
+      if (left.device === device) return -1
+      if (right.device === device) return 1
+      return left.name.localeCompare(right.name)
+    })
+  } catch {
+    // Keep parsed order when the default route is not yet available.
+  }
+  cachedServiceOrder = {
+    fingerprint: stdout,
+    at: now,
+    services: services.map((service) => ({ ...service }))
+  }
+  return services.map((service) => ({ ...service }))
+}
+
+export function compactJournal(journal: SystemDNSJournal): SystemDNSJournal {
+  const byDevice = new Map<string, SystemDNSJournal['services'][number]>()
+  for (const entry of journal.services) {
+    const existing = byDevice.get(entry.service.device)
+    if (!existing) {
+      byDevice.set(entry.service.device, entry)
+      continue
+    }
+    const keep =
+      entry.original.length > existing.original.length
+        ? entry
+        : existing.original.length > entry.original.length
+          ? existing
+          : entry.service.name.length <= existing.service.name.length
+            ? entry
+            : existing
+    byDevice.set(entry.service.device, keep)
+  }
+  return { version: 1, services: [...byDevice.values()] }
 }
 
 async function readDNS(service: SystemDNSService): Promise<string[]> {
@@ -98,7 +147,13 @@ async function readJournal(): Promise<SystemDNSJournal> {
   ) {
     throw new Error('System DNS recovery journal is invalid; retaining it for recovery')
   }
-  return journal
+  const compacted = compactJournal(journal)
+  if (compacted.services.length !== journal.services.length) {
+    void atomicWriteFile(journalPath(), JSON.stringify(compacted, null, 2), { mode: 0o600 }).catch(
+      (error) => logger.error('Failed to compact duplicate system DNS journal entries', error)
+    )
+  }
+  return compacted
 }
 
 const controller = new SystemDNSController({
@@ -123,15 +178,48 @@ interface DNSSession {
   readyNotified: boolean
   guardArmed: boolean
   guardAttempted: boolean
+  syncFailures: number
 }
 
 let session: DNSSession | null = null
 let monitor: NodeJS.Timeout | null = null
 const DNS_MONITOR_INTERVAL_MS = 5000
+const DNS_MONITOR_INTERVAL_MAX_MS = 60_000
 
 function clearDNSMonitor(): void {
-  if (monitor) clearInterval(monitor)
+  if (monitor) clearTimeout(monitor)
   monitor = null
+}
+
+function monitorDelayMs(syncFailures: number): number {
+  if (syncFailures <= 0) return DNS_MONITOR_INTERVAL_MS
+  return Math.min(
+    DNS_MONITOR_INTERVAL_MAX_MS,
+    DNS_MONITOR_INTERVAL_MS * 2 ** Math.min(syncFailures, 4)
+  )
+}
+
+function scheduleMonitorTick(current: DNSSession): void {
+  if (session !== current || !current.isCurrent()) return
+  monitor = setTimeout(() => {
+    void synchronize(current).finally(() => {
+      if (session === current && current.isCurrent()) scheduleMonitorTick(current)
+    })
+  }, monitorDelayMs(current.syncFailures))
+  monitor.unref()
+}
+
+async function priorityAcquireDevices(): Promise<Set<string>> {
+  const devices = new Set<string>()
+  try {
+    devices.add(await getDefaultDevice())
+  } catch {
+    // ignore
+  }
+  for (const entry of (await readJournal()).services) {
+    devices.add(entry.service.device)
+  }
+  return devices
 }
 
 function isDNSSessionProtected(current: DNSSession): boolean {
@@ -197,10 +285,19 @@ async function synchronize(current: DNSSession): Promise<void> {
     }
     if (!current.hasListenerProof(address)) return
     // Switch system DNS only after the owned listener answers locally; never restore first.
-    await controller.acquire(current.generation, [address], { restoreMode })
+    const acquireOptions: {
+      restoreMode: 'original' | 'automatic'
+      onlyDevices?: Set<string>
+    } = { restoreMode }
+    if (current.syncFailures > 0) {
+      const priority = await priorityAcquireDevices()
+      if (priority.size > 0) acquireOptions.onlyDevices = priority
+    }
+    await controller.acquire(current.generation, [address], acquireOptions)
     if (session !== current || !current.isCurrent() || current.runtime !== runtime) return
     if (current.guardArmed && current.signature === signature) {
       current.lastError = null
+      current.syncFailures = 0
       await notifyReady(current)
       return
     }
@@ -211,12 +308,14 @@ async function synchronize(current: DNSSession): Promise<void> {
     current.guardArmed = true
     current.signature = signature
     current.lastError = null
+    current.syncFailures = 0
     await notifyReady(current)
   } catch (error) {
     // A transient probe/network failure must never enable a router/public DNS fallback.
     const message = String(error)
     if (message !== current.lastError) logger.error('System DNS synchronization failed', error)
     current.lastError = message
+    current.syncFailures += 1
   } finally {
     current.busy = false
   }
@@ -261,15 +360,13 @@ export async function startSystemDNSMonitoring(
     onReady,
     readyNotified: false,
     guardArmed: false,
-    guardAttempted: false
+    guardAttempted: false,
+    syncFailures: 0
   }
   session = current
   await synchronize(current)
   if (session !== current || !isCurrent()) return
-  monitor = setInterval(() => {
-    void synchronize(current)
-  }, DNS_MONITOR_INTERVAL_MS)
-  monitor.unref()
+  scheduleMonitorTick(current)
 }
 
 /**

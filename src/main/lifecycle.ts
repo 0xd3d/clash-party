@@ -3,6 +3,7 @@ import { promisify } from 'util'
 import { stat } from 'fs/promises'
 import { existsSync } from 'fs'
 import { app, powerMonitor } from 'electron'
+import { getAppConfig } from './config'
 import { stopCoreForExit, cleanupCoreWatcher } from './core/manager'
 import { primeAdminPrivilegesCache } from './core/admin'
 import { triggerSysProxy, disableSysProxySync } from './sys/sysproxy'
@@ -112,11 +113,16 @@ export function setupAppLifecycle(): void {
 
       const cleanupTasks: Promise<unknown>[] = [stopCoreForExit(), closeTrafficUsage()]
       if (process.platform === 'darwin') {
-        cleanupTasks.push(
-          triggerSysProxy(false, { helperTimeout: 750, force: true }).then(() => {
-            sysProxyDisabled = true
-          })
-        )
+        const { sysProxy } = await getAppConfig()
+        if (sysProxy?.enable) {
+          cleanupTasks.push(
+            triggerSysProxy(false, { helperTimeout: 750, force: true }).then(() => {
+              sysProxyDisabled = true
+            })
+          )
+        } else {
+          sysProxyDisabled = true
+        }
       }
 
       // DNS recovery gets a bounded grace period before core termination starts.
