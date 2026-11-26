@@ -1,3 +1,4 @@
+# Lightweight checks on every push/PR. On forks, unit tests run on ubuntu only to save Windows minutes.
 name: CI
 
 on:
@@ -48,9 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
+        os: ${{ github.event.repository.fork == true && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "windows-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout

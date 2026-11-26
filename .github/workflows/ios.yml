@@ -1,3 +1,4 @@
+# Forks: iOS macOS builds run only via workflow_dispatch. Upstream / PRs still use push path filters.
 name: iOS source build
 
 on:
@@ -23,6 +24,7 @@ concurrency:
 
 jobs:
   unsigned-build:
+    if: github.event_name == 'workflow_dispatch' || github.event.repository.fork != true
     runs-on: macos-latest
     timeout-minutes: 60
     env:

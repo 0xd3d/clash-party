@@ -1,3 +1,5 @@
+# Forks: push does not run this workflow (saves Actions minutes). Use workflow_dispatch when you need packages.
+# Upstream: push to smart_core still runs automatically (paths-ignore excludes docs-only and iOS-only pushes).
 name: Build and release
 
 on:
@@ -23,9 +25,11 @@ concurrency:
 env:
   CLASH_PARTY_UPDATE_REPOSITORY: ${{ github.repository }}
   CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+  RUN_RELEASE_PIPELINE: ${{ github.event_name == 'workflow_dispatch' || github.event.repository.fork != true }}
 
 jobs:
   plan:
+    if: env.RUN_RELEASE_PIPELINE == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -51,6 +55,7 @@ jobs:
           overwrite: true
 
   checks:
+    if: env.RUN_RELEASE_PIPELINE == 'true'
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -67,6 +72,7 @@ jobs:
       - run: pnpm test
 
   packages:
+    if: env.RUN_RELEASE_PIPELINE == 'true'
     needs: checks
     name: ${{ matrix.platform }} ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
@@ -197,6 +203,7 @@ jobs:
           overwrite: true
 
   publish:
+    if: env.RUN_RELEASE_PIPELINE == 'true'
     needs: [plan, checks, packages]
     runs-on: ubuntu-latest
     timeout-minutes: 15

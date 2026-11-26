@@ -16,7 +16,7 @@ The updater reads stable releases: `releases/latest/download/latest.yml`, then a
 
 ## Automatic builds and Releases
 
-`Build and release` runs after code pushes to `smart_core` and can also be started manually. A lightweight planning job first reserves the real remote Git tag at the exact source commit. It then runs the full format/lint/type/test checks and builds on **four matching native runners**: `windows-latest` (x64), `windows-11-arm` (ARM64), `macos-15-intel` (Intel), and `macos-latest` (Apple Silicon).
+`Build and release` runs after code pushes to `smart_core` on the **upstream** repository and can always be started manually (`workflow_dispatch`). On a **GitHub fork**, pushes do **not** start the release pipeline automatically—use **Actions → Build and release → Run workflow** when you need installable packages. Forks still get lightweight **CI** (format/lint/typecheck/tests on Ubuntu). A lightweight planning job first reserves the real remote Git tag at the exact source commit. It then runs the full format/lint/type/test checks and builds on **four matching native runners**: `windows-latest` (x64), `windows-11-arm` (ARM64), `macos-15-intel` (Intel), and `macos-latest` (Apple Silicon).
 
 Each package gate checks binary architecture, bundled privacy components, actual sysproxy loading in the packaged Electron runtime and, on Windows, the portable marker/archive integrity. Only after all four jobs succeed does a separate job create the Release. Only the planning and publishing jobs have `contents: write`; checks and build jobs have read-only repository permissions. The workflow neither deletes older Releases nor contacts upstream notification/package services.
 
