@@ -3601,6 +3601,83 @@
         }
       }
     },
+    "tunnel.disconnect.confirm.action": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "断开 VPN"
+          }
+        }
+      }
+    },
+    "tunnel.disconnect.confirm.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
+          }
+        }
+      }
+    },
+    "tunnel.disconnect.confirm.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "断开 VPN 后，仍在运行的 Claude、Chrome、Google 等国际 App 可能走直连。请先完全退出这些 App，再断开。"
+          }
+        }
+      }
+    },
+    "tunnel.disconnect.confirm.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确定断开 VPN？"
+          }
+        }
+      }
+    },
+    "settings.confirm_before_disconnect.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "断开 VPN 前确认"
+          }
+        }
+      }
+    },
+    "settings.confirm_before_disconnect.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "断开前提示先退出敏感国际 App。开启后，快捷指令里的「Stop VPN」会受阻，请在 App 首页断开。"
+          }
+        }
+      }
+    },
+    "shortcuts.error.stop_requires_confirmation": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已开启断开前确认。请打开 Clash Party，在首页断开 VPN。"
+          }
+        }
+      }
+    },
     "tunnel.activity.waiting": {
       "extractionState": "manual",
       "localizations": {

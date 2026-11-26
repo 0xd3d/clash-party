@@ -9,6 +9,7 @@ struct OverviewPage: View {
   var onOpenProxies: (() -> Void)? = nil
   var onOpenRuntime: ((RuntimeDestination) -> Void)? = nil
   var onOpenMore: ((MoreDestination) -> Void)? = nil
+  @State private var showDisconnectVPNConfirmation = false
 
   var body: some View {
     AppPageContainer {
@@ -22,12 +23,41 @@ struct OverviewPage: View {
         primaryDisabled: presentation.state.tunnelControlsDisabled
       ) {
         if presentation.state.vpnConnected || presentation.state.runtimeState == .running {
-          viewModel.stopTunnel()
+          if viewModel.confirmBeforeDisconnectingVPN {
+            showDisconnectVPNConfirmation = true
+          } else {
+            viewModel.stopTunnel()
+          }
         } else if !presentation.state.hasProxyNodes {
           onOpenProfiles?()
         } else {
           viewModel.startTunnel()
         }
+      }
+      .confirmationDialog(
+        L10n.string("tunnel.disconnect.confirm.title", "Disconnect VPN?"),
+        isPresented: $showDisconnectVPNConfirmation,
+        titleVisibility: .visible
+      ) {
+        Button(
+          L10n.string("tunnel.disconnect.confirm.action", "Disconnect"),
+          role: .destructive
+        ) {
+          viewModel.stopTunnel()
+        }
+        Button(L10n.string("tunnel.disconnect.confirm.cancel", "Cancel"), role: .cancel) {}
+      } message: {
+        Text(
+          L10n.string(
+            "tunnel.disconnect.confirm.message",
+            "After VPN disconnects, international apps still running—such as Claude, Chrome, or Google—may use your direct network. Quit them first when possible, then disconnect."
+          )
+        )
+      }
+
+      if presentation.state.vpnConnected || presentation.state.runtimeState == .starting
+        || presentation.state.runtimeState == .running {
+        TrafficReadinessBanner(readiness: presentation.state.trafficReadiness)
       }
 
       if !presentation.state.hasProxyNodes {
@@ -184,7 +214,7 @@ struct OverviewPage: View {
             title: L10n.string("runtime.summary.data_plane", "Data Plane"),
             value: dataPlaneSummary,
             icon: "arrow.left.arrow.right.circle",
-            tint: dataPlaneReady ? AppPalette.success : AppPalette.warning
+            tint: internationalTrafficReady ? AppPalette.success : AppPalette.warning
           )
           PhoneStatChip(
             title: L10n.string("runtime.summary.fake_dns", "Fake DNS"),
@@ -338,8 +368,9 @@ struct OverviewPage: View {
     presentation.state.vpnConnected
   }
 
-  private var dataPlaneReady: Bool {
-    presentation.state.dataPlaneReady
+  /// Matches the top traffic-readiness banner: international browsing is safe only at `.ready`.
+  private var internationalTrafficReady: Bool {
+    TrafficReadinessResolver.isInternationalTrafficReady(presentation.state.trafficReadiness)
   }
 
   private var vpnSummary: String {
@@ -349,7 +380,7 @@ struct OverviewPage: View {
   }
 
   private var dataPlaneSummary: String {
-    dataPlaneReady
+    internationalTrafficReady
       ? L10n.string("runtime.summary.data_plane_ready", "Ready")
       : L10n.string("runtime.summary.data_plane_warming", "Warming")
   }
@@ -1732,6 +1763,14 @@ struct RulesPage: View {
           .disabled(viewModel.isBusy || viewModel.isUpdatingRoutingRules)
           Text(L10n.string("routing.snapshot_help", "Domain/IP rules define proxy, direct and block behavior. Imported rule sets use the current device’s nodes and can be reused across devices."))
             .font(.footnote).foregroundStyle(.secondary)
+          Text(
+            L10n.string(
+              "routing.desktop_sync_help",
+              "On macOS, open TUN settings → Protection status → Tests and tools, export the iOS routing snapshot, transfer the JSON here, then choose Custom Rules."
+            )
+          )
+          .font(.footnote)
+          .foregroundStyle(.secondary)
           if let message = viewModel.routingUpdateMessage {
             Text(message).font(.footnote).foregroundStyle(.secondary)
           }
@@ -2732,11 +2771,66 @@ struct SettingsPage: View {
         )
       ) {
         VStack(alignment: .leading, spacing: 12) {
+          Toggle(isOn: confirmBeforeDisconnectBinding) {
+            VStack(alignment: .leading, spacing: 4) {
+              Text(
+                L10n.string(
+                  "settings.confirm_before_disconnect.title",
+                  "Confirm before disconnecting VPN"
+                )
+              )
+              Text(
+                L10n.string(
+                  "settings.confirm_before_disconnect.subtitle",
+                  "Shows a reminder to quit sensitive international apps before the tunnel stops. Shortcuts “Stop VPN” is blocked while enabled—disconnect in the app instead."
+                )
+              )
+              .font(.footnote)
+              .foregroundStyle(.secondary)
+            }
+          }
+          .tint(AppPalette.accent)
+
           Button(L10n.string("settings.import_app_config", "Import App Config JSON")) {
             onImportRequested(.appConfigJSON)
           }
           .buttonStyle(AppleUtilityButtonStyle())
 
+        }
+      }
+
+      AppSurface(
+        title: L10n.string("settings.shortcuts.title", "Shortcuts & automations"),
+        subtitle: L10n.string(
+          "settings.shortcuts.subtitle",
+          "Actions sync when the app is installed; personal automations must be saved once on this iPhone."
+        )
+      ) {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(
+            L10n.string(
+              "settings.shortcuts.open_google_hint",
+              "In Shortcuts → App → Clash Party, add “Open Google with Clash Party VPN” to the Home Screen. It connects, waits for Ready, then opens google.com in Safari (Clash Party may flash briefly)."
+            )
+          )
+          .font(.footnote)
+          .foregroundStyle(.secondary)
+          Text(
+            L10n.string(
+              "settings.shortcuts.automation_hint",
+              "To run when the Google app opens: Automation → App → Google → Opened → Connect and wait for Clash Party VPN (60s)."
+            )
+          )
+          .font(.footnote)
+          .foregroundStyle(.secondary)
+          Text(
+            L10n.string(
+              "settings.shortcuts.claude_hint",
+              "For the Claude app: create a shortcut — Connect and wait (60s) → If false, stop → Otherwise Open App → Claude — then add it to the Home Screen."
+            )
+          )
+          .font(.footnote)
+          .foregroundStyle(.secondary)
         }
       }
 
@@ -2775,6 +2869,13 @@ struct SettingsPage: View {
     Binding(
       get: { presentation.state.exportBundleName },
       set: { viewModel.exportBundleName = $0 }
+    )
+  }
+
+  private var confirmBeforeDisconnectBinding: Binding<Bool> {
+    Binding(
+      get: { presentation.state.confirmBeforeDisconnectingVPN },
+      set: { viewModel.confirmBeforeDisconnectingVPN = $0 }
     )
   }
 

@@ -19,24 +19,78 @@ public struct DesktopRoutingSnapshot: Codable, Equatable, Sendable {
   public var generatedAt: String
   public var sourceRuleCount: Int
   public var skippedProcessRuleCount: Int
+  public var skippedDesktopOnlyRuleCount: Int
   public var policyMap: [String: String]
   public var rules: [String]
 
+  public init(
+    version: Int,
+    generatedAt: String,
+    sourceRuleCount: Int,
+    skippedProcessRuleCount: Int,
+    skippedDesktopOnlyRuleCount: Int = 0,
+    policyMap: [String: String],
+    rules: [String]
+  ) {
+    self.version = version
+    self.generatedAt = generatedAt
+    self.sourceRuleCount = sourceRuleCount
+    self.skippedProcessRuleCount = skippedProcessRuleCount
+    self.skippedDesktopOnlyRuleCount = skippedDesktopOnlyRuleCount
+    self.policyMap = policyMap
+    self.rules = rules
+  }
+
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    version = try container.decode(Int.self, forKey: .version)
+    generatedAt = try container.decode(String.self, forKey: .generatedAt)
+    sourceRuleCount = try container.decode(Int.self, forKey: .sourceRuleCount)
+    skippedProcessRuleCount = try container.decode(Int.self, forKey: .skippedProcessRuleCount)
+    skippedDesktopOnlyRuleCount = try container.decodeIfPresent(Int.self, forKey: .skippedDesktopOnlyRuleCount) ?? 0
+    policyMap = try container.decode([String: String].self, forKey: .policyMap)
+    rules = try container.decode([String].self, forKey: .rules)
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(version, forKey: .version)
+    try container.encode(generatedAt, forKey: .generatedAt)
+    try container.encode(sourceRuleCount, forKey: .sourceRuleCount)
+    try container.encode(skippedProcessRuleCount, forKey: .skippedProcessRuleCount)
+    try container.encode(skippedDesktopOnlyRuleCount, forKey: .skippedDesktopOnlyRuleCount)
+    try container.encode(policyMap, forKey: .policyMap)
+    try container.encode(rules, forKey: .rules)
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case version, generatedAt, sourceRuleCount, skippedProcessRuleCount, skippedDesktopOnlyRuleCount, policyMap, rules
+  }
+
   public func validate() throws {
     guard version == 1, !rules.isEmpty, rules.count <= 50_000,
-          sourceRuleCount >= rules.count, skippedProcessRuleCount >= 0,
+          sourceRuleCount >= rules.count, skippedProcessRuleCount >= 0, skippedDesktopOnlyRuleCount >= 0,
           rules.last?.hasPrefix("MATCH,") == true else {
       throw RoutingPolicyError.invalidSnapshot
     }
-    let allowed = Set(["DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "IP-CIDR", "IP-CIDR6", "GEOIP", "NETWORK", "MATCH"])
+    let allowed = Set(["DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "IP-CIDR", "IP-CIDR6", "GEOIP", "GEOSITE", "NETWORK", "DST-PORT", "MATCH"])
     for (index, rule) in rules.enumerated() {
       let parts = rule.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
       guard let kind = parts.first, allowed.contains(kind), !rule.contains("\n"),
             parts.count >= (kind == "MATCH" ? 2 : 3) else { throw RoutingPolicyError.invalidSnapshot }
       let target = parts[kind == "MATCH" ? 1 : 2]
-      guard ["DIRECT", "REJECT", RoutingPolicyService.proxyPlaceholder].contains(target),
-            parts.dropFirst(kind == "MATCH" ? 2 : 3).allSatisfy({ $0 == "no-resolve" }) else {
+      let extras = Array(parts.dropFirst(kind == "MATCH" ? 2 : 3))
+      guard ["DIRECT", "REJECT", RoutingPolicyService.proxyPlaceholder].contains(target) else {
         throw RoutingPolicyError.invalidSnapshot
+      }
+      if kind == "DST-PORT" {
+        guard extras.isEmpty || (extras.count == 1 && ["tcp", "udp"].contains(extras[0].lowercased())) else {
+          throw RoutingPolicyError.invalidSnapshot
+        }
+      } else {
+        guard extras.allSatisfy({ $0 == "no-resolve" }) else {
+          throw RoutingPolicyError.invalidSnapshot
+        }
       }
       if kind == "IP-CIDR" || kind == "IP-CIDR6" {
         guard RoutingRuleResources.isValidCIDR(parts[1]) else { throw RoutingPolicyError.invalidSnapshot }
@@ -54,8 +108,20 @@ public struct DesktopRoutingSnapshot: Codable, Equatable, Sendable {
           throw RoutingPolicyError.invalidSnapshot
         }
       }
+      if kind == "DST-PORT" {
+        let portSpec = #"^[0-9/,-]+$"#
+        guard parts[1].range(of: portSpec, options: .regularExpression) != nil,
+              parts.count == 3 || (parts.count == 4 && ["tcp", "udp"].contains(parts[3].lowercased())) else {
+          throw RoutingPolicyError.invalidSnapshot
+        }
+      }
       if kind == "GEOIP" {
         guard parts[1].count == 2, parts[1].allSatisfy({ $0.isASCII && $0.isLetter }) else { throw RoutingPolicyError.invalidSnapshot }
+      }
+      if kind == "GEOSITE" {
+        guard parts[1].range(of: #"^[!a-zA-Z0-9_-]+$"#, options: .regularExpression) != nil else {
+          throw RoutingPolicyError.invalidSnapshot
+        }
       }
     }
   }
@@ -166,7 +232,7 @@ public enum RoutingPolicyService {
       general += originalAI
       // Domain classification precedes IP geolocation and domestic CDN shortcuts.
       general += ["RULE-SET,ios-non-cn,\(groupName)"]
-      let foreign = ["chatgpt.com", "openai.com", "oaiusercontent.com", "oaistatic.com", "claude.ai", "claude.com", "claudeusercontent.com", "anthropic.com", "google.com", "googleapis.com", "gstatic.com", "youtube.com", "youtu.be", "googlevideo.com", "ytimg.com", "github.com", "githubusercontent.com", "githubassets.com", "wikipedia.org", "wikimedia.org", "telegram.org", "t.me", "discord.com", "discordapp.com", "x.com", "twitter.com", "facebook.com", "instagram.com", "reddit.com"]
+      let foreign = ["chatgpt.com", "openai.com", "oaiusercontent.com", "oaistatic.com", "claude.ai", "claude.com", "claude.app", "claudeusercontent.com", "anthropic.com", "google.com", "googleapis.com", "gstatic.com", "youtube.com", "youtu.be", "googlevideo.com", "ytimg.com", "github.com", "githubusercontent.com", "githubassets.com", "wikipedia.org", "wikimedia.org", "telegram.org", "t.me", "discord.com", "discordapp.com", "x.com", "twitter.com", "facebook.com", "instagram.com", "reddit.com"]
       general += foreign.map { "DOMAIN-SUFFIX,\($0),\(groupName)" }
       general += ["RULE-SET,ios-private,DIRECT", "RULE-SET,ios-gfw,\(groupName)", "RULE-SET,ios-telegramcidr,\(groupName),no-resolve"]
       general += ["qq.com", "weixin.com", "wechat.com", "qpic.cn", "qlogo.cn", "gtimg.com", "baidu.com", "bilibili.com", "biliapi.net", "taobao.com", "tmall.com", "alipay.com", "jd.com", "163.com", "126.com", "mi.com", "aliyun.com", "cn"]

@@ -77,6 +77,9 @@
 		F1A200210000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100020000000000000000 /* PacketTunnelIPv6Policy.swift */; };
 		F1A200220000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100020000000000000000 /* PacketTunnelIPv6Policy.swift */; };
 		F1A200230000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100020000000000000000 /* PacketTunnelIPv6Policy.swift */; };
+		B1A200310000000000000000 /* TunnelShortcutService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A100310000000000000000 /* TunnelShortcutService.swift */; };
+		B1A200330000000000000000 /* AppUserPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A100330000000000000000 /* AppUserPreferences.swift */; };
+		B1A200320000000000000000 /* ClashPartyShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A100320000000000000000 /* ClashPartyShortcuts.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -151,6 +154,9 @@
 		AC0000010000000000000001 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Shared.xcconfig; sourceTree = SOURCE_ROOT; };
 		F1A100010000000000000000 /* EncryptedBootstrapResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptedBootstrapResolver.swift; sourceTree = "<group>"; };
 		F1A100020000000000000000 /* PacketTunnelIPv6Policy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelIPv6Policy.swift; sourceTree = "<group>"; };
+		B1A100310000000000000000 /* TunnelShortcutService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunnelShortcutService.swift; sourceTree = "<group>"; };
+		B1A100330000000000000000 /* AppUserPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUserPreferences.swift; sourceTree = "<group>"; };
+		B1A100320000000000000000 /* ClashPartyShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClashPartyShortcuts.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -198,6 +204,7 @@
 			children = (
 				A20000010000000000000000 /* ClashPartyApp.swift */,
 				A70000100000000000000000 /* Services */,
+				B70000100000000000000000 /* Shortcuts */,
 				A70000110000000000000000 /* ViewModels */,
 				A70000120000000000000000 /* Views */,
 				A70000130000000000000000 /* Resources */,
@@ -247,8 +254,18 @@
 			isa = PBXGroup;
 			children = (
 				A20000030000000000000000 /* TunnelManager.swift */,
+				B1A100310000000000000000 /* TunnelShortcutService.swift */,
+				B1A100330000000000000000 /* AppUserPreferences.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		B70000100000000000000000 /* Shortcuts */ = {
+			isa = PBXGroup;
+			children = (
+				B1A100320000000000000000 /* ClashPartyShortcuts.swift */,
+			);
+			path = Shortcuts;
 			sourceTree = "<group>";
 		};
 		A70000110000000000000000 /* ViewModels */ = {
@@ -492,6 +509,9 @@
 				A10000010000000000000000 /* ClashPartyApp.swift in Sources */,
 				A10000020000000000000000 /* ContentView.swift in Sources */,
 				A10000030000000000000000 /* TunnelManager.swift in Sources */,
+				B1A200310000000000000000 /* TunnelShortcutService.swift in Sources */,
+				B1A200330000000000000000 /* AppUserPreferences.swift in Sources */,
+				B1A200320000000000000000 /* ClashPartyShortcuts.swift in Sources */,
 				A10000040000000000000000 /* RuntimeModels.swift in Sources */,
 				A10000050000000000000000 /* CompatibilityModels.swift in Sources */,
 				A10000060000000000000000 /* SharedStore.swift in Sources */,
@@ -581,7 +601,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 41;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -604,7 +624,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 41;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 0.1.0;
@@ -620,7 +640,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ClashParty/Resources/ClashParty.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 41;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ClashParty/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -648,7 +668,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ClashParty/Resources/ClashParty.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 41;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ClashParty/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -676,7 +696,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ClashPartyTunnel/Resources/ClashPartyTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 41;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ClashPartyTunnel/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -704,7 +724,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ClashPartyTunnel/Resources/ClashPartyTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 41;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ClashPartyTunnel/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -731,7 +751,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 41;
 				DEFINES_MODULE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -752,7 +772,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 41;
 				DEFINES_MODULE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

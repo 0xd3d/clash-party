@@ -6,8 +6,10 @@ import {
   getAppliedCoreConfig,
   getAppliedCoreRevision,
   getAppliedRouteOrigins,
+  getCoreOperationPhase,
   getCurrentCorePID
 } from '../core/manager'
+import { deriveTrafficReadiness, type TrafficReadinessState } from '../../shared/trafficReadiness'
 import { getAxios } from '../core/mihomoApi'
 import { inspectMacDNSGuard } from '../core/macDNSGuard'
 import { inspectNetworkGuard } from '../core/networkGuard'
@@ -22,6 +24,23 @@ export function protectWebContentsPrivacy(
   contents: Pick<WebContents, 'setWebRTCIPHandlingPolicy'>
 ): void {
   contents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp')
+}
+
+export type TrafficReadinessReport = {
+  state: TrafficReadinessState
+}
+
+export async function inspectTrafficReadiness(): Promise<TrafficReadinessReport> {
+  const report = await inspectPrivacyProtection()
+  const snapshot = getAppliedCoreConfig()
+  const state = deriveTrafficReadiness({
+    corePid: getCurrentCorePID(),
+    corePhase: getCoreOperationPhase(),
+    tunEnabled: snapshot?.tun?.enable,
+    networkProtection: (await getAppConfig()).networkProtection === true,
+    report
+  })
+  return { state }
 }
 
 export async function inspectPrivacyProtection(): Promise<PrivacyProtectionReport> {
@@ -111,6 +130,8 @@ export async function inspectPrivacyProtection(): Promise<PrivacyProtectionRepor
 }
 
 /** Export an optional browser component; never edits browser profiles or OS policy. */
+export { exportIosRoutingSnapshot } from './exportIosRoutingSnapshot'
+
 export async function exportWebRTCGuard(): Promise<string | null> {
   const source = path.join(
     app.isPackaged ? process.resourcesPath : app.getAppPath(),

@@ -21,10 +21,28 @@ import tempfile
 import yaml
 
 PLACEHOLDER = '__IOS_PROXY__'
-SUPPORTED = {'DOMAIN', 'DOMAIN-SUFFIX', 'DOMAIN-KEYWORD', 'IP-CIDR', 'IP-CIDR6', 'GEOIP', 'NETWORK', 'MATCH'}
-SKIPPED = {'PROCESS-NAME', 'PROCESS-PATH', 'UID', 'IN-TYPE', 'IN-PORT'}
+SUPPORTED = {
+    'DOMAIN', 'DOMAIN-SUFFIX', 'DOMAIN-KEYWORD', 'IP-CIDR', 'IP-CIDR6', 'GEOIP', 'GEOSITE', 'NETWORK', 'DST-PORT', 'MATCH'
+}
+SKIPPED = {'PROCESS-NAME', 'PROCESS-PATH', 'UID', 'IN-TYPE', 'IN-PORT', 'AND', 'OR', 'NOT'}
+PORT_SPEC = re.compile(r'^[0-9/,-]+$')
 MAX_RULES = 50_000
 MAX_PROVIDER_BYTES = 8 * 1024 * 1024
+# Desktop RULE-SET providers must not expand on iOS; use compact GEOSITE/GEOIP matchers instead.
+PORTABLE_RULE_SET_COLLAPSE = {
+    'cn-domain': ('GEOSITE', 'cn'),
+    'cn-ip': ('GEOIP', 'CN'),
+    'non-cn-domain': ('GEOSITE', 'geolocation-!cn'),
+}
+
+
+def collapse_rule_set(provider_name, target, flags):
+    mapping = PORTABLE_RULE_SET_COLLAPSE.get(provider_name)
+    if not mapping:
+        return None
+    kind, selector = mapping
+    parts = [kind, selector, target, *flags]
+    return ','.join(parts)
 
 
 def load_proxies(socket_path):
@@ -72,6 +90,12 @@ def validate_portable_rule(rule):
             raise ValueError('CIDR address family does not match the mobile rule')
     if kind == 'GEOIP' and not re.fullmatch(r'[A-Za-z]{2}', parts[1]):
         raise ValueError('Unsupported portable GeoIP selector')
+    if kind == 'GEOSITE' and not re.fullmatch(r'[!a-zA-Z0-9_-]+', parts[1]):
+        raise ValueError('Unsupported portable GeoSite selector')
+    if kind == 'DST-PORT' and (len(parts) not in {3, 4} or not PORT_SPEC.fullmatch(parts[1])):
+        raise ValueError('DST-PORT requires a portable port selector')
+    if kind == 'DST-PORT' and len(parts) == 4 and parts[3].lower() not in {'tcp', 'udp'}:
+        raise ValueError('DST-PORT transport must be tcp or udp')
 
 
 def provider_rules(config, name, target, flags, base_dir, mihomo_binary):
@@ -134,11 +158,15 @@ def export(config, proxies, base_dir=Path('.'), mihomo_binary=None):
     mapping = {}
     converted = []
     skipped = 0
+    skipped_logic = 0
+    collapsed_rule_sets = []
     expanded = 0
     for rule in config['rules']:
         parts = [part.strip() for part in rule.split(',')]
         kind = parts[0]
         if kind in SKIPPED:
+            if kind in {'AND', 'OR', 'NOT'}:
+                skipped_logic += 1
             skipped += 1
             continue
         if kind not in SUPPORTED and kind != 'RULE-SET':
@@ -150,9 +178,18 @@ def export(config, proxies, base_dir=Path('.'), mihomo_binary=None):
         resolved = leaf(proxies, original)
         target = 'DIRECT' if resolved == 'DIRECT' else 'REJECT' if resolved in {'REJECT', 'REJECT-DROP'} else PLACEHOLDER
         mapping[original] = target
-        if kind == 'NETWORK' and (len(parts) != 3 or parts[1].lower() not in {'udp', 'tcp'}):
-            raise ValueError('NETWORK requires tcp/udp and no additional flags')
+        if kind == 'NETWORK':
+            if len(parts) != 3 or parts[1].lower() not in {'udp', 'tcp'}:
+                raise ValueError('NETWORK requires tcp/udp and no additional flags')
+            parts[1] = parts[1].lower()
         if kind == 'RULE-SET':
+            provider_name = parts[1]
+            collapsed = collapse_rule_set(provider_name, target, parts[position + 1:])
+            if collapsed is not None:
+                validate_portable_rule(collapsed)
+                converted.append(collapsed)
+                collapsed_rule_sets.append(provider_name)
+                continue
             added = list(provider_rules(config, parts[1], target, parts[position + 1:], Path(base_dir), mihomo_binary))
             expanded += len(added)
             converted.extend(added)
@@ -167,6 +204,14 @@ def export(config, proxies, base_dir=Path('.'), mihomo_binary=None):
             raise ValueError('MATCH must be the final rule')
     if not converted or not converted[-1].startswith('MATCH,'):
         raise ValueError('Desktop rules must end with MATCH')
+    deduped = []
+    seen = set()
+    for rule in converted:
+        if rule in seen:
+            continue
+        seen.add(rule)
+        deduped.append(rule)
+    converted = deduped
     return {
         'version': 1,
         'generatedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
@@ -174,6 +219,8 @@ def export(config, proxies, base_dir=Path('.'), mihomo_binary=None):
         'sourceTopLevelRuleCount': len(config['rules']),
         'expandedProviderRuleCount': expanded,
         'skippedProcessRuleCount': skipped,
+        'skippedDesktopOnlyRuleCount': skipped_logic,
+        'collapsedRuleSets': collapsed_rule_sets,
         'policyMap': mapping,
         'rules': converted,
     }

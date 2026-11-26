@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generatedAt": "2026-10-25T00:00:00Z",
-  "sourceRuleCount": 23,
+  "sourceRuleCount": 24,
   "skippedProcessRuleCount": 0,
   "policyMap": {
     "DIRECT": "DIRECT",
@@ -22,6 +22,7 @@
     "DOMAIN-SUFFIX,oaiusercontent.com,__IOS_PROXY__",
     "DOMAIN-SUFFIX,claude.ai,__IOS_PROXY__",
     "DOMAIN-SUFFIX,claude.com,__IOS_PROXY__",
+    "DOMAIN-SUFFIX,claude.app,__IOS_PROXY__",
     "DOMAIN-SUFFIX,claudeusercontent.com,__IOS_PROXY__",
     "DOMAIN-SUFFIX,anthropic.com,__IOS_PROXY__",
     "DOMAIN-SUFFIX,google.com,__IOS_PROXY__",

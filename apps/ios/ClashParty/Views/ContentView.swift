@@ -47,6 +47,7 @@ private struct ConsoleRootView: View {
         return
       }
       if arguments.contains("--codex-export-active-input") {
+        viewModel.bootstrap()
         viewModel.exportDebugActiveInput()
         return
       }
@@ -57,8 +58,21 @@ private struct ConsoleRootView: View {
         }
         return
       }
+      if arguments.contains("--codex-latency-benchmark") {
+        let coldStart = arguments.contains("--codex-latency-cold")
+        _ = await viewModel.runCodexLatencyBenchmark(coldStart: coldStart)
+        return
+      }
       #endif
       viewModel.bootstrap()
+      #if DEBUG
+      if viewModel.shouldRunTriggeredLatencyBenchmark() {
+        let cold = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+          .map { FileManager.default.fileExists(atPath: $0.appendingPathComponent("trigger-ios-latency-cold").path) } ?? false
+        _ = await viewModel.runCodexLatencyBenchmark(coldStart: cold)
+        return
+      }
+      #endif
       if CommandLine.arguments.contains("--codex-auto-start-tunnel") {
         try? await Task.sleep(for: .seconds(2))
         viewModel.startTunnel()
@@ -66,7 +80,11 @@ private struct ConsoleRootView: View {
     }
     .onChange(of: scenePhase, initial: true) { _, phase in
       #if DEBUG
-      if CommandLine.arguments.contains("--codex-export-active-input") || CommandLine.arguments.contains("--codex-export-restored-input") { return }
+      if CommandLine.arguments.contains("--codex-export-active-input")
+        || CommandLine.arguments.contains("--codex-export-restored-input")
+        || CommandLine.arguments.contains("--codex-latency-benchmark") {
+        return
+      }
       #endif
       viewModel.handleScenePhase(phase)
     }

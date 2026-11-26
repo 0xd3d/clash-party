@@ -45,6 +45,12 @@ class PortablePolicyExportTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'NETWORK requires'):
                 module.export(config, {'Route': {'now': 'Node'}, 'Node': {}}, path)
 
+    def test_non_cn_rule_set_collapses_to_geosite(self):
+        config = {'rules': ['RULE-SET,non-cn-domain,Route', 'MATCH,Route'], 'rule-providers': {}}
+        result = module.export(config, {'Route': {'now': 'Node'}, 'Node': {}}, Path('.'))
+        self.assertEqual(result['rules'], ['GEOSITE,geolocation-!cn,__IOS_PROXY__', 'MATCH,__IOS_PROXY__'])
+        self.assertIn('non-cn-domain', result['collapsedRuleSets'])
+
     def test_unsupported_patterns_and_network_flags_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)

@@ -553,6 +553,60 @@ struct PhoneStatusHero: View {
   }
 }
 
+struct TrafficReadinessBanner: View {
+  let readiness: TrafficReadinessLevel
+
+  private var tint: Color {
+    switch readiness {
+    case .ready:
+      return AppPalette.success
+    case .failed, .disconnected:
+      return AppPalette.danger
+    case .connecting, .tunnelOnly, .warming:
+      return AppPalette.warning
+    }
+  }
+
+  private var icon: String {
+    switch readiness {
+    case .ready:
+      return "checkmark.shield.fill"
+    case .failed:
+      return "exclamationmark.triangle.fill"
+    case .disconnected:
+      return "shield.slash.fill"
+    case .connecting, .tunnelOnly, .warming:
+      return "hourglass"
+    }
+  }
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 12) {
+      Image(systemName: icon)
+        .font(.title3.weight(.semibold))
+        .foregroundStyle(tint)
+        .frame(width: 28)
+      VStack(alignment: .leading, spacing: 4) {
+        Text(readiness.title)
+          .appFont(size: 15, weight: .semibold)
+          .foregroundStyle(AppPalette.ink)
+        Text(readiness.message)
+          .appFont(size: 13, weight: .regular)
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      Spacer(minLength: 0)
+    }
+    .padding(14)
+    .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .overlay(
+      RoundedRectangle(cornerRadius: 16, style: .continuous)
+        .strokeBorder(tint.opacity(0.35), lineWidth: 1)
+    )
+    .accessibilityElement(children: .combine)
+  }
+}
+
 struct PhoneQuickAction: View {
   let title: String
   let subtitle: String

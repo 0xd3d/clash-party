@@ -427,12 +427,18 @@ func loadProxyProvider(proxyProviders map[string]provider.ProxyProvider) {
 
 func warmProvidersSync(cfg *config.Config) {
 	if len(cfg.Providers) == 0 && len(cfg.RuleProviders) == 0 {
+		if runtime.GOOS == "ios" && mobilephase.FastStartupEnabled() {
+			warmIOSPublicPathsAfterProviders(cfg)
+		}
 		return
 	}
 
 	loadProxyProvider(cfg.Providers)
 	reapplyStoredSelectionsAfterProxyWarmup(cfg)
 	loadRuleProvider(cfg.RuleProviders)
+	if runtime.GOOS == "ios" && mobilephase.FastStartupEnabled() {
+		warmIOSPublicPathsAfterProviders(cfg)
+	}
 }
 
 func warmProvidersAsync(cfg *config.Config) {

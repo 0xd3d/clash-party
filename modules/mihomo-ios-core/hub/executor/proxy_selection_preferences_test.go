@@ -164,6 +164,16 @@ func (g *testSelectableGroup) GetProxies(touch bool) []C.Proxy {
 	return g.proxies
 }
 
+func (g *testSelectableGroup) Now() string {
+	if g.selected != "" {
+		return g.selected
+	}
+	if len(g.proxies) == 0 {
+		return ""
+	}
+	return g.proxies[0].Name()
+}
+
 func (g *testSelectableGroup) Set(name string) error {
 	for _, proxy := range g.proxies {
 		if proxy.Name() == name {

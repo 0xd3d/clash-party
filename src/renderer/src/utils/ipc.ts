@@ -1,6 +1,7 @@
 import { TitleBarOverlayOptions } from 'electron'
 import type { ProtectionSetupPreview, ProtectionSetupResult } from '../../../shared/protectionSetup'
 import type { PrivacyProtectionReport } from '../../../shared/privacyAudit'
+import type { TrafficReadinessState } from '../../../shared/trafficReadiness'
 import type {
   TrafficUsageAggregate,
   TrafficUsageBreakdownQuery,
@@ -32,7 +33,9 @@ interface IpcApi {
   }) => Promise<void>
   syncBootLeakPolicy: () => Promise<void>
   inspectPrivacyProtection: () => Promise<PrivacyProtectionReport>
+  inspectTrafficReadiness: () => Promise<{ state: TrafficReadinessState }>
   exportWebRTCGuard: () => Promise<string | null>
+  exportIosRoutingSnapshot: () => Promise<string | null>
   // Mihomo API
   mihomoVersion: () => Promise<IMihomoVersion>
   mihomoCloseConnection: (id: string) => Promise<void>
@@ -295,11 +298,13 @@ const ipc = new Proxy({} as IpcApi, {
 // 导出所有 IPC 方法
 export const {
   inspectPrivacyProtection,
+  inspectTrafficReadiness,
   configureNetworkProtection,
   syncBootLeakPolicy,
   previewProtectionSetup,
   applyProtectionSetup,
   exportWebRTCGuard,
+  exportIosRoutingSnapshot,
   // Mihomo API
   mihomoVersion,
   mihomoCloseConnection,

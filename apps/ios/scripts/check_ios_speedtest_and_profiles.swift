@@ -117,6 +117,8 @@ struct IOSSpeedtestAndProfilesRegressionCheck {
     let projectRootURL = scriptURL.deletingLastPathComponent().deletingLastPathComponent()
     let consoleViewModelURL = projectRootURL.appendingPathComponent("ClashParty/ViewModels/ConsoleViewModel.swift")
     let consolePresentationDeriversURL = projectRootURL.appendingPathComponent("ClashParty/ViewModels/ConsolePresentationDerivers.swift")
+    let tunnelShortcutServiceURL = projectRootURL.appendingPathComponent("ClashParty/Services/TunnelShortcutService.swift")
+    let clashPartyShortcutsURL = projectRootURL.appendingPathComponent("ClashParty/Shortcuts/ClashPartyShortcuts.swift")
     let consoleRuntimeIOURL = projectRootURL.appendingPathComponent("ClashParty/ViewModels/ConsoleRuntimeIO.swift")
     let consoleProxySelectionURL = projectRootURL.appendingPathComponent("ClashParty/ViewModels/ConsoleProxySelection.swift")
     let consoleDiagnosticsWriterURL = projectRootURL.appendingPathComponent("ClashParty/ViewModels/ConsoleDiagnosticsWriter.swift")
@@ -143,6 +145,8 @@ struct IOSSpeedtestAndProfilesRegressionCheck {
     let routeServerURL = goCoreRootURL.appendingPathComponent("hub/route/server.go")
     let consoleViewModelSource = (try? String(contentsOf: consoleViewModelURL, encoding: .utf8)) ?? ""
     let consolePresentationDeriversSource = (try? String(contentsOf: consolePresentationDeriversURL, encoding: .utf8)) ?? ""
+    let tunnelShortcutServiceSource = (try? String(contentsOf: tunnelShortcutServiceURL, encoding: .utf8)) ?? ""
+    let clashPartyShortcutsSource = (try? String(contentsOf: clashPartyShortcutsURL, encoding: .utf8)) ?? ""
     let consoleRuntimeIOSource = (try? String(contentsOf: consoleRuntimeIOURL, encoding: .utf8)) ?? ""
     let consoleProxySelectionSource = (try? String(contentsOf: consoleProxySelectionURL, encoding: .utf8)) ?? ""
     let consoleDiagnosticsWriterSource = (try? String(contentsOf: consoleDiagnosticsWriterURL, encoding: .utf8)) ?? ""
@@ -453,6 +457,29 @@ struct IOSSpeedtestAndProfilesRegressionCheck {
         && appPagesSource.contains("ProxyNodeSortControl(selection: $sortMode)")
         && appPagesSource.contains("L10n.string(\"proxies.sort.title\", \"Sort\")"),
       "latency sorting should be visible on both the group detail and subscription node lists"
+    )
+    expect(
+      consolePresentationDeriversSource.contains("isInternationalTrafficReady")
+        && consoleViewModelSource.contains("isInternationalTrafficReady(readiness)")
+        && !consoleViewModelSource.contains("if vpnOn && dataPlane && running")
+        && tunnelShortcutServiceSource.contains("isInternationalTrafficReady(readiness)")
+        && tunnelShortcutServiceSource.contains("func connectAndWait(timeout:")
+        && clashPartyShortcutsSource.contains("ConnectAndWaitClashPartyVPNIntent")
+        && clashPartyShortcutsSource.contains("OpenGoogleSafelyIntent")
+        && tunnelShortcutServiceSource.contains("openURLWhenReady")
+        && tunnelShortcutServiceSource.contains("deliverPendingShortcutOpenIfNeeded")
+        && sharedStoreSource.contains("queueShortcutOpenURL")
+        && appPagesSource.contains("internationalTrafficReady"),
+      "international traffic readiness must align across banner, Data Plane chip, shortcuts, and benchmarks"
+    )
+    expect(
+      tunnelShortcutServiceSource.contains("AppUserPreferences.confirmBeforeDisconnectingVPN")
+        && tunnelShortcutServiceSource.contains("stopRequiresInAppConfirmation")
+        && appPagesSource.contains("showDisconnectVPNConfirmation")
+        && appPagesSource.contains("confirmationDialog")
+        && appPagesSource.contains("confirmBeforeDisconnectingVPN")
+        && consolePresentationDeriversSource.contains("confirmBeforeDisconnectingVPN"),
+      "disconnect confirmation should gate in-app stop actions and block shortcut stop while enabled"
     )
     expect(
       consolePresentationDeriversSource.contains("struct ProxyPresentationState")

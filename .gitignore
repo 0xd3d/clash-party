@@ -22,6 +22,11 @@ apps/ios/.derived-data*/
 apps/ios/DerivedData/
 apps/ios/Vendor/
 apps/ios/Config/Local.xcconfig
+.ios-backup-fork14-*/
+.ios-pull-*/
+.ios-verify-*/
+.ios-benchmark-*/
+.ios-pull-15pm-latest.json
 apps/ios/**/xcuserdata/
 apps/ios/**/Resources/GeoResources/*.dat
 apps/ios/**/Resources/GeoResources/*.mmdb

@@ -130,6 +130,10 @@ let coreProcessWatchdog: CoreProcessWatchdog | null = null
 let isRestarting = false
 let coreOperationPhase: 'initializing' | 'ready' | 'blocked' | 'shutting-down' = 'ready'
 let coreOperationTail: Promise<void> = Promise.resolve()
+
+export function getCoreOperationPhase(): typeof coreOperationPhase {
+  return coreOperationPhase
+}
 let pendingRestart: Promise<void> | null = null
 let cancelActiveStartup: ((reason: Error) => void) | null = null
 let automaticRestartController: AbortController | null = null

@@ -27,6 +27,20 @@ Portable snapshots support at most 50,000 rules after provider expansion. The cu
 
 This mobile core is a custom 1.10.0 base. It does not support every current desktop protocol or DNS/TUN option; for example Hysteria2 and desktop JS overrides are absent. Keep capability handling in the existing iOS compatibility layer, not a new policy language. REALITY ML-KEM, Fake-IP persistence, DoH and packet-flow lifetime changes retain their existing regression checks.
 
+## Shortcuts (快捷指令)
+
+The main app registers App Intents for **Start VPN**, **Stop VPN**, and **Wait for VPN** (polls until the data plane is ready). They use the last published profile in the App Group; open the app once after importing or editing a profile so it is published.
+
+Example manual shortcut (Claude, Chrome, etc.):
+
+1. **连接并等待 Clash Party VPN**（60 秒，与首页「国际流量 Ready」一致）
+2. **如果** false → 通知并 **停止此捷径**
+3. **否则** → **打开 App**（Claude / Chrome）；可加主屏幕图标
+
+Google in Safari: use **Open Google with Clash Party VPN** from Shortcuts → App. Race-condition notes and automation limits: `docs/shortcuts-app-automation.md`.
+
+Stop VPN is available as its own shortcut for teardown after you leave the app.
+
 ## Verification
 
 Run `scripts/check-portable-routing.sh` for Swift overlay/snapshot tests and real mobile-core rule matching. The independent GitHub iOS workflow builds unsigned ARM64 device/simulator apps and uploads build artifacts only. It never accesses an iPhone or changes a desktop VPN.

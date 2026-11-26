@@ -36,6 +36,7 @@ struct RoutingChecks {
     check(udpIndex < strings.firstIndex(of: "GEOIP,CN,DIRECT")!, "Public UDP must precede country DIRECT")
     check(nonCNIndex < strings.firstIndex(of: "DOMAIN-SUFFIX,qq.com,DIRECT")!, "Non-CN classification must precede domestic shortcuts")
     check(strings.contains("DOMAIN-SUFFIX,claude.ai,\(RoutingPolicyService.managedGroupName)"), "General routing must cover Claude alongside other external services")
+    check(strings.contains("DOMAIN-SUFFIX,claude.app,\(RoutingPolicyService.managedGroupName)"), "General routing must cover claude.app before Geo/rule-set warmup")
     let cnDomainIndex = strings.firstIndex(of: "GEOSITE,cn,DIRECT")!
     let namedPublicIndex = strings.firstIndex(of: "GEOSITE,!private,\(RoutingPolicyService.managedGroupName)")!
     let namedPrivateIndex = strings.firstIndex(of: "GEOSITE,private,\(RoutingPolicyService.managedGroupName)")!

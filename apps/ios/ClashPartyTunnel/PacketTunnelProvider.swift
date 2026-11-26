@@ -787,7 +787,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     func persistSuccessfulBootstrap(snapshot: TunnelExtensionSnapshot, source: String) {
       guard self.isCurrentStartup(identity) else { return }
-      self.stopStartupPhaseTimer()
+      let livePhase = MihomoCoreFFI.startupPhase()
+      let liveMessage = MihomoCoreFFI.startupMessage()
       var persistedStatus = snapshot.runtimeStatus
       persistedStatus.state = .running
       persistedStatus.vpnConnected = true
@@ -796,6 +797,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
       persistedStatus.lastFailurePhase = nil
       persistedStatus.lastStopReason = nil
       persistedStatus.updatedAt = .now
+      if !livePhase.isEmpty {
+        persistedStatus.startupPhase = livePhase
+      }
+      if !liveMessage.isEmpty {
+        persistedStatus.startupMessage = liveMessage
+      }
       self.updateRuntimeState(
         .running,
         startupPhase: persistedStatus.startupPhase,
@@ -969,6 +976,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
       if let failure, !failure.isEmpty {
         self.appendLog(level: "error", message: "Embedded runtime reported startup failure during \(phase): \(failure)")
+      }
+
+      if phase == "running" || phase == "failed" {
+        self.stopStartupPhaseTimer()
       }
     }
     timer.resume()

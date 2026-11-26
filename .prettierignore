@@ -9,3 +9,7 @@ tsconfig.*.json
 
 /apps/ios/
 /modules/mihomo-ios-core/
+.ios-pull-*/
+.ios-verify-*/
+.ios-benchmark-*/
+.ios-pull-15pm-latest.json

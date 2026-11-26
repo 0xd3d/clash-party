@@ -322,6 +322,13 @@ final class ConsoleViewModel: ObservableObject {
   @Published var appConfigJson: String = ConsoleViewModel.defaultAppConfig {
     didSet { refreshSettingsPresentation() }
   }
+  @Published var confirmBeforeDisconnectingVPN: Bool = AppUserPreferences.confirmBeforeDisconnectingVPN {
+    didSet {
+      guard confirmBeforeDisconnectingVPN != AppUserPreferences.confirmBeforeDisconnectingVPN else { return }
+      AppUserPreferences.confirmBeforeDisconnectingVPN = confirmBeforeDisconnectingVPN
+      refreshSettingsPresentation()
+    }
+  }
   @Published private(set) var routingUpdateMessage: String?
   @Published private(set) var isUpdatingRoutingRules = false
 
@@ -789,6 +796,177 @@ final class ConsoleViewModel: ObservableObject {
       return false
     }
   }
+
+  func shouldRunTriggeredLatencyBenchmark() -> Bool {
+    guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+      return false
+    }
+    let warm = documents.appendingPathComponent("trigger-ios-latency-benchmark")
+    let cold = documents.appendingPathComponent("trigger-ios-latency-cold")
+    return FileManager.default.fileExists(atPath: warm.path) || FileManager.default.fileExists(atPath: cold.path)
+  }
+
+  /// Device-only latency benchmark for codex / CI scripts. Writes `ios-latency-benchmark.json` to Documents.
+  func runCodexLatencyBenchmark(coldStart: Bool) async -> Bool {
+    if let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+      for name in ["trigger-ios-latency-benchmark", "trigger-ios-latency-cold"] {
+        try? FileManager.default.removeItem(at: documents.appendingPathComponent(name))
+      }
+    }
+    bootstrap(restoreWorkspace: true)
+    isBusy = true
+    defer { isBusy = false }
+
+    let outputFileName = "ios-latency-benchmark.json"
+    guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+      return false
+    }
+    let proxyName = proxyNodes.first(where: { $0.name != "DIRECT" })?.name ?? "KR-Primary"
+    let timeoutMilliseconds = 45_000
+    let probeURLs = [
+      ("gstatic_204", "https://www.gstatic.com/generate_204"),
+      ("google_https", "https://www.google.com/"),
+      ("ip_net_coffee", "https://ip.net.coffee/"),
+    ]
+
+    var payload: [String: Any] = [
+      "capturedAt": ISO8601DateFormatter().string(from: .now),
+      "build": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "",
+      "scenario": coldStart ? "cold_vpn_cycle" : "warm_already_connected",
+      "proxyName": proxyName,
+    ]
+
+    SharedStore.appendLog(level: "info", message: "Codex latency benchmark started. coldStart=\(coldStart).")
+
+    if !(await waitForBenchmarkWorkspace()) {
+      payload["error"] = "workspace has no proxy nodes after restore/import"
+      writeBenchmarkPayload(payload, to: documents.appendingPathComponent(outputFileName))
+      SharedStore.appendLog(level: "error", message: "Codex latency benchmark failed: no proxy nodes in workspace.")
+      return false
+    }
+
+    if coldStart {
+      if runtimeStatus.vpnConnected || runtimeStatus.state == .running || runtimeStatus.state == .starting {
+        try? await TunnelManager.shared.stopTunnel()
+        for _ in 0 ..< 80 {
+          await syncSystemTunnelStatus()
+          refresh()
+          if runtimeStatus.state == .stopped && !runtimeStatus.vpnConnected {
+            break
+          }
+          try? await Task.sleep(for: .milliseconds(250))
+        }
+        try? await Task.sleep(for: .seconds(2))
+      }
+    }
+
+    let connectStarted = Date()
+    if !runtimeStatus.vpnConnected || runtimeStatus.state != .running {
+      isBusy = false
+      startTunnel()
+    }
+
+    let readyWait = await waitForTrafficReady(timeoutSeconds: 120)
+    payload["tunnelConnectToReadyMs"] = readyWait.elapsedMs
+    payload["trafficReady"] = readyWait.isReady
+    guard readyWait.isReady else {
+      payload["error"] = "traffic never reached Ready within timeout"
+      writeBenchmarkPayload(payload, to: documents.appendingPathComponent(outputFileName))
+      SharedStore.appendLog(level: "error", message: "Codex latency benchmark failed: traffic not ready.")
+      return false
+    }
+
+    try? await Task.sleep(for: .milliseconds(500))
+
+    var measurements: [[String: Any]] = []
+    for repeatIndex in 1 ... 2 {
+      for (label, url) in probeURLs {
+        let attemptLabel = repeatIndex == 1 ? "\(label)_first" : "\(label)_second"
+        let started = Date()
+        var entry: [String: Any] = [
+          "label": attemptLabel,
+          "url": url,
+          "repeat": repeatIndex,
+        ]
+        do {
+          let delay = try await runtimeIO.measureProxyDelay(
+            name: proxyName,
+            url: url,
+            timeoutMilliseconds: timeoutMilliseconds
+          )
+          entry["mihomoDelayMs"] = delay
+          entry["wallClockMs"] = Int(Date().timeIntervalSince(started) * 1000)
+        } catch {
+          entry["error"] = error.localizedDescription
+          entry["wallClockMs"] = Int(Date().timeIntervalSince(started) * 1000)
+        }
+        measurements.append(entry)
+        try? await Task.sleep(for: .milliseconds(400))
+      }
+    }
+
+    payload["measurements"] = measurements
+    payload["vpnConnectWallClockMs"] = Int(Date().timeIntervalSince(connectStarted) * 1000)
+    writeBenchmarkPayload(payload, to: documents.appendingPathComponent(outputFileName))
+    SharedStore.appendLog(level: "info", message: "Codex latency benchmark finished and wrote \(outputFileName).")
+    return true
+  }
+
+  private func waitForBenchmarkWorkspace() async -> Bool {
+    let started = Date()
+    while Date().timeIntervalSince(started) < 45 {
+      if proxyCount > 0 {
+        return true
+      }
+      let workspace = await runtimeIO.loadStartupWorkspace(
+        routeExplanationLimit: Self.routeExplanationConnectionLimit
+      )
+      await MainActor.run {
+        self.applyStartupWorkspace(workspace)
+        self.validateOnly()
+      }
+      if proxyCount > 0 {
+        return true
+      }
+      try? await Task.sleep(for: .milliseconds(300))
+    }
+    let portableJSON = "ClashParty-iOS-from-Mac-20261030.json"
+    if FileManager.default.fileExists(
+      atPath: documentsPortablePath(portableJSON)
+    ) {
+      return await prepareDebugValidationProfile(fileName: portableJSON)
+    }
+    return proxyCount > 0
+  }
+
+  private func documentsPortablePath(_ fileName: String) -> String {
+    let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+    return documents?.appendingPathComponent(fileName).path ?? ""
+  }
+
+  private func waitForTrafficReady(timeoutSeconds: TimeInterval) async -> (isReady: Bool, elapsedMs: Int) {
+    let started = Date()
+    while Date().timeIntervalSince(started) < timeoutSeconds {
+      await syncSystemTunnelStatus()
+      performPresentationRefreshBatch {
+        self.updateOverviewPresentationNow()
+      }
+      let readiness = overviewPresentation.state.trafficReadiness
+      if TrafficReadinessResolver.isInternationalTrafficReady(readiness) {
+        return (true, Int(Date().timeIntervalSince(started) * 1000))
+      }
+      try? await Task.sleep(for: .milliseconds(250))
+    }
+    return (false, Int(Date().timeIntervalSince(started) * 1000))
+  }
+
+  private func writeBenchmarkPayload(_ payload: [String: Any], to url: URL) {
+    guard JSONSerialization.isValidJSONObject(payload),
+          let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]) else {
+      return
+    }
+    try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+  }
   #endif
 
   private func restoreStartupWorkspaceAsync() {
@@ -1074,6 +1252,7 @@ final class ConsoleViewModel: ObservableObject {
     switch phase {
     case .active:
       activity = "active"
+      Task { await TunnelShortcutService.deliverPendingShortcutOpenIfNeeded() }
       if didBootstrapWorkspace {
         refresh()
         startMonitoringTunnelStatus()
@@ -2345,18 +2524,27 @@ final class ConsoleViewModel: ObservableObject {
       ? currentProfileDisplayName
       : L10n.string("overview.connect.no_profile", "No imported subscription yet")
 
+    let vpnConnected = runtimeStatus.vpnConnected || extensionSnapshot.runtimeStatus.vpnConnected
+    let dataPlaneReady = runtimeStatus.dataPlaneReady || extensionSnapshot.runtimeStatus.dataPlaneReady
+    let trafficReadiness = TrafficReadinessResolver.resolve(
+      runtimeStatus: runtimeStatus,
+      extensionSnapshot: extensionSnapshot
+    )
+
     overviewPresentation.update(
       OverviewPresentationState(
         runtimeState: runtimeStatus.state,
         runtimeMode: runtimeStatus.mode,
         fakeDnsEnabled: runtimeStatus.fakeDnsEnabled,
-        vpnConnected: runtimeStatus.vpnConnected || extensionSnapshot.runtimeStatus.vpnConnected,
-        dataPlaneReady: runtimeStatus.dataPlaneReady || extensionSnapshot.runtimeStatus.dataPlaneReady,
+        vpnConnected: vpnConnected,
+        dataPlaneReady: dataPlaneReady,
         hasProxyNodes: !proxyNodes.isEmpty,
         tunnelControlsDisabled: tunnelControlsDisabled,
         activeProxySummary: activeProxySummary,
         currentProfileSummary: profileSummary,
         runtimePhaseSummary: phase.isEmpty ? L10n.string("runtime.phase.idle", "Runtime is idle.") : phase,
+        startupPhaseRaw: phase,
+        trafficReadiness: trafficReadiness,
         planStartupMessage: startupStateShowsMessage ? startupMessage : "",
         diagnosticStartupMessage: startupStateShowsMessage ? startupMessage : "",
         lastFailureReason: lastFailureReason,
@@ -2501,7 +2689,8 @@ final class ConsoleViewModel: ObservableObject {
         preservedButInactiveFields: validationReport.preservedButInactiveFields,
         exportBundleName: exportBundleName,
         lastExportPath: lastExportPath,
-        appConfigJson: appConfigJson
+        appConfigJson: appConfigJson,
+        confirmBeforeDisconnectingVPN: confirmBeforeDisconnectingVPN
       )
     )
   }
@@ -2618,12 +2807,12 @@ final class ConsoleViewModel: ObservableObject {
     }
 
     let livePhase = extensionSnapshot.startupPhase.trimmingCharacters(in: .whitespacesAndNewlines)
-    if livePhase == "warmingProviders" {
+    if livePhase == "warmingProviders" || livePhase == "warmingPublicPaths" {
       return true
     }
 
     let persistedPhase = runtimeStatus.startupPhase.trimmingCharacters(in: .whitespacesAndNewlines)
-    if persistedPhase == "warmingProviders" {
+    if persistedPhase == "warmingProviders" || persistedPhase == "warmingPublicPaths" {
       return true
     }
 
@@ -2638,12 +2827,12 @@ final class ConsoleViewModel: ObservableObject {
     }
 
     let livePhase = extensionSnapshot.startupPhase.trimmingCharacters(in: .whitespacesAndNewlines)
-    if livePhase == "warmingProviders" {
+    if livePhase == "warmingProviders" || livePhase == "warmingPublicPaths" {
       return true
     }
 
     let persistedPhase = runtimeStatus.startupPhase.trimmingCharacters(in: .whitespacesAndNewlines)
-    return persistedPhase == "warmingProviders"
+    return persistedPhase == "warmingProviders" || persistedPhase == "warmingPublicPaths"
   }
 
   private func notePendingProxySelectionWaitingForController() {

@@ -176,6 +176,124 @@ final class ShellPresentationModel: ObservableObject {
   }
 }
 
+enum TrafficReadinessLevel: Equatable {
+  case disconnected
+  case connecting
+  case tunnelOnly
+  case warming
+  case ready
+  case failed
+
+  var title: String {
+    switch self {
+    case .disconnected:
+      return L10n.string("readiness.disconnected.title", "Not Connected")
+    case .connecting:
+      return L10n.string("readiness.connecting.title", "Connecting")
+    case .tunnelOnly:
+      return L10n.string("readiness.tunnel_only.title", "Tunnel Starting")
+    case .warming:
+      return L10n.string("readiness.warming.title", "Finishing Startup")
+    case .ready:
+      return L10n.string("readiness.ready.title", "Ready for International Traffic")
+    case .failed:
+      return L10n.string("readiness.failed.title", "Startup Failed")
+    }
+  }
+
+  var message: String {
+    switch self {
+    case .disconnected:
+      return L10n.string(
+        "readiness.disconnected.message",
+        "Connect the VPN before opening international apps or browsers."
+      )
+    case .connecting:
+      return L10n.string(
+        "readiness.connecting.message",
+        "The protected tunnel is still coming up. Avoid international traffic until this banner turns green."
+      )
+    case .tunnelOnly:
+      return L10n.string(
+        "readiness.tunnel_only.message",
+        "VPN is linked but the data plane is not ready yet. Wait before opening Claude or other international apps."
+      )
+    case .warming:
+      return L10n.string(
+        "readiness.warming.message",
+        "Basic protection is active. Rule providers are still warming up; wait a few seconds before heavy international browsing."
+      )
+    case .ready:
+      return L10n.string(
+        "readiness.ready.message",
+        "Tunnel, DNS and routing are ready. You can open international apps and browsers now."
+      )
+    case .failed:
+      return L10n.string(
+        "readiness.failed.message",
+        "Packets stay blocked until you reconnect. Check the error below, then start the tunnel again."
+      )
+    }
+  }
+}
+
+enum TrafficReadinessResolver {
+  static func isInternationalTrafficReady(_ level: TrafficReadinessLevel) -> Bool {
+    level == .ready
+  }
+
+  static func resolve(
+    runtimeStatus: RuntimeStatus,
+    extensionSnapshot: TunnelExtensionSnapshot?
+  ) -> TrafficReadinessLevel {
+    let vpnConnected = runtimeStatus.vpnConnected || (extensionSnapshot?.runtimeStatus.vpnConnected ?? false)
+    let dataPlaneReady = runtimeStatus.dataPlaneReady || (extensionSnapshot?.runtimeStatus.dataPlaneReady ?? false)
+    let phase: String = {
+      if let extensionSnapshot, !extensionSnapshot.startupPhase.isEmpty {
+        return extensionSnapshot.startupPhase
+      }
+      return runtimeStatus.startupPhase
+    }()
+    return resolve(
+      runtimeState: runtimeStatus.state,
+      vpnConnected: vpnConnected,
+      dataPlaneReady: dataPlaneReady,
+      startupPhase: phase
+    )
+  }
+
+  static func resolve(
+    runtimeState: RuntimeConnectionState,
+    vpnConnected: Bool,
+    dataPlaneReady: Bool,
+    startupPhase: String
+  ) -> TrafficReadinessLevel {
+    if runtimeState == .failed {
+      return .failed
+    }
+    guard vpnConnected || runtimeState == .starting || runtimeState == .running else {
+      return runtimeState == .starting ? .connecting : .disconnected
+    }
+    if runtimeState == .starting && !dataPlaneReady {
+      return .connecting
+    }
+    if !dataPlaneReady {
+      return .tunnelOnly
+    }
+    let phase = startupPhase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    if phase == "warmingproviders" {
+      return .warming
+    }
+    if runtimeState == .starting || (phase != "running" && phase != "idle" && !phase.isEmpty) {
+      return .warming
+    }
+    if runtimeState == .running || (vpnConnected && dataPlaneReady) {
+      return .ready
+    }
+    return .connecting
+  }
+}
+
 struct OverviewPresentationState: Equatable {
   var runtimeState: RuntimeConnectionState = .idle
   var runtimeMode: String = "rule"
@@ -187,6 +305,8 @@ struct OverviewPresentationState: Equatable {
   var activeProxySummary: String = L10n.string("common.none", "None")
   var currentProfileSummary: String = L10n.string("common.none", "None")
   var runtimePhaseSummary: String = L10n.string("runtime.phase.idle", "Runtime is idle.")
+  var startupPhaseRaw: String = ""
+  var trafficReadiness: TrafficReadinessLevel = .disconnected
   var planStartupMessage: String = ""
   var diagnosticStartupMessage: String = ""
   var lastFailureReason: String?
@@ -354,6 +474,7 @@ struct SettingsPresentationState: Equatable {
   var exportBundleName: String = ""
   var lastExportPath: String?
   var appConfigJson: String = ""
+  var confirmBeforeDisconnectingVPN: Bool = false
 }
 
 @MainActor

@@ -23,6 +23,16 @@ public struct SharedStoreConfigurationBundle: Equatable {
   }
 }
 
+public struct PendingShortcutOpenRequest: Codable, Equatable {
+  public let urlString: String
+  public let requestedAt: Date
+
+  public init(urlString: String, requestedAt: Date) {
+    self.urlString = urlString
+    self.requestedAt = requestedAt
+  }
+}
+
 public struct SharedStoreAppGroupDiagnostics: Codable, Equatable {
   public var appGroupIdentifier: String
   public var isAvailable: Bool
@@ -527,6 +537,38 @@ public enum SharedStore {
 
   public static func readTraffic() -> TrafficSnapshot {
     (try? readJSON(TrafficSnapshot.self, from: trafficURL())) ?? TrafficSnapshot()
+  }
+
+  private static let pendingShortcutOpenMaxAge: TimeInterval = 120
+
+  private static func pendingShortcutOpenFileURL() throws -> URL {
+    try containerURL().appendingPathComponent("runtime/pending-shortcut-open.json")
+  }
+
+  public static func queueShortcutOpenURL(_ url: URL) {
+    try? ensureDirectories()
+    guard let fileURL = try? pendingShortcutOpenFileURL() else { return }
+    let request = PendingShortcutOpenRequest(urlString: url.absoluteString, requestedAt: .now)
+    try? writeJSON(request, to: fileURL)
+  }
+
+  public static func clearPendingShortcutOpenURL() {
+    guard let fileURL = try? pendingShortcutOpenFileURL() else { return }
+    try? fileManager.removeItem(at: fileURL)
+  }
+
+  public static func consumePendingShortcutOpenURL(now: Date = .now) -> URL? {
+    guard let fileURL = try? pendingShortcutOpenFileURL(),
+          let request = try? readJSON(PendingShortcutOpenRequest.self, from: fileURL) else {
+      return nil
+    }
+    defer { clearPendingShortcutOpenURL() }
+    guard now.timeIntervalSince(request.requestedAt) <= pendingShortcutOpenMaxAge,
+          let url = URL(string: request.urlString),
+          !request.urlString.isEmpty else {
+      return nil
+    }
+    return url
   }
 
   public static func writeLogs(_ logs: [RuntimeLogEntry]) throws {

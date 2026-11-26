@@ -1,9 +1,15 @@
 import { Button } from '@heroui/react'
 import SettingCard from '@renderer/components/base/base-setting-card'
-import { exportWebRTCGuard, inspectPrivacyProtection } from '@renderer/utils/ipc'
+import {
+  exportIosRoutingSnapshot,
+  exportWebRTCGuard,
+  inspectPrivacyProtection,
+  inspectTrafficReadiness
+} from '@renderer/utils/ipc'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PrivacyProtectionReport } from '../../../../shared/privacyAudit'
+import type { TrafficReadinessState } from '../../../../shared/trafficReadiness'
 import ProtectionReport from './protection-report'
 import { useProtectionRevision } from './use-protection-revision'
 
@@ -14,6 +20,9 @@ export default function PrivacyCheck(): React.JSX.Element {
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [exportedPath, setExportedPath] = useState<string | null>(null)
+  const [iosExportPath, setIosExportPath] = useState<string | null>(null)
+  const [exportingIosRules, setExportingIosRules] = useState(false)
+  const [readiness, setReadiness] = useState<TrafficReadinessState | null>(null)
 
   const [stale, setStale] = useState(false)
   const invalidate = useCallback(() => {
@@ -30,12 +39,31 @@ export default function PrivacyCheck(): React.JSX.Element {
     setStale(false)
     const ticket = revision.current
     try {
-      const next = await inspectPrivacyProtection()
-      if (revision.current === ticket) setReport(next)
+      const [next, trafficReadiness] = await Promise.all([
+        inspectPrivacyProtection(),
+        inspectTrafficReadiness()
+      ])
+      if (revision.current === ticket) {
+        setReport(next)
+        setReadiness(trafficReadiness.state)
+      }
     } catch {
       if (revision.current === ticket) setError(t('privacy.error.check'))
     } finally {
       setChecking(false)
+    }
+  }
+
+  const exportIosRules = async (): Promise<void> => {
+    setExportingIosRules(true)
+    setError(null)
+    setIosExportPath(null)
+    try {
+      setIosExportPath(await exportIosRoutingSnapshot())
+    } catch (e) {
+      setError(typeof e === 'string' ? e : t('privacy.error.iosExport'))
+    } finally {
+      setExportingIosRules(false)
     }
   }
 
@@ -59,6 +87,20 @@ export default function PrivacyCheck(): React.JSX.Element {
           {t('privacy.title')}
         </h3>
         <p className="text-sm text-default-600">{t('privacy.scope')}</p>
+        {readiness && (
+          <p
+            role="status"
+            className={
+              readiness === 'ready'
+                ? 'text-sm text-success-700'
+                : readiness === 'blocked'
+                  ? 'text-sm text-danger'
+                  : 'text-sm text-warning-700'
+            }
+          >
+            {t(`privacy.readiness.${readiness}`)}
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           <Button size="sm" color="primary" isLoading={checking} onPress={inspect}>
             {t('privacy.check')}
@@ -67,6 +109,9 @@ export default function PrivacyCheck(): React.JSX.Element {
         <details>
           <summary className="cursor-pointer text-sm">{t('privacy.tools')}</summary>
           <div className="flex flex-wrap gap-2 py-2">
+            <Button size="sm" variant="flat" isLoading={exportingIosRules} onPress={exportIosRules}>
+              {t('privacy.exportIosRules')}
+            </Button>
             <Button size="sm" variant="flat" isLoading={exporting} onPress={exportGuard}>
               {t('privacy.export')}
             </Button>
@@ -90,6 +135,11 @@ export default function PrivacyCheck(): React.JSX.Element {
         {exportedPath && (
           <p role="status" className="text-sm break-all">
             {t('privacy.exported', { path: exportedPath })}
+          </p>
+        )}
+        {iosExportPath && (
+          <p role="status" className="text-sm break-all">
+            {t('privacy.iosExported', { path: iosExportPath })}
           </p>
         )}
         {stale && (
