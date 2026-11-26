@@ -25,11 +25,26 @@ concurrency:
 env:
   CLASH_PARTY_UPDATE_REPOSITORY: ${{ github.repository }}
   CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-  RUN_RELEASE_PIPELINE: ${{ github.event_name == 'workflow_dispatch' || github.event.repository.fork != true }}
 
 jobs:
+  release-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      run_release: ${{ steps.policy.outputs.run_release }}
+    steps:
+      - id: policy
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event.repository.fork }}" != "true" ]]; then
+            echo "run_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
   fork-push-skip:
-    if: env.RUN_RELEASE_PIPELINE != 'true' && github.event_name == 'push'
+    needs: release-policy
+    if: needs.release-policy.outputs.run_release != 'true' && github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -39,7 +54,8 @@ jobs:
           echo 'Use Actions → Build and release → Run workflow when you need packages.'
 
   plan:
-    if: env.RUN_RELEASE_PIPELINE == 'true'
+    needs: release-policy
+    if: needs.release-policy.outputs.run_release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -65,8 +81,8 @@ jobs:
           overwrite: true
 
   checks:
-    if: env.RUN_RELEASE_PIPELINE == 'true'
-    needs: plan
+    if: needs.release-policy.outputs.run_release == 'true'
+    needs: [release-policy, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -82,8 +98,8 @@ jobs:
       - run: pnpm test
 
   packages:
-    if: env.RUN_RELEASE_PIPELINE == 'true'
-    needs: checks
+    if: needs.release-policy.outputs.run_release == 'true'
+    needs: [release-policy, checks]
     name: ${{ matrix.platform }} ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
@@ -213,8 +229,8 @@ jobs:
           overwrite: true
 
   publish:
-    if: env.RUN_RELEASE_PIPELINE == 'true'
-    needs: [plan, checks, packages]
+    if: needs.release-policy.outputs.run_release == 'true'
+    needs: [release-policy, plan, checks, packages]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
