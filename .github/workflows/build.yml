@@ -29,7 +29,7 @@ env:
 
 jobs:
   fork-push-skip:
-    if: github.event.repository.fork == true && github.event_name == 'push'
+    if: env.RUN_RELEASE_PIPELINE != 'true' && github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
