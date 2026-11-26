@@ -28,6 +28,16 @@ env:
   RUN_RELEASE_PIPELINE: ${{ github.event_name == 'workflow_dispatch' || github.event.repository.fork != true }}
 
 jobs:
+  fork-push-skip:
+    if: github.event.repository.fork == true && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Skip heavy release on fork push
+        run: |
+          echo 'Fork push skips Build and release to save Actions minutes.'
+          echo 'Use Actions → Build and release → Run workflow when you need packages.'
+
   plan:
     if: env.RUN_RELEASE_PIPELINE == 'true'
     runs-on: ubuntu-latest

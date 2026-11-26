@@ -33,6 +33,9 @@ vi.mock('../../shared/privacyAudit', () => ({
   auditPrivacyConfig: mocks.auditPrivacyConfig,
   nativeGuardReason: mocks.nativeGuardReason
 }))
+vi.mock('./exportIosRoutingSnapshot', () => ({
+  exportIosRoutingSnapshot: vi.fn()
+}))
 
 const resourcesPathDescriptor = Object.getOwnPropertyDescriptor(process, 'resourcesPath')
 afterEach(() => {
