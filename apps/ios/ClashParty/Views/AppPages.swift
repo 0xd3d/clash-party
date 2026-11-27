@@ -10,6 +10,7 @@ struct OverviewPage: View {
   var onOpenRuntime: ((RuntimeDestination) -> Void)? = nil
   var onOpenMore: ((MoreDestination) -> Void)? = nil
   @State private var showDisconnectVPNConfirmation = false
+  @State private var sensitiveDisconnectBlockedHosts: [String]?
 
   var body: some View {
     AppPageContainer {
@@ -23,10 +24,14 @@ struct OverviewPage: View {
         primaryDisabled: presentation.state.tunnelControlsDisabled
       ) {
         if presentation.state.vpnConnected || presentation.state.runtimeState == .running {
-          if viewModel.confirmBeforeDisconnectingVPN {
-            showDisconnectVPNConfirmation = true
-          } else {
-            viewModel.stopTunnel()
+          Task {
+            if let hosts = await viewModel.activeSensitiveHostsBlockingDisconnect() {
+              sensitiveDisconnectBlockedHosts = hosts
+            } else if viewModel.confirmBeforeDisconnectingVPN {
+              showDisconnectVPNConfirmation = true
+            } else {
+              viewModel.stopTunnel()
+            }
           }
         } else if !presentation.state.hasProxyNodes {
           onOpenProfiles?()
@@ -53,6 +58,30 @@ struct OverviewPage: View {
             "After VPN disconnects, international apps still running—such as Claude, Chrome, or Google—may use your direct network. Quit them first when possible, then disconnect."
           )
         )
+      }
+      .alert(
+        L10n.string("tunnel.disconnect.blocked.title", "Cannot disconnect yet"),
+        isPresented: Binding(
+          get: { sensitiveDisconnectBlockedHosts != nil },
+          set: { if !$0 { sensitiveDisconnectBlockedHosts = nil } }
+        )
+      ) {
+        Button(L10n.string("tunnel.disconnect.blocked.action", "OK"), role: .cancel) {
+          sensitiveDisconnectBlockedHosts = nil
+        }
+      } message: {
+        if let hosts = sensitiveDisconnectBlockedHosts {
+          let sample = hosts.prefix(4).joined(separator: ", ")
+          let extra = hosts.count > 4 ? L10n.string("tunnel.disconnect.blocked.more", "…") : ""
+          Text(
+            L10n.format(
+              "tunnel.disconnect.blocked.message",
+              "Sensitive international traffic is still active (%@%@). Swipe away Claude, Google, or other protected apps, wait a few seconds, then try disconnecting again.",
+              sample,
+              extra
+            )
+          )
+        }
       }
 
       if presentation.state.vpnConnected || presentation.state.runtimeState == .starting
@@ -2791,6 +2820,26 @@ struct SettingsPage: View {
           }
           .tint(AppPalette.accent)
 
+          Toggle(isOn: blockSensitiveDisconnectBinding) {
+            VStack(alignment: .leading, spacing: 4) {
+              Text(
+                L10n.string(
+                  "settings.block_sensitive_disconnect.title",
+                  "Refuse disconnect while sensitive traffic is active"
+                )
+              )
+              Text(
+                L10n.string(
+                  "settings.block_sensitive_disconnect.subtitle",
+                  "Checks live connections for Claude, Google, OpenAI, and similar hosts. Disconnect is blocked until those sessions end or you quit the app."
+                )
+              )
+              .font(.footnote)
+              .foregroundStyle(.secondary)
+            }
+          }
+          .tint(AppPalette.accent)
+
           Button(L10n.string("settings.import_app_config", "Import App Config JSON")) {
             onImportRequested(.appConfigJSON)
           }
@@ -2876,6 +2925,13 @@ struct SettingsPage: View {
     Binding(
       get: { presentation.state.confirmBeforeDisconnectingVPN },
       set: { viewModel.confirmBeforeDisconnectingVPN = $0 }
+    )
+  }
+
+  private var blockSensitiveDisconnectBinding: Binding<Bool> {
+    Binding(
+      get: { presentation.state.blockDisconnectWhenSensitiveTraffic },
+      set: { viewModel.blockDisconnectWhenSensitiveTraffic = $0 }
     )
   }
 

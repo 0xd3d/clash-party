@@ -475,6 +475,7 @@ struct SettingsPresentationState: Equatable {
   var lastExportPath: String?
   var appConfigJson: String = ""
   var confirmBeforeDisconnectingVPN: Bool = false
+  var blockDisconnectWhenSensitiveTraffic: Bool = true
 }
 
 @MainActor

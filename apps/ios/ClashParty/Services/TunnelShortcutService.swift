@@ -9,6 +9,7 @@ enum TunnelShortcutError: LocalizedError {
   case noProxyNodes
   case waitTimedOut
   case stopRequiresInAppConfirmation
+  case stopBlockedSensitiveTraffic([String])
 
   var errorDescription: String? {
     switch self {
@@ -33,6 +34,15 @@ enum TunnelShortcutError: LocalizedError {
       return L10n.string(
         "shortcuts.error.stop_requires_confirmation",
         "Disconnect confirmation is enabled. Open Clash Party and disconnect from the home screen."
+      )
+    case let .stopBlockedSensitiveTraffic(hosts):
+      let sample = hosts.prefix(3).joined(separator: ", ")
+      let extra = hosts.count > 3 ? "…" : ""
+      return L10n.format(
+        "shortcuts.error.stop_blocked_sensitive",
+        "Sensitive international traffic is still active (%@%@). Quit Claude, Google, or other protected apps, wait a moment, then try again.",
+        sample,
+        extra
       )
     }
   }
@@ -67,6 +77,12 @@ enum TunnelShortcutService {
   static func stopVPN() async throws {
     if AppUserPreferences.confirmBeforeDisconnectingVPN {
       throw TunnelShortcutError.stopRequiresInAppConfirmation
+    }
+    if AppUserPreferences.blockDisconnectWhenSensitiveTraffic {
+      let hosts = DisconnectSensitiveTrafficGuard.activeSensitiveHostnamesAfterRefresh()
+      if !hosts.isEmpty {
+        throw TunnelShortcutError.stopBlockedSensitiveTraffic(hosts)
+      }
     }
     SharedStore.appendLog(level: "info", message: "Shortcuts requested the VPN tunnel to stop.")
     try await TunnelManager.shared.stopTunnel()

@@ -3667,6 +3667,78 @@
         }
       }
     },
+    "settings.block_sensitive_disconnect.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "敏感流量活跃时拒绝断开"
+          }
+        }
+      }
+    },
+    "settings.block_sensitive_disconnect.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内核仍检测到 Claude、Google 等国际连接时，直接拒绝断开（不弹出「仍要断开」）。请先划掉对应 App 或稍后再试。"
+          }
+        }
+      }
+    },
+    "tunnel.disconnect.blocked.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时无法断开 VPN"
+          }
+        }
+      }
+    },
+    "tunnel.disconnect.blocked.action": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "知道了"
+          }
+        }
+      }
+    },
+    "tunnel.disconnect.blocked.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等"
+          }
+        }
+      }
+    },
+    "tunnel.disconnect.blocked.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sensitive international traffic is still active (%1$@%2$@). Swipe away Claude, Google, or other protected apps, wait a few seconds, then try disconnecting again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍有敏感国际流量在传输（%1$@%2$@）。请先划掉 Claude、Google 等受保护 App，等待几秒后再断开。"
+          }
+        }
+      }
+    },
     "shortcuts.error.stop_requires_confirmation": {
       "extractionState": "manual",
       "localizations": {
@@ -3674,6 +3746,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已开启断开前确认。请打开 Clash Party，在首页断开 VPN。"
+          }
+        }
+      }
+    },
+    "shortcuts.error.stop_blocked_sensitive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sensitive international traffic is still active (%1$@%2$@). Quit Claude, Google, or other protected apps, wait a moment, then try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍有敏感国际流量（%1$@%2$@）。请先退出 Claude、Google 等 App，稍候再试。"
           }
         }
       }

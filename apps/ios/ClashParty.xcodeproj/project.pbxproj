@@ -70,6 +70,9 @@
 		A10000610000000000000000 /* RoutingPolicyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000400000000000000000 /* RoutingPolicyService.swift */; };
 		A10000620000000000000000 /* RoutingPolicyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000400000000000000000 /* RoutingPolicyService.swift */; };
 		A10000630000000000000000 /* RuleResources in Resources */ = {isa = PBXBuildFile; fileRef = A20000410000000000000000 /* RuleResources */; };
+		A10000660000000000000000 /* DisconnectSensitiveTrafficGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000430000000000000000 /* DisconnectSensitiveTrafficGuard.swift */; };
+		A10000670000000000000000 /* DisconnectSensitiveTrafficGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000430000000000000000 /* DisconnectSensitiveTrafficGuard.swift */; };
+		A10000680000000000000000 /* DisconnectSensitiveTrafficGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000430000000000000000 /* DisconnectSensitiveTrafficGuard.swift */; };
 		A10000640000000000000000 /* RuleResources in Resources */ = {isa = PBXBuildFile; fileRef = A20000420000000000000000 /* RuleResources */; };
 		F1A200110000000000000000 /* EncryptedBootstrapResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100010000000000000000 /* EncryptedBootstrapResolver.swift */; };
 		F1A200120000000000000000 /* EncryptedBootstrapResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A100010000000000000000 /* EncryptedBootstrapResolver.swift */; };
@@ -150,6 +153,7 @@
 		A30000030000000000000000 /* ClashPartyShared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ClashPartyShared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000400000000000000000 /* RoutingPolicyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutingPolicyService.swift; sourceTree = "<group>"; };
 		A20000410000000000000000 /* RuleResources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = RuleResources; sourceTree = "<group>"; };
+		A20000430000000000000000 /* DisconnectSensitiveTrafficGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisconnectSensitiveTrafficGuard.swift; sourceTree = "<group>"; };
 		A20000420000000000000000 /* RuleResources */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuleResources; path = "../../ClashParty/Resources/RuleResources"; sourceTree = "<group>"; };
 		AC0000010000000000000001 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Shared.xcconfig; sourceTree = SOURCE_ROOT; };
 		F1A100010000000000000000 /* EncryptedBootstrapResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptedBootstrapResolver.swift; sourceTree = "<group>"; };
@@ -340,6 +344,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000400000000000000000 /* RoutingPolicyService.swift */,
+				A20000430000000000000000 /* DisconnectSensitiveTrafficGuard.swift */,
 				A20000070000000000000000 /* CompatibilityService.swift */,
 			);
 			path = Compatibility;
@@ -506,6 +511,7 @@
 				F1A200210000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */,
 				F1A200110000000000000000 /* EncryptedBootstrapResolver.swift in Sources */,
 				A10000600000000000000000 /* RoutingPolicyService.swift in Sources */,
+				A10000660000000000000000 /* DisconnectSensitiveTrafficGuard.swift in Sources */,
 				A10000010000000000000000 /* ClashPartyApp.swift in Sources */,
 				A10000020000000000000000 /* ContentView.swift in Sources */,
 				A10000030000000000000000 /* TunnelManager.swift in Sources */,
@@ -544,6 +550,7 @@
 				F1A200220000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */,
 				F1A200120000000000000000 /* EncryptedBootstrapResolver.swift in Sources */,
 				A10000610000000000000000 /* RoutingPolicyService.swift in Sources */,
+				A10000670000000000000000 /* DisconnectSensitiveTrafficGuard.swift in Sources */,
 				A10000090000000000000000 /* PacketTunnelProvider.swift in Sources */,
 				A10000100000000000000000 /* RuntimeModels.swift in Sources */,
 				A10000110000000000000000 /* CompatibilityModels.swift in Sources */,
@@ -567,6 +574,7 @@
 				F1A200230000000000000000 /* PacketTunnelIPv6Policy.swift in Sources */,
 				F1A200130000000000000000 /* EncryptedBootstrapResolver.swift in Sources */,
 				A10000620000000000000000 /* RoutingPolicyService.swift in Sources */,
+				A10000680000000000000000 /* DisconnectSensitiveTrafficGuard.swift in Sources */,
 				A10000150000000000000000 /* RuntimeModels.swift in Sources */,
 				A10000160000000000000000 /* CompatibilityModels.swift in Sources */,
 				A10000170000000000000000 /* SharedStore.swift in Sources */,

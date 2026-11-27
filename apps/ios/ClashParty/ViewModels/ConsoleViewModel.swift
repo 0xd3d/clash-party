@@ -329,6 +329,13 @@ final class ConsoleViewModel: ObservableObject {
       refreshSettingsPresentation()
     }
   }
+  @Published var blockDisconnectWhenSensitiveTraffic: Bool = AppUserPreferences.blockDisconnectWhenSensitiveTraffic {
+    didSet {
+      guard blockDisconnectWhenSensitiveTraffic != AppUserPreferences.blockDisconnectWhenSensitiveTraffic else { return }
+      AppUserPreferences.blockDisconnectWhenSensitiveTraffic = blockDisconnectWhenSensitiveTraffic
+      refreshSettingsPresentation()
+    }
+  }
   @Published private(set) var routingUpdateMessage: String?
   @Published private(set) var isUpdatingRoutingRules = false
 
@@ -1212,6 +1219,23 @@ final class ConsoleViewModel: ObservableObject {
 
   func formattedLogTimestamp(_ timestamp: Date) -> String {
     Self.logTimestampFormatter.string(from: timestamp)
+  }
+
+  /// Returns active sensitive hostnames when disconnect must be refused; otherwise `nil`.
+  func activeSensitiveHostsBlockingDisconnect() async -> [String]? {
+    guard AppUserPreferences.blockDisconnectWhenSensitiveTraffic else { return nil }
+    guard runtimeStatus.vpnConnected || runtimeStatus.state == .running || runtimeStatus.state == .starting else {
+      return nil
+    }
+    _ = await syncSystemTunnelStatus(forceControllerSnapshotRefresh: true, scope: .fast)
+    let hosts = DisconnectSensitiveTrafficGuard.activeSensitiveHostnames(in: connections)
+    guard !hosts.isEmpty else { return nil }
+    let summary = hosts.prefix(5).joined(separator: ", ")
+    SharedStore.appendLog(
+      level: "warning",
+      message: "Refused VPN stop while sensitive international traffic remains active: \(summary)."
+    )
+    return hosts
   }
 
   func stopTunnel() {
@@ -2690,7 +2714,8 @@ final class ConsoleViewModel: ObservableObject {
         exportBundleName: exportBundleName,
         lastExportPath: lastExportPath,
         appConfigJson: appConfigJson,
-        confirmBeforeDisconnectingVPN: confirmBeforeDisconnectingVPN
+        confirmBeforeDisconnectingVPN: confirmBeforeDisconnectingVPN,
+        blockDisconnectWhenSensitiveTraffic: blockDisconnectWhenSensitiveTraffic
       )
     )
   }

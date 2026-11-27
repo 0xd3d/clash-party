@@ -475,11 +475,23 @@ struct IOSSpeedtestAndProfilesRegressionCheck {
     expect(
       tunnelShortcutServiceSource.contains("AppUserPreferences.confirmBeforeDisconnectingVPN")
         && tunnelShortcutServiceSource.contains("stopRequiresInAppConfirmation")
+        && tunnelShortcutServiceSource.contains("stopBlockedSensitiveTraffic")
+        && tunnelShortcutServiceSource.contains("AppUserPreferences.blockDisconnectWhenSensitiveTraffic")
         && appPagesSource.contains("showDisconnectVPNConfirmation")
         && appPagesSource.contains("confirmationDialog")
         && appPagesSource.contains("confirmBeforeDisconnectingVPN")
-        && consolePresentationDeriversSource.contains("confirmBeforeDisconnectingVPN"),
+        && appPagesSource.contains("sensitiveDisconnectBlockedHosts")
+        && appPagesSource.contains("activeSensitiveHostsBlockingDisconnect")
+        && consolePresentationDeriversSource.contains("confirmBeforeDisconnectingVPN")
+        && consolePresentationDeriversSource.contains("blockDisconnectWhenSensitiveTraffic"),
       "disconnect confirmation should gate in-app stop actions and block shortcut stop while enabled"
+    )
+    let disconnectGuardSource = readRepo("apps/ios/ClashPartyShared/Compatibility/DisconnectSensitiveTrafficGuard.swift")
+    expect(
+      disconnectGuardSource.contains("claude.app")
+        && disconnectGuardSource.contains("activeSensitiveHostnames(in:")
+        && disconnectGuardSource.contains("refreshDataPlaneSnapshotNow"),
+      "sensitive disconnect guard should classify Claude/Google traffic and refresh controller connections"
     )
     expect(
       consolePresentationDeriversSource.contains("struct ProxyPresentationState")
